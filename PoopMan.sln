@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36915.13 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoopMan", "PoopMan\PoopMan.csproj", "{27556F98-B2E9-4489-9C87-607DB58537BF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoopManLibrary", "PoopManLibrary\PoopManLibrary.csproj", "{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{27556F98-B2E9-4489-9C87-607DB58537BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27556F98-B2E9-4489-9C87-607DB58537BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{27556F98-B2E9-4489-9C87-607DB58537BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{27556F98-B2E9-4489-9C87-607DB58537BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B989FE3E-606C-4080-9487-E5FC13D1CA0A}
+	EndGlobalSection
+EndGlobal
