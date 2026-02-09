@@ -10,3 +10,17 @@ C:\Users\fkpro\Documents\INFO\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLib
 C:\Users\fkpro\Documents\INFO\PoopMan\PoopManLibrary\obj\Debug\net9.0\refint\PoopManLibrary.dll
 C:\Users\fkpro\Documents\INFO\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.pdb
 C:\Users\fkpro\Documents\INFO\PoopMan\PoopManLibrary\obj\Debug\net9.0\ref\PoopManLibrary.dll
+C:\Users\stefa\PoopMan\PoopManLibrary\bin\Debug\net9.0\PoopManLibrary.deps.json
+C:\Users\stefa\PoopMan\PoopManLibrary\bin\Debug\net9.0\PoopManLibrary.dll
+C:\Users\stefa\PoopMan\PoopManLibrary\bin\Debug\net9.0\PoopManLibrary.pdb
+C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.csproj.AssemblyReference.cache
+C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.AssemblyInfoInputs.cache
+C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.AssemblyInfo.cs
+C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.csproj.CoreCompileInputs.cache
+C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.sourcelink.json
+C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.dll
+C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\refint\PoopManLibrary.dll
+C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.pdb
+C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\ref\PoopManLibrary.dll
+C:\Users\fkpro\Documents\INFO\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.sourcelink.json

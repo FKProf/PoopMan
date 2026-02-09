@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CharacterDefinition>
+	<Texture>image/character/mineratlas</Texture>
+	<Regions>
+		<!-- Riga 0 - Death Front (6 frame) -->
+		<Region Name="death_front_1" X="0" Y="0" Width="32" Height="32" />
+		<Region Name="death_front_2" X="32" Y="0" Width="32" Height="32" />
+		<Region Name="death_front_3" X="64" Y="0" Width="32" Height="32" />
+		<Region Name="death_front_4" X="96" Y="0" Width="32" Height="32" />
+		<Region Name="death_front_5" X="128" Y="0" Width="32" Height="32" />
+		<Region Name="death_front_6" X="160" Y="0" Width="32" Height="32" />
+
+		<!-- Riga 1 - Idle Back (4 frame) -->
+		<Region Name="idle_back_1" X="0" Y="32" Width="32" Height="32" />
+		<Region Name="idle_back_2" X="32" Y="32" Width="32" Height="32" />
+		<Region Name="idle_back_3" X="64" Y="32" Width="32" Height="32" />
+		<Region Name="idle_back_4" X="96" Y="32" Width="32" Height="32" />
+
+		<!-- Riga 1 continuazione - Idle Front (4 frame) -->
+		<Region Name="idle_front_1" X="128" Y="32" Width="32" Height="32" />
+		<Region Name="idle_front_2" X="160" Y="32" Width="32" Height="32" />
+		<Region Name="idle_front_3" X="192" Y="32" Width="32" Height="32" />
+		<Region Name="idle_front_4" X="224" Y="32" Width="32" Height="32" />
+
+		<!-- Riga 2 - Idle Left (4 frame) -->
+		<Region Name="idle_left_1" X="0" Y="64" Width="32" Height="32" />
+		<Region Name="idle_left_2" X="32" Y="64" Width="32" Height="32" />
+		<Region Name="idle_left_3" X="64" Y="64" Width="32" Height="32" />
+		<Region Name="idle_left_4" X="96" Y="64" Width="32" Height="32" />
+
+		<!-- Riga 2 continuazione - Idle Right (4 frame) -->
+		<Region Name="idle_right_1" X="128" Y="64" Width="32" Height="32" />
+		<Region Name="idle_right_2" X="160" Y="64" Width="32" Height="32" />
+		<Region Name="idle_right_3" X="192" Y="64" Width="32" Height="32" />
+		<Region Name="idle_right_4" X="224" Y="64" Width="32" Height="32" />
+
+		<!-- Riga 3 - Take Off Front (3 frame) -->
+		<Region Name="take_off_front_1" X="0" Y="96" Width="32" Height="32" />
+		<Region Name="take_off_front_2" X="32" Y="96" Width="32" Height="32" />
+		<Region Name="take_off_front_3" X="64" Y="96" Width="32" Height="32" />
+
+		<!-- Riga 3 continuazione - Walk Back (4 frame) -->
+		<Region Name="walk_back_1" X="96" Y="96" Width="32" Height="32" />
+		<Region Name="walk_back_2" X="128" Y="96" Width="32" Height="32" />
+		<Region Name="walk_back_3" X="160" Y="96" Width="32" Height="32" />
+		<Region Name="walk_back_4" X="192" Y="96" Width="32" Height="32" />
+
+		<!-- Riga 4 - Walk Front (4 frame) -->
+		<Region Name="walk_front_1" X="0" Y="128" Width="32" Height="32" />
+		<Region Name="walk_front_2" X="32" Y="128" Width="32" Height="32" />
+		<Region Name="walk_front_3" X="64" Y="128" Width="32" Height="32" />
+		<Region Name="walk_front_4" X="96" Y="128" Width="32" Height="32" />
+
+		<!-- Riga 4 continuazione - Walk Left (4 frame) -->
+		<Region Name="walk_left_1" X="128" Y="128" Width="32" Height="32" />
+		<Region Name="walk_left_2" X="160" Y="128" Width="32" Height="32" />
+		<Region Name="walk_left_3" X="192" Y="128" Width="32" Height="32" />
+		<Region Name="walk_left_4" X="224" Y="128" Width="32" Height="32" />
+
+		<!-- Riga 5 - Walk Right (4 frame) -->
+		<Region Name="walk_right_1" X="0" Y="160" Width="32" Height="32" />
+		<Region Name="walk_right_2" X="32" Y="160" Width="32" Height="32" />
+		<Region Name="walk_right_3" X="64" Y="160" Width="32" Height="32" />
+		<Region Name="walk_right_4" X="96" Y="160" Width="32" Height="32" />
+
+		<!-- Riga 5 continuazione - Win Front (4 frame) -->
+		<Region Name="win_front_1" X="128" Y="160" Width="32" Height="32" />
+		<Region Name="win_front_2" X="160" Y="160" Width="32" Height="32" />
+		<Region Name="win_front_3" X="192" Y="160" Width="32" Height="32" />
+		<Region Name="win_front_4" X="224" Y="160" Width="32" Height="32" />
+	</Regions>
+</CharacterDefinition>

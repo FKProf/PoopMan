@@ -2,6 +2,10 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using PoopManLibrary;
+using PoopManLibrary.World;
+using PoopManLibrary.Entities;
+using PoopManLibrary.Graphics;
+using System.IO;
 
 namespace PoopMan
 {
@@ -10,6 +14,14 @@ namespace PoopMan
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
 
+        private TileMap map;
+        private Player player;
+        private Texture2D pixel;
+        private TextureCharacter minerCharacter;
+
+        private float animationTimer;
+        private int currentFrame;
+
         public Game1() : base("PoopMan", 1280, 720, false)
         {
 
@@ -17,22 +29,40 @@ namespace PoopMan
 
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
-
             base.Initialize();
+            animationTimer = 0f;
+            currentFrame = 1;
         }
 
         protected override void LoadContent()
         {
-            // TODO: use this.Content to load your game content here
+            _spriteBatch = new SpriteBatch(GraphicsDevice);
+            pixel = new Texture2D(GraphicsDevice, 1, 1);
+            pixel.SetData(new[] { Color.White });
+
+            map = new TileMap(pixel);
+            player = new Player(pixel, new Point(1, 1));
+
+            string xmlPath = Path.Combine(Content.RootDirectory, "image", "character", "character-definition.xml");
+            minerCharacter = TextureCharacter.LoadFromXml(Content, xmlPath);
         }
 
         protected override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
+            if (Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            // TODO: Add your update logic here
+            player.Update(map, Keyboard.GetState());
+
+            // Anima il personaggio (cambia frame ogni 0.15 secondi)
+            animationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (animationTimer >= 0.15f)
+            {
+                animationTimer = 0f;
+                currentFrame++;
+                if (currentFrame > 4)
+                    currentFrame = 1;
+            }
 
             base.Update(gameTime);
         }
@@ -41,7 +71,16 @@ namespace PoopMan
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            // TODO: Add your drawing code here
+            // Usa PointClamp per evitare bleeding tra i frame
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
+            //map.Draw(_spriteBatch);   //HO TOLTO IL DISEGNO DELLA MAPPA PER FARE TEST SUL PERSONAGGIO
+
+            // Disegna il personaggio con scala ridotta (2x o 3x invece di 6x)
+            string frameName = $"idle_front_{currentFrame}";
+            minerCharacter.Draw(_spriteBatch, frameName, new Vector2(100, 100), Color.White, 2f);
+
+            _spriteBatch.End();
 
             base.Draw(gameTime);
         }
