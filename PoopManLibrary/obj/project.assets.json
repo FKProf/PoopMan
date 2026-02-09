@@ -273,19 +273,24 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\fkpro\\.nuget\\packages\\": {}
+    "C:\\Users\\stefa\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+      "projectUniqueName": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
       "projectName": "PoopManLibrary",
-      "projectPath": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
-      "packagesPath": "C:\\Users\\fkpro\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopManLibrary\\obj\\",
+      "projectPath": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+      "packagesPath": "C:\\Users\\stefa\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "C:\\Users\\fkpro\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\stefa\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -339,7 +344,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.310/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.309/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

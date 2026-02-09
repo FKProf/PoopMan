@@ -23,4 +23,7 @@ C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.dll
 C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\refint\PoopManLibrary.dll
 C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.pdb
 C:\Users\stefa\PoopMan\PoopManLibrary\obj\Debug\net9.0\ref\PoopManLibrary.dll
+<<<<<<< HEAD
 C:\Users\fkpro\Documents\INFO\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.sourcelink.json
+=======
+>>>>>>> e47a7ba5ae4e3382f26dbdc38ed4db8995c3bdfe

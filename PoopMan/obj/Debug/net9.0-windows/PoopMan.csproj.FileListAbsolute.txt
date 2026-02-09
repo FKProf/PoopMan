@@ -57,6 +57,9 @@ C:\Users\stefa\PoopMan\PoopMan\obj\Debug\net9.0-windows\refint\PoopMan.dll
 C:\Users\stefa\PoopMan\PoopMan\obj\Debug\net9.0-windows\PoopMan.pdb
 C:\Users\stefa\PoopMan\PoopMan\obj\Debug\net9.0-windows\PoopMan.genruntimeconfig.cache
 C:\Users\stefa\PoopMan\PoopMan\obj\Debug\net9.0-windows\ref\PoopMan.dll
+<<<<<<< HEAD
 C:\Users\fkpro\Documents\INFO\PoopMan\PoopMan\obj\Debug\net9.0-windows\PoopMan.sourcelink.json
 C:\Users\fkpro\Documents\INFO\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\character\character-definition.xml
 C:\Users\fkpro\Documents\INFO\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\character\mineratlas.xnb
+=======
+>>>>>>> e47a7ba5ae4e3382f26dbdc38ed4db8995c3bdfe
