@@ -1,38 +1,14 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\stefa\\PoopMan\\",
+  "WorkspaceRootPath": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{27556F98-B2E9-4489-9C87-607DB58537BF}|PoopMan\\PoopMan.csproj|c:\\users\\stefa\\poopman\\poopman\\game1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{27556F98-B2E9-4489-9C87-607DB58537BF}|PoopMan\\PoopMan.csproj|c:\\users\\fkpro\\documents\\info\\poopman\\poopman\\game1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{27556F98-B2E9-4489-9C87-607DB58537BF}|PoopMan\\PoopMan.csproj|solutionrelative:poopman\\game1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-<<<<<<< HEAD
-      "AbsoluteMoniker": "D:0:0:{27556F98-B2E9-4489-9C87-607DB58537BF}|PoopMan\\PoopMan.csproj|c:\\users\\fkpro\\documents\\info\\poopman\\poopman\\content\\image\\character\\character-definition.xml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
-      "RelativeMoniker": "D:0:0:{27556F98-B2E9-4489-9C87-607DB58537BF}|PoopMan\\PoopMan.csproj|solutionrelative:poopman\\content\\image\\character\\character-definition.xml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}|PoopManLibrary\\PoopManLibrary.csproj|c:\\users\\fkpro\\documents\\info\\poopman\\poopmanlibrary\\graphics\\texturecharacter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}|PoopManLibrary\\PoopManLibrary.csproj|solutionrelative:poopmanlibrary\\graphics\\texturecharacter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}|PoopManLibrary\\PoopManLibrary.csproj|c:\\users\\fkpro\\documents\\info\\poopman\\poopmanlibrary\\core.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-=======
-      "AbsoluteMoniker": "D:0:0:{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}|PoopManLibrary\\PoopManLibrary.csproj|c:\\users\\stefa\\poopman\\poopmanlibrary\\core.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
->>>>>>> e47a7ba5ae4e3382f26dbdc38ed4db8995c3bdfe
       "RelativeMoniker": "D:0:0:{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}|PoopManLibrary\\PoopManLibrary.csproj|solutionrelative:poopmanlibrary\\core.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}|PoopManLibrary\\PoopManLibrary.csproj|c:\\users\\stefa\\poopman\\poopmanlibrary\\entities\\player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}|PoopManLibrary\\PoopManLibrary.csproj|solutionrelative:poopmanlibrary\\entities\\player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}|PoopManLibrary\\PoopManLibrary.csproj|c:\\users\\stefa\\poopman\\poopmanlibrary\\world\\tiletype.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}|PoopManLibrary\\PoopManLibrary.csproj|solutionrelative:poopmanlibrary\\world\\tiletype.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}|PoopManLibrary\\PoopManLibrary.csproj|c:\\users\\stefa\\poopman\\poopmanlibrary\\world\\tilemap.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}|PoopManLibrary\\PoopManLibrary.csproj|solutionrelative:poopmanlibrary\\world\\tilemap.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -42,15 +18,11 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-<<<<<<< HEAD
-          "SelectedChildIndex": 5,
-=======
-          "SelectedChildIndex": 8,
->>>>>>> e47a7ba5ae4e3382f26dbdc38ed4db8995c3bdfe
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Bookmark",
-              "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
+              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
             },
             {
               "$type": "Bookmark",
@@ -61,110 +33,27 @@
               "Name": "ST:0:0:{eefa5220-e298-11d0-8f78-00a0c9110057}"
             },
             {
-              "$type": "Bookmark",
-              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "Player.cs",
-              "DocumentMoniker": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\Entities\\Player.cs",
-              "RelativeDocumentMoniker": "PoopManLibrary\\Entities\\Player.cs",
-              "ToolTip": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\Entities\\Player.cs",
-              "RelativeToolTip": "PoopManLibrary\\Entities\\Player.cs",
-              "ViewState": "AgIAAAIAAAAAAAAAAAArwAkAAAAOAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-09T18:38:52.892Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "TileType.cs",
-              "DocumentMoniker": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\World\\TileType.cs",
-              "RelativeDocumentMoniker": "PoopManLibrary\\World\\TileType.cs",
-              "ToolTip": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\World\\TileType.cs",
-              "RelativeToolTip": "PoopManLibrary\\World\\TileType.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAKAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-09T17:54:11.844Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "TileMap.cs",
-              "DocumentMoniker": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\World\\TileMap.cs",
-              "RelativeDocumentMoniker": "PoopManLibrary\\World\\TileMap.cs",
-              "ToolTip": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\World\\TileMap.cs",
-              "RelativeToolTip": "PoopManLibrary\\World\\TileMap.cs",
-              "ViewState": "AgIAADMAAAAAAAAAAAAAADsAAABLAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-09T17:26:25.765Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "TextureCharacter.cs",
-              "DocumentMoniker": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopManLibrary\\Graphics\\TextureCharacter.cs",
-              "RelativeDocumentMoniker": "PoopManLibrary\\Graphics\\TextureCharacter.cs",
-              "ToolTip": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopManLibrary\\Graphics\\TextureCharacter.cs",
-              "RelativeToolTip": "PoopManLibrary\\Graphics\\TextureCharacter.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB4AAAAIAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-09T20:57:16.987Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "character-definition.xml",
-              "DocumentMoniker": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopMan\\Content\\image\\character\\character-definition.xml",
-              "RelativeDocumentMoniker": "PoopMan\\Content\\image\\character\\character-definition.xml",
-              "ToolTip": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopMan\\Content\\image\\character\\character-definition.xml",
-              "RelativeToolTip": "PoopMan\\Content\\image\\character\\character-definition.xml",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEcAAAAWAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003576|",
-              "WhenOpened": "2026-02-09T20:55:25.935Z",
-              "EditorCaption": ""
-            },
-            {
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "Game1.cs",
-              "DocumentMoniker": "C:\\Users\\stefa\\PoopMan\\PoopMan\\Game1.cs",
+              "DocumentMoniker": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopMan\\Game1.cs",
               "RelativeDocumentMoniker": "PoopMan\\Game1.cs",
-<<<<<<< HEAD
               "ToolTip": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopMan\\Game1.cs",
               "RelativeToolTip": "PoopMan\\Game1.cs",
-              "ViewState": "AgIAADQAAAAAAAAAAAAvwEUAAAAPAAAAAAAAAA==",
-=======
-              "ToolTip": "C:\\Users\\stefa\\PoopMan\\PoopMan\\Game1.cs*",
-              "RelativeToolTip": "PoopMan\\Game1.cs*",
-              "ViewState": "AgIAAAoAAAAAAAAAAAAIwCAAAAA4AAAAAAAAAA==",
->>>>>>> e47a7ba5ae4e3382f26dbdc38ed4db8995c3bdfe
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAADsAAAAfAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-01-31T17:57:11.452Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 1,
               "Title": "Core.cs",
-              "DocumentMoniker": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\Core.cs",
+              "DocumentMoniker": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopManLibrary\\Core.cs",
               "RelativeDocumentMoniker": "PoopManLibrary\\Core.cs",
-              "ToolTip": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\Core.cs",
+              "ToolTip": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopManLibrary\\Core.cs",
               "RelativeToolTip": "PoopManLibrary\\Core.cs",
-<<<<<<< HEAD
               "ViewState": "AgIAAAAAAAAAAAAAAAAAADUAAAAlAAAAAAAAAA==",
-=======
-              "ViewState": "AgIAABkAAAAAAAAAAAA0wBMAAABBAAAAAAAAAA==",
->>>>>>> e47a7ba5ae4e3382f26dbdc38ed4db8995c3bdfe
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-01-31T17:55:06.685Z"
             }
