@@ -4175,19 +4175,24 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\fkpro\\.nuget\\packages\\": {}
+    "C:\\Users\\stefa\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopMan\\PoopMan.csproj",
+      "projectUniqueName": "C:\\Users\\stefa\\PoopMan\\PoopMan\\PoopMan.csproj",
       "projectName": "PoopMan",
-      "projectPath": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopMan\\PoopMan.csproj",
-      "packagesPath": "C:\\Users\\fkpro\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopMan\\obj\\",
+      "projectPath": "C:\\Users\\stefa\\PoopMan\\PoopMan\\PoopMan.csproj",
+      "packagesPath": "C:\\Users\\stefa\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\stefa\\PoopMan\\PoopMan\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "C:\\Users\\fkpro\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\stefa\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -4201,8 +4206,8 @@
         "net9.0-windows7.0": {
           "targetAlias": "net9.0-windows",
           "projectReferences": {
-            "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
-              "projectPath": "C:\\Users\\fkpro\\Documents\\INFO\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj"
+            "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
+              "projectPath": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj"
             }
           }
         }
@@ -4251,7 +4256,7 @@
             "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.310/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.309/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

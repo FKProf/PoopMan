@@ -11,17 +11,22 @@ namespace PoopManLibrary.Entities
         public Texture2D Texture; // Texture del giocatore
         public Vector2 Position; // Posizione del giocatore in pixel
         public int Speed = 2; // Velocità di movimento del giocatore 
-        
+        private float moveCooldown = 0.175f;   // tempo tra un movimento e l'altro
+        private float moveTimer = 0f;
         //costruttore
         public Player(Texture2D texture,Point startTile)
         {
-            texture = Texture;
+            Texture = texture;
             TilePosition = startTile;
             Position = new Vector2(TilePosition.X * TileMap.TileSize, TilePosition.Y * TileMap.TileSize);
             //setto la pos iniziale del player dimensionandolo alla tile
         }
-        public void Update(TileMap map,KeyboardState keyboardstate)
+        public void Update(TileMap map, KeyboardState keyboardstate, GameTime gameTime)
         {
+            moveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (moveTimer < moveCooldown)
+                return; // troppo presto per muoversi
             Point targetTile = TilePosition; // tile di destinazione inizialmente uguale alla tile attuale
 
             // Controllo input per il movimento
@@ -34,6 +39,7 @@ namespace PoopManLibrary.Entities
             {
                 TilePosition = targetTile; // aggiorno la posizione del giocatore
                 Position = new Vector2(TilePosition.X * TileMap.TileSize, TilePosition.Y * TileMap.TileSize); // aggiorno la posizione in pixel
+                moveTimer = 0f; // reset cooldown
             }
         }
     }

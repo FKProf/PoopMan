@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Free texture packer v0.6.7 http://free-tex-packer.com
+Format:
+n  => name
+x  => x pos
+y  => y pos
+w  => width
+h  => height
+pX => x pos of the pivot point
+pY => y pos of the pivot point
+oX => x-corner offset
+oY => y-corner offset
+oW => original width
+oH => original height
+r => 'y' if sprite is rotated-->
+<TextureAtlas imagePath="Tileset.png" width="400" height="200" scale="1" format="RGBA8888">
+  <sprite n="gnd0.png" x="10" y="10" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="gnd1.png" x="10" y="62" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="gnd2.png" x="10" y="114" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="grass0.png" x="62" y="10" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="grass1.png" x="62" y="62" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="grass2.png" x="62" y="114" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="wall0.png" x="114" y="10" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="wall1.png" x="114" y="62" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="wall2.png" x="114" y="114" w="32" h="32" pX="0.5" pY="0.5"/>
+</TextureAtlas>

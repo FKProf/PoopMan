@@ -6,53 +6,57 @@ namespace PoopManLibrary.World
 {
     public class TileMap
     {
+        private TileAtlas atlas;
         public const int TileSize = 32;//Dimensione di ogni tile in pixel
         private TileType[,] map;//Matrice che rappresenta la mappa dei tile
+        private string[,] tileVariant; // quale variante usare per ogni tile
 
-        private Texture2D pixel; // texture 1x1 per debug
-
-        public TileMap(Texture2D pixel, int rows = 15, int cols = 13)//pixel per debug, piu avanti da cambiare con texture
+        public TileMap(TileAtlas atlas, int rows = 15, int cols = 13)
         {
-            this.pixel = pixel;
+            this.atlas = atlas;
 
             map = new TileType[rows, cols];
+            tileVariant = new string[rows, cols];
 
-            // Generazione automatica
+            Random rand = new Random();
+
             for (int y = 0; y < rows; y++)
             {
-                for (int x = 0; x < cols; x++)//tengo y e scorro x
+                for (int x = 0; x < cols; x++)
                 {
-                    // Perimetro = Wall
+                    // DECIDI IL TIPO DI TILE
                     if (y == 0 || y == rows - 1 || x == 0 || x == cols - 1)
                         map[y, x] = TileType.Wall;
-                    // Muri interni alternati (griglia)
                     else if (y % 2 == 0 && x % 2 == 0)
                         map[y, x] = TileType.Wall;
-                    // Altri tile = Breakable o Empty casuale
                     else
-                        map[y, x] = (Random.Shared.Next(2) == 0) ? TileType.Breakable : TileType.Empty;
+                        map[y, x] = (rand.Next(2) == 0) ? TileType.Breakable : TileType.Empty;
+
+                    // ASSEGNA LA VARIANTE CORRISPONDENTE (questo è il pezzo di codice)
+                    tileVariant[y, x] = map[y, x] switch
+                    {
+                        TileType.Wall => "wall" + rand.Next(3),
+                        TileType.Breakable => "breakable" + rand.Next(3),
+                        _ => "empty" + rand.Next(3)   // qui va il nome dei tile camminabili presenti nell'XML
+                    };
                 }
             }
+
+            // Assicurati che l'angolo in alto a sinistra sia camminabile
+            map[1, 1] = TileType.Empty;
+            tileVariant[1, 1] = "empty0"; // variante iniziale
         }
         public void Draw(SpriteBatch spriteBatch)
         {
-            // Disegna la mappa dei tile usando il pixel colorato per debug
             for (int y = 0; y < map.GetLength(0); y++)
             {
                 for (int x = 0; x < map.GetLength(1); x++)
                 {
-                    Color color = map[y, x] switch
-                    {
-                        TileType.Wall => Color.Gray,
-                        TileType.Breakable => Color.SaddleBrown,
-                        _ => Color.Black
-                    };
+                    string tileName = tileVariant[y, x]; // prendi la variante scelta
+                    Rectangle sourceRect = atlas.GetTile(tileName); // rettangolo nel PNG
+                    Rectangle destRect = new Rectangle(x * TileSize, y * TileSize, TileSize, TileSize);
 
-                    spriteBatch.Draw(
-                        pixel,
-                        new Rectangle(x * TileSize, y * TileSize, TileSize, TileSize),
-                        color
-                    );
+                    spriteBatch.Draw(atlas.Texture, destRect, sourceRect, Color.White);
                 }
             }
         }

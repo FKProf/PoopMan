@@ -4,9 +4,11 @@
   <Platform>Windows</Platform>
   <Config />
   <SourceFiles>
-    <File>C:/Users/fkpro/Documents/INFO/PoopMan/PoopMan/Content/image/character/death-front.png</File>
+    <File>C:/Users/stefa/PoopMan/PoopMan/Content/image/character/mineratlas.png</File>
+    <File>C:/Users/stefa/PoopMan/PoopMan/Content/image/Tile/TilesetImage.png</File>
   </SourceFiles>
   <DestFiles>
+    <File xsi:nil="true" />
     <File xsi:nil="true" />
   </DestFiles>
 </SourceFileCollection>

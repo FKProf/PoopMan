@@ -1,0 +1,16 @@
+<TextureAtlas imagePath="Tileset.png" width="400" height="200" scale="1" format="RGBA8888">
+  <!-- breackable -->
+  <sprite n="breakable0.png" x="10" y="10" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="breakable1.png" x="10" y="62" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="breakable2.png" x="10" y="114" w="32" h="32" pX="0.5" pY="0.5"/>
+
+  <!-- camminabile -->
+  <sprite n="empty0.png" x="62" y="10" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="empty1.png" x="62" y="62" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="empty2.png" x="62" y="114" w="32" h="32" pX="0.5" pY="0.5"/>
+
+  <!-- Muri -->
+  <sprite n="wall0.png" x="114" y="10" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="wall1.png" x="114" y="62" w="32" h="32" pX="0.5" pY="0.5"/>
+  <sprite n="wall2.png" x="114" y="114" w="32" h="32" pX="0.5" pY="0.5"/>
+</TextureAtlas>
