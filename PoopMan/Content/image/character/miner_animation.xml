@@ -8,5 +8,47 @@
 		<Region Name ="idle_back2" X="64" Y="0" Width="32" Height="32"/>
 		<Region Name ="idle_back3" X="96" Y="0" Width="32" Height="32"/>
 
+		<!--idle front-->
+		<Region Name ="idle_front0" X="160" Y="0" Width="32" Height="32"/>
+		<Region Name ="idle_front1" X="192" Y="0" Width="32" Height="32"/>
+		<Region Name ="idle_front2" X="224" Y="0" Width="32" Height="32"/>
+		<Region Name ="idle_front3" X="256" Y="0" Width="32" Height="32"/>
+
+		<!--idle left-->
+		<Region Name ="idle_left0" X="0" Y="32" Width="32" Height="32"/>
+		<Region Name ="idle_left1" X="32" Y="32" Width="32" Height="32"/>
+		<Region Name ="idle_left2" X="64" Y="32" Width="32" Height="32"/>
+		<Region Name ="idle_left3" X="96" Y="32" Width="32" Height="32"/>
+
+		<!--idle right-->
+		<Region Name ="idle_right0" X="160" Y="32" Width="32" Height="32"/>
+		<Region Name ="idle_right1" X="192" Y="32" Width="32" Height="32"/>
+		<Region Name ="idle_right2" X="224" Y="32" Width="32" Height="32"/>
+		<Region Name ="idle_right3" X="256" Y="32" Width="32" Height="32"/>
+
+		<!-- walk back-->
+		<Region Name ="walk_back0" X="0" Y="64" Width="32" Height="32"/>
+		<Region Name ="walk_back1" X="32" Y="64" Width="32" Height="32"/>
+		<Region Name ="walk_back2" X="64" Y="64" Width="32" Height="32"/>
+		<Region Name ="walk_back3" X="96" Y="64" Width="32" Height="32"/>
+
+		<!-- walk front-->
+		<Region Name ="walk_front0" X="160" Y="64" Width="32" Height="32"/>
+		<Region Name ="walk_front1" X="192" Y="64" Width="32" Height="32"/>
+		<Region Name ="walk_front2" X="224" Y="64" Width="32" Height="32"/>
+		<Region Name ="walk_front3" X="256" Y="64" Width="32" Height="32"/>
+
+		<!-- walk left-->
+		<Region Name ="walk_left0" X="0" Y="96" Width="32" Height="32"/>
+		<Region Name ="walk_left1" X="32" Y="96" Width="32" Height="32"/>
+		<Region Name ="walk_left2" X="64" Y="96" Width="32" Height="32"/>
+		<Region Name ="walk_left3" X="96" Y="96" Width="32" Height="32"/>
+
+		<!-- walk right-->
+		<Region Name ="walk_right0" X="160" Y="96" Width="32" Height="32"/>
+		<Region Name ="walk_right1" X="192" Y="96" Width="32" Height="32"/>
+		<Region Name ="walk_right2" X="224" Y="96" Width="32" Height="32"/>
+		<Region Name ="walk_right3" X="256" Y="96" Width="32" Height="32"/>
+
 	</Regions>
 </CharacterDefinition>	

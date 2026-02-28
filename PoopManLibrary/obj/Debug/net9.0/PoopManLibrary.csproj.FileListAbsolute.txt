@@ -37,3 +37,6 @@ C:\Users\pietro delledonne\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrar
 C:\Users\pietro delledonne\PoopMan\PoopManLibrary\obj\Debug\net9.0\refint\PoopManLibrary.dll
 C:\Users\pietro delledonne\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.pdb
 C:\Users\pietro delledonne\PoopMan\PoopManLibrary\obj\Debug\net9.0\ref\PoopManLibrary.dll
+C:\Users\fkpro\OneDrive\Documents\info\C#\FKProf\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.dll
+C:\Users\fkpro\OneDrive\Documents\info\C#\FKProf\PoopMan\PoopManLibrary\obj\Debug\net9.0\refint\PoopManLibrary.dll
+C:\Users\fkpro\OneDrive\Documents\info\C#\FKProf\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.pdb

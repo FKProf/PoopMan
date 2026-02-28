@@ -1,0 +1,13 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\PoopMan",
+    "\\PoopManLibrary",
+    "\\PoopManLibrary\\Entities",
+    "\\PoopMan\\Content",
+    "\\PoopMan\\Content\\image",
+    "\\PoopMan\\Content\\image\\character"
+  ],
+  "SelectedNode": "\\PoopManLibrary\\Entities\\Player.cs",
+  "PreviewInSolutionExplorer": false
+}

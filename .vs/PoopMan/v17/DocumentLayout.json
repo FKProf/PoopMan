@@ -1,22 +1,18 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\pietro delledonne\\PoopMan\\",
+  "WorkspaceRootPath": "C:\\Users\\fkpro\\OneDrive\\Documents\\info\\C#\\FKProf\\PoopMan\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{27556F98-B2E9-4489-9C87-607DB58537BF}|PoopMan\\PoopMan.csproj|c:\\users\\pietro delledonne\\poopman\\poopman\\content\\image\\character\\miner.png||{177559E0-D141-11D0-92DF-00A0C9138C45}",
-      "RelativeMoniker": "D:0:0:{27556F98-B2E9-4489-9C87-607DB58537BF}|PoopMan\\PoopMan.csproj|solutionrelative:poopman\\content\\image\\character\\miner.png||{177559E0-D141-11D0-92DF-00A0C9138C45}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\fkpro\\OneDrive\\Documents\\info\\C#\\FKProf\\PoopMan\\PoopManLibrary\\Entities\\Player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:PoopManLibrary\\Entities\\Player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{27556F98-B2E9-4489-9C87-607DB58537BF}|PoopMan\\PoopMan.csproj|c:\\users\\pietro delledonne\\poopman\\poopman\\content\\image\\character\\miner_animation.xml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
-      "RelativeMoniker": "D:0:0:{27556F98-B2E9-4489-9C87-607DB58537BF}|PoopMan\\PoopMan.csproj|solutionrelative:poopman\\content\\image\\character\\miner_animation.xml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\fkpro\\OneDrive\\Documents\\info\\C#\\FKProf\\PoopMan\\PoopMan\\Content\\image\\character\\miner_animation.xml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:PoopMan\\Content\\image\\character\\miner_animation.xml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{27556F98-B2E9-4489-9C87-607DB58537BF}|PoopMan\\PoopMan.csproj|c:\\users\\pietro delledonne\\poopman\\poopman\\game1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{27556F98-B2E9-4489-9C87-607DB58537BF}|PoopMan\\PoopMan.csproj|solutionrelative:poopman\\game1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}|PoopManLibrary\\PoopManLibrary.csproj|c:\\users\\pietro delledonne\\poopman\\poopmanlibrary\\entities\\player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}|PoopManLibrary\\PoopManLibrary.csproj|solutionrelative:poopmanlibrary\\entities\\player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\fkpro\\OneDrive\\Documents\\info\\C#\\FKProf\\PoopMan\\PoopMan\\Game1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:PoopMan\\Game1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -26,12 +22,8 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 6,
+          "SelectedChildIndex": 7,
           "Children": [
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
-            },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{b1ce3aef-c78d-49ee-b72b-ec1fbc908313}"
@@ -42,11 +34,15 @@
             },
             {
               "$type": "Bookmark",
-              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
             },
             {
               "$type": "Bookmark",
-              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+              "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
             },
             {
               "$type": "Bookmark",
@@ -54,38 +50,26 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "miner.png - PNG [320x256, 32 bit, PNG]",
-              "DocumentMoniker": "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\Content\\image\\character\\miner.png",
-              "RelativeDocumentMoniker": "PoopMan\\Content\\image\\character\\miner.png",
-              "ToolTip": "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\Content\\image\\character\\miner.png - PNG [320x256, 32 bit, PNG]",
-              "RelativeToolTip": "PoopMan\\Content\\image\\character\\miner.png - PNG [320x256, 32 bit, PNG]",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001533|",
-              "WhenOpened": "2026-02-28T11:22:57.18Z",
-              "EditorCaption": " - PNG [320x256, 32 bit, PNG]"
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 1,
               "Title": "miner_animation.xml",
-              "DocumentMoniker": "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\Content\\image\\character\\miner_animation.xml",
+              "DocumentMoniker": "C:\\Users\\fkpro\\OneDrive\\Documents\\info\\C#\\FKProf\\PoopMan\\PoopMan\\Content\\image\\character\\miner_animation.xml",
               "RelativeDocumentMoniker": "PoopMan\\Content\\image\\character\\miner_animation.xml",
-              "ToolTip": "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\Content\\image\\character\\miner_animation.xml",
+              "ToolTip": "C:\\Users\\fkpro\\OneDrive\\Documents\\info\\C#\\FKProf\\PoopMan\\PoopMan\\Content\\image\\character\\miner_animation.xml",
               "RelativeToolTip": "PoopMan\\Content\\image\\character\\miner_animation.xml",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAiAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAADIAAABFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003576|",
               "WhenOpened": "2026-02-28T11:22:37.475Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 0,
               "Title": "Player.cs",
-              "DocumentMoniker": "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\Entities\\Player.cs",
+              "DocumentMoniker": "C:\\Users\\fkpro\\OneDrive\\Documents\\info\\C#\\FKProf\\PoopMan\\PoopManLibrary\\Entities\\Player.cs",
               "RelativeDocumentMoniker": "PoopManLibrary\\Entities\\Player.cs",
-              "ToolTip": "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\Entities\\Player.cs",
+              "ToolTip": "C:\\Users\\fkpro\\OneDrive\\Documents\\info\\C#\\FKProf\\PoopMan\\PoopManLibrary\\Entities\\Player.cs",
               "RelativeToolTip": "PoopManLibrary\\Entities\\Player.cs",
-              "ViewState": "AgIAAEEAAAAAAAAAAAAmwL8AAAANAAAAAAAAAA==",
+              "ViewState": "AgIAABsAAAAAAAAAAAAAADcAAAAtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-02-22T15:50:08.36Z",
               "EditorCaption": ""
@@ -94,11 +78,11 @@
               "$type": "Document",
               "DocumentIndex": 2,
               "Title": "Game1.cs",
-              "DocumentMoniker": "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\Game1.cs",
+              "DocumentMoniker": "C:\\Users\\fkpro\\OneDrive\\Documents\\info\\C#\\FKProf\\PoopMan\\PoopMan\\Game1.cs",
               "RelativeDocumentMoniker": "PoopMan\\Game1.cs",
-              "ToolTip": "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\Game1.cs",
+              "ToolTip": "C:\\Users\\fkpro\\OneDrive\\Documents\\info\\C#\\FKProf\\PoopMan\\PoopMan\\Game1.cs",
               "RelativeToolTip": "PoopMan\\Game1.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAC0AAAAOAAAAAAAAAA==",
+              "ViewState": "AgIAACcAAAAAAAAAAAAAAC0AAAAOAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-01-31T17:57:11.452Z",
               "EditorCaption": ""
