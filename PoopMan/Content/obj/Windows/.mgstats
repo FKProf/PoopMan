@@ -1,5 +1,1 @@
 Source File,Dest File,Processor Type,Content Type,Source File Size,Dest File Size,Build Seconds
-"C:/Users/stefa/PoopMan/PoopMan/Content/image/character/character-definition.xml","C:\Users\stefa\PoopMan\PoopMan\Content\bin\Windows\image/character/character-definition.xml","CopyItem","File",3931,3931,0,0013742
-"C:/Users/stefa/PoopMan/PoopMan/Content/image/character/mineratlas.png","C:/Users/stefa/PoopMan/PoopMan/Content/bin/Windows/image/character/mineratlas.xnb","TextureProcessor","Texture2DContent",15817,196693,0,0994652
-"C:/Users/stefa/PoopMan/PoopMan/Content/image/Tile/TilesetAtlas.xml","C:\Users\stefa\PoopMan\PoopMan\Content\bin\Windows\image/Tile/TilesetAtlas.xml","CopyItem","File",1148,1148,0,0016155
-"C:/Users/stefa/PoopMan/PoopMan/Content/image/Tile/TilesetImage.png","C:/Users/stefa/PoopMan/PoopMan/Content/bin/Windows/image/Tile/TilesetImage.xnb","TextureProcessor","Texture2DContent",7637,320085,0,0134952

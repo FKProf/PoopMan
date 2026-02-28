@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CharacterDefinition>
+	<Texture>image/character/miner.png</Texture>
+	<Regions>
+		<!-- idle back-->
+		<Region Name ="idle_back0" X="0" Y="0" Width="32" Height="32"/>
+		<Region Name ="idle_back1" X="32" Y="0" Width="32" Height="32"/>
+		<Region Name ="idle_back2" X="64" Y="0" Width="32" Height="32"/>
+		<Region Name ="idle_back3" X="96" Y="0" Width="32" Height="32"/>
+
+	</Regions>
+</CharacterDefinition>	

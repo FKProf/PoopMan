@@ -4,8 +4,8 @@
   <Platform>Windows</Platform>
   <Config />
   <SourceFiles>
-    <File>C:/Users/stefa/PoopMan/PoopMan/Content/image/character/mineratlas.png</File>
-    <File>C:/Users/stefa/PoopMan/PoopMan/Content/image/Tile/TilesetImage.png</File>
+    <File>C:/Users/pietro delledonne/PoopMan/PoopMan/Content/image/character/mineratlas.png</File>
+    <File>C:/Users/pietro delledonne/PoopMan/PoopMan/Content/image/Tile/TilesetImage.png</File>
   </SourceFiles>
   <DestFiles>
     <File xsi:nil="true" />

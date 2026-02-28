@@ -13,10 +13,7 @@
 
 #---------------------------------- Content ---------------------------------#
 
-#begin image/character/character-definition.xml
-/copy:image/character/character-definition.xml
-
-#begin image/character/mineratlas.png
+#begin image/character/miner_ win_tof_death.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -26,7 +23,22 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:image/character/mineratlas.png
+/build:image/character/miner_ win_tof_death.png
+
+#begin image/character/miner_animation.xml
+/copy:image/character/miner_animation.xml
+
+#begin image/character/miner.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:image/character/miner.png
 
 #begin image/Tile/TilesetAtlas.xml
 /copy:image/Tile/TilesetAtlas.xml

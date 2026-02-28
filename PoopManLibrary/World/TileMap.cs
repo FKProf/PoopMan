@@ -11,7 +11,7 @@ namespace PoopManLibrary.World
         private TileType[,] map;//Matrice che rappresenta la mappa dei tile
         private string[,] tileVariant; // quale variante usare per ogni tile
 
-        public TileMap(TileAtlas atlas, int rows = 15, int cols = 13)
+        public TileMap(TileAtlas atlas, int rows = 50, int cols = 40)
         {
             this.atlas = atlas;
 

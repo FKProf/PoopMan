@@ -1,24 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\stefa\\PoopMan\\PoopMan\\PoopMan.csproj": {}
+    "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\PoopMan.csproj": {}
   },
   "projects": {
-    "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
+    "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+        "projectUniqueName": "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
         "projectName": "PoopManLibrary",
-        "projectPath": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
-        "packagesPath": "C:\\Users\\stefa\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\obj\\",
+        "projectPath": "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+        "packagesPath": "C:\\Users\\pietro delledonne\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\stefa\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Users\\pietro delledonne\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -76,21 +72,17 @@
         }
       }
     },
-    "C:\\Users\\stefa\\PoopMan\\PoopMan\\PoopMan.csproj": {
+    "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\PoopMan.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\stefa\\PoopMan\\PoopMan\\PoopMan.csproj",
+        "projectUniqueName": "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\PoopMan.csproj",
         "projectName": "PoopMan",
-        "projectPath": "C:\\Users\\stefa\\PoopMan\\PoopMan\\PoopMan.csproj",
-        "packagesPath": "C:\\Users\\stefa\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\stefa\\PoopMan\\PoopMan\\obj\\",
+        "projectPath": "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\PoopMan.csproj",
+        "packagesPath": "C:\\Users\\pietro delledonne\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\stefa\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Users\\pietro delledonne\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -104,8 +96,8 @@
           "net9.0-windows7.0": {
             "targetAlias": "net9.0-windows",
             "projectReferences": {
-              "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
-                "projectPath": "C:\\Users\\stefa\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj"
+              "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
+                "projectPath": "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj"
               }
             }
           }
