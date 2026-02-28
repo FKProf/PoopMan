@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\PoopMan.csproj": {}
+    "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\PoopMan.csproj": {}
   },
   "projects": {
-    "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
+    "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+        "projectUniqueName": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
         "projectName": "PoopManLibrary",
-        "projectPath": "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
-        "packagesPath": "C:\\Users\\pietro delledonne\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\obj\\",
+        "projectPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+        "packagesPath": "C:\\Users\\fkpro\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\pietro delledonne\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\fkpro\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -68,21 +68,21 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.309/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.311/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\PoopMan.csproj": {
+    "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\PoopMan.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\PoopMan.csproj",
+        "projectUniqueName": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\PoopMan.csproj",
         "projectName": "PoopMan",
-        "projectPath": "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\PoopMan.csproj",
-        "packagesPath": "C:\\Users\\pietro delledonne\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\pietro delledonne\\PoopMan\\PoopMan\\obj\\",
+        "projectPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\PoopMan.csproj",
+        "packagesPath": "C:\\Users\\fkpro\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\pietro delledonne\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\fkpro\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -96,8 +96,8 @@
           "net9.0-windows7.0": {
             "targetAlias": "net9.0-windows",
             "projectReferences": {
-              "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
-                "projectPath": "C:\\Users\\pietro delledonne\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj"
+              "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
+                "projectPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj"
               }
             }
           }
@@ -146,7 +146,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.309/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.311/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

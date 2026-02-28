@@ -40,3 +40,16 @@ C:\Users\pietro delledonne\PoopMan\PoopManLibrary\obj\Debug\net9.0\ref\PoopManLi
 C:\Users\fkpro\OneDrive\Documents\info\C#\FKProf\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.dll
 C:\Users\fkpro\OneDrive\Documents\info\C#\FKProf\PoopMan\PoopManLibrary\obj\Debug\net9.0\refint\PoopManLibrary.dll
 C:\Users\fkpro\OneDrive\Documents\info\C#\FKProf\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.pdb
+C:\Users\fkpro\Source\Repos\PoopMan\PoopManLibrary\bin\Debug\net9.0\PoopManLibrary.deps.json
+C:\Users\fkpro\Source\Repos\PoopMan\PoopManLibrary\bin\Debug\net9.0\PoopManLibrary.dll
+C:\Users\fkpro\Source\Repos\PoopMan\PoopManLibrary\bin\Debug\net9.0\PoopManLibrary.pdb
+C:\Users\fkpro\Source\Repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.csproj.AssemblyReference.cache
+C:\Users\fkpro\Source\Repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\fkpro\Source\Repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.AssemblyInfoInputs.cache
+C:\Users\fkpro\Source\Repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.AssemblyInfo.cs
+C:\Users\fkpro\Source\Repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.csproj.CoreCompileInputs.cache
+C:\Users\fkpro\Source\Repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.sourcelink.json
+C:\Users\fkpro\Source\Repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.dll
+C:\Users\fkpro\Source\Repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\refint\PoopManLibrary.dll
+C:\Users\fkpro\Source\Repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.pdb
+C:\Users\fkpro\Source\Repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\ref\PoopManLibrary.dll

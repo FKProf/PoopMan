@@ -55,7 +55,7 @@ namespace PoopMan
             map = new TileMap(atlas, 23, 39);
 
             // Player
-            string playerXml = Path.Combine(Content.RootDirectory, "image", "character", "character-definition.xml");
+            string playerXml = Path.Combine(Content.RootDirectory, "image", "character", "miner_animation.xml");
             player = new Player(new Point(1,1), playerXml, Content);
         }
 

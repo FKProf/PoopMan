@@ -27,6 +27,7 @@ namespace PoopManLibrary.Entities
 
         private Dictionary<string, List<Rectangle>> animations = new();
         private string currentAnimation = "idle_front";
+        private List<Rectangle> currentAnimationFrames;
 
         private enum PlayerState
         {
@@ -59,7 +60,6 @@ namespace PoopManLibrary.Entities
             string texturePath = doc.Root.Element("Texture").Value;
             texture = content.Load<Texture2D>(texturePath);
 
-            // Carica tutte le animazioni e frame
             var temp = new Dictionary<string, List<(int frame, Rectangle rect)>>();
 
             foreach (var region in doc.Root.Element("Regions").Elements("Region"))
@@ -70,8 +70,22 @@ namespace PoopManLibrary.Entities
                 int w = int.Parse(region.Attribute("Width").Value);
                 int h = int.Parse(region.Attribute("Height").Value);
 
-                string animationName = fullName.Substring(0, fullName.LastIndexOf('_'));
-                int frameNumber = int.Parse(fullName.Substring(fullName.LastIndexOf('_') + 1)) - 1;
+                // Find where the frame number starts (last sequence of digits)
+                int frameNumberStart = fullName.Length;
+                while (frameNumberStart > 0 && char.IsDigit(fullName[frameNumberStart - 1]))
+                {
+                    frameNumberStart--;
+                }
+
+                if (frameNumberStart >= fullName.Length || frameNumberStart == 0)
+                    continue;
+
+                string animationName = fullName.Substring(0, frameNumberStart);
+                // Remove trailing separators
+                animationName = animationName.TrimEnd('_', '-', ' ');
+
+                // NO -1 here! Frame numbers start from 0 in XML
+                int frameNumber = int.Parse(fullName.Substring(frameNumberStart));
 
                 if (!temp.ContainsKey(animationName))
                     temp[animationName] = new List<(int, Rectangle)>();
@@ -86,15 +100,7 @@ namespace PoopManLibrary.Entities
                     .OrderBy(f => f.frame)
                     .Select(f => f.rect)
                     .ToList();
-
-                Console.WriteLine($"Animazione: {pair.Key}, Frame count: {animations[pair.Key].Count}");
-                for (int i = 0; i < animations[pair.Key].Count; i++)
-                {
-                    var r = animations[pair.Key][i];
-                    Console.WriteLine($"\tFrame {i}: X:{r.X} Y:{r.Y} W:{r.Width} H:{r.Height}");
-                }
             }
-            Console.WriteLine("=== FINE CARICAMENTO ANIMAZIONI ===");
         }
 
         public void Update(TileMap map, KeyboardState keyboard, GameTime gameTime)
@@ -109,10 +115,31 @@ namespace PoopManLibrary.Entities
                 bool left = keyboard.IsKeyDown(Keys.A);
                 bool right = keyboard.IsKeyDown(Keys.D);
 
-                if (right) { nextTile.X++; state = PlayerState.WalkRight; moved = true; }
-                else if (left) { nextTile.X--; state = PlayerState.WalkLeft; moved = true; }
-                else if (up) { nextTile.Y--; state = PlayerState.WalkBack; moved = true; }
-                else if (down) { nextTile.Y++; state = PlayerState.WalkFront; moved = true; }
+                // Priority-based input (prevents diagonal movement)
+                if (right)
+                {
+                    nextTile.X++;
+                    state = PlayerState.WalkRight;
+                    moved = true;
+                }
+                else if (left)
+                {
+                    nextTile.X--;
+                    state = PlayerState.WalkLeft;
+                    moved = true;
+                }
+                else if (up)
+                {
+                    nextTile.Y--;
+                    state = PlayerState.WalkBack;
+                    moved = true;
+                }
+                else if (down)
+                {
+                    nextTile.Y++;
+                    state = PlayerState.WalkFront;
+                    moved = true;
+                }
 
                 if (moved && map.IsWalkable(nextTile))
                 {
@@ -170,35 +197,25 @@ namespace PoopManLibrary.Entities
 
         private void UpdateAnimation(GameTime gameTime)
         {
-            string newAnimation = state switch
-            {
-                PlayerState.WalkFront => "walk_front",
-                PlayerState.WalkBack => "walk_back",
-                PlayerState.WalkLeft => "walk_left",
-                PlayerState.WalkRight => "walk_right",
-                PlayerState.IdleFront => "idle_front",
-                PlayerState.IdleBack => "idle_back",
-                PlayerState.IdleLeft => "idle_left",
-                PlayerState.IdleRight => "idle_right",
-                _ => "idle_front"
-            };
+            string newAnimation = GetAnimationName(state);
 
-            // Se l'animazione è cambiata, reset frame
             if (newAnimation != currentAnimation)
             {
                 currentAnimation = newAnimation;
+                currentAnimationFrames = animations.GetValueOrDefault(newAnimation);
                 currentFrame = 0;
                 animationTimer = 0f;
             }
-            // Aggiorna frame
-            animationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (animations.ContainsKey(currentAnimation) && animations[currentAnimation].Count > 1)
+
+            // Use cached reference for performance
+            if (currentAnimationFrames?.Count > 1)
             {
+                animationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 if (animationTimer >= animationSpeed)
                 {
                     animationTimer = 0f;
                     currentFrame++;
-                    if (currentFrame >= animations[currentAnimation].Count)
+                    if (currentFrame >= currentAnimationFrames.Count)
                         currentFrame = 0;
                 }
             }
@@ -210,9 +227,24 @@ namespace PoopManLibrary.Entities
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            if (!animations.ContainsKey(currentAnimation)) return;
-            Rectangle source = animations[currentAnimation][currentFrame];
-            spriteBatch.Draw(texture, Position, source, Color.White);
+            if (animations.TryGetValue(currentAnimation, out var frames)
+                && currentFrame < frames.Count)
+            {
+                spriteBatch.Draw(texture, Position, frames[currentFrame], Color.White);
+            }
         }
+
+        private string GetAnimationName(PlayerState state) => state switch
+        {
+            PlayerState.WalkFront => "walk_front",
+            PlayerState.WalkBack => "walk_back",
+            PlayerState.WalkLeft => "walk_left",
+            PlayerState.WalkRight => "walk_right",
+            PlayerState.IdleFront => "idle_front",
+            PlayerState.IdleBack => "idle_back",
+            PlayerState.IdleLeft => "idle_left",
+            PlayerState.IdleRight => "idle_right",
+            _ => "idle_front"
+        };
     }
 }
