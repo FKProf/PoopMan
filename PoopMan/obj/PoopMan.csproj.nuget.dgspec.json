@@ -1,15 +1,15 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\PoopMan.csproj": {}
+    "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopMan\\PoopMan.csproj": {}
   },
   "projects": {
-    "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
+    "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+        "projectUniqueName": "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
         "projectName": "PoopManLibrary",
-        "projectPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+        "projectPath": "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
         "packagesPath": "C:\\Users\\fkpro\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\obj\\",
         "projectStyle": "PackageReference",
@@ -72,14 +72,14 @@
         }
       }
     },
-    "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\PoopMan.csproj": {
+    "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopMan\\PoopMan.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\PoopMan.csproj",
+        "projectUniqueName": "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopMan\\PoopMan.csproj",
         "projectName": "PoopMan",
-        "projectPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\PoopMan.csproj",
+        "projectPath": "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopMan\\PoopMan.csproj",
         "packagesPath": "C:\\Users\\fkpro\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\obj\\",
+        "outputPath": "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopMan\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\fkpro\\AppData\\Roaming\\NuGet\\NuGet.Config",
@@ -96,8 +96,8 @@
           "net9.0-windows7.0": {
             "targetAlias": "net9.0-windows",
             "projectReferences": {
-              "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
-                "projectPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj"
+              "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
+                "projectPath": "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj"
               }
             }
           }

@@ -1,15 +1,15 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {}
+    "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {}
   },
   "projects": {
-    "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
+    "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+        "projectUniqueName": "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
         "projectName": "PoopManLibrary",
-        "projectPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+        "projectPath": "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
         "packagesPath": "C:\\Users\\fkpro\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\obj\\",
         "projectStyle": "PackageReference",

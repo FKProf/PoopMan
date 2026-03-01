@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "KY/8FvMGQW8=",
+  "dgSpecHash": "Ke76q1BkqiA=",
   "success": true,
-  "projectFilePath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\PoopMan.csproj",
+  "projectFilePath": "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopMan\\PoopMan.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\fkpro\\.nuget\\packages\\microsoft.netcore.app\\2.1.30\\microsoft.netcore.app.2.1.30.nupkg.sha512",
     "C:\\Users\\fkpro\\.nuget\\packages\\microsoft.netcore.dotnetapphost\\2.1.30\\microsoft.netcore.dotnetapphost.2.1.30.nupkg.sha512",

@@ -102,10 +102,13 @@ C:\Users\fkpro\OneDrive\Documents\info\C#\FKProf\PoopMan\PoopMan\obj\Debug\net9.
 C:\Users\fkpro\OneDrive\Documents\info\C#\FKProf\PoopMan\PoopMan\obj\Debug\net9.0-windows\PoopMan.dll
 C:\Users\fkpro\OneDrive\Documents\info\C#\FKProf\PoopMan\PoopMan\obj\Debug\net9.0-windows\refint\PoopMan.dll
 C:\Users\fkpro\OneDrive\Documents\info\C#\FKProf\PoopMan\PoopMan\obj\Debug\net9.0-windows\PoopMan.pdb
-C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\Tile\TilesetAtlas.xml
 C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\character\miner.xnb
 C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\character\miner_animation.xml
-C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\Tile\TilesetImage.xnb
+C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\bat.xnb
+C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\fxs\fxs.xnb
+C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\items\items.xnb
+C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\Tile\terrain.xnb
+C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\Tile\TilesetAtlas.xml
 C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\PoopMan.exe
 C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\PoopMan.deps.json
 C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\PoopMan.runtimeconfig.json
@@ -136,7 +139,3 @@ C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\obj\Debug\net9.0-windows\refint\Poop
 C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\obj\Debug\net9.0-windows\PoopMan.pdb
 C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\obj\Debug\net9.0-windows\PoopMan.genruntimeconfig.cache
 C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\obj\Debug\net9.0-windows\ref\PoopMan.dll
-C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\bat.xnb
-C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\fxs\fxs.xnb
-C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\items\items.xnb
-C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\Tile\terrain.xnb

@@ -18,7 +18,7 @@ namespace PoopMan
         private TileMap map;
         private Player player;
 
-        public Game1() : base("PoopMan", 1247, 735, false)
+        public Game1() : base("PoopMan", 1248, 735, false)
         {
         }
 
@@ -32,27 +32,27 @@ namespace PoopMan
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
             // Carica il Tileset PNG
-            Texture2D tilesetTexture = Content.Load<Texture2D>("image/Tile/TilesetImage"); // senza .png
+            Texture2D tilesetTexture = Content.Load<Texture2D>("image/Tile/terrain"); // senza .png
 
-            // Crea l’atlas
+            // Crea l'atlas
             atlas = new TileAtlas(tilesetTexture);
 
-            // Leggi l’XML del Tileset e registra i tile
+            // Leggi l'XML del Tileset e registra i tile
             string xmlPath = Path.Combine(Content.RootDirectory, "image","Tile","TilesetAtlas.xml");
             XDocument doc = XDocument.Load(xmlPath);
-            foreach (var sprite in doc.Descendants("sprite"))
+            foreach (var sprite in doc.Descendants("Region"))
             {
-                string name = sprite.Attribute("n").Value.Replace(".png", "");
-                int x = (int)sprite.Attribute("x");
-                int y = (int)sprite.Attribute("y");
-                int w = (int)sprite.Attribute("w");
-                int h = (int)sprite.Attribute("h");
+                string name = sprite.Attribute("Name").Value;
+                int x = (int)sprite.Attribute("X");
+                int y = (int)sprite.Attribute("Y");
+                int w = (int)sprite.Attribute("Width");
+                int h = (int)sprite.Attribute("Height");
 
                 atlas.AddTile(name, x, y, w, h);
             }
 
-            // Crea la mappa usando l’atlas con varianti casuali
-            map = new TileMap(atlas, 23, 39);
+            // Crea la mappa per il livello 1
+            map = new TileMap(atlas, 23, 39, level: 1);
 
             // Player
             string playerXml = Path.Combine(Content.RootDirectory, "image", "character", "miner_animation.xml");

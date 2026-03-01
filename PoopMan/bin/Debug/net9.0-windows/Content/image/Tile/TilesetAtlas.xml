@@ -1,16 +1,40 @@
-<TextureAtlas imagePath="Tileset.png" width="400" height="200" scale="1" format="RGBA8888">
-  <!-- breackable -->
-  <sprite n="breakable0.png" x="10" y="10" w="32" h="32" pX="0.5" pY="0.5"/>
-  <sprite n="breakable1.png" x="10" y="62" w="32" h="32" pX="0.5" pY="0.5"/>
-  <sprite n="breakable2.png" x="10" y="114" w="32" h="32" pX="0.5" pY="0.5"/>
+<?xml version="1.0" encoding="utf-8"?>
+<TilesetAtlas>
+	<Texture>image/Tile/terrain</Texture>
+	<Regions>
 
-  <!-- camminabile -->
-  <sprite n="empty0.png" x="62" y="10" w="32" h="32" pX="0.5" pY="0.5"/>
-  <sprite n="empty1.png" x="62" y="62" w="32" h="32" pX="0.5" pY="0.5"/>
-  <sprite n="empty2.png" x="62" y="114" w="32" h="32" pX="0.5" pY="0.5"/>
+		<!-- woods type -->
+		<Region Name="plank0" X="0" Y="0" Width="32" Height="32"/>
+		<Region Name="plank1" X="32" Y="0" Width="32" Height="32"/>
+		<Region Name="log0" X="64" Y="0" Width="32" Height="32"/>
+		<Region Name="log1" X="96" Y="0" Width="32" Height="32"/>
 
-  <!-- Muri -->
-  <sprite n="wall0.png" x="114" y="10" w="32" h="32" pX="0.5" pY="0.5"/>
-  <sprite n="wall1.png" x="114" y="62" w="32" h="32" pX="0.5" pY="0.5"/>
-  <sprite n="wall2.png" x="114" y="114" w="32" h="32" pX="0.5" pY="0.5"/>
-</TextureAtlas>
+		<!-- glass type -->
+		<Region Name="glass0" X="128" Y="0" Width="32" Height="32"/>
+		<Region Name="glass1" X="160" Y="0" Width="32" Height="32"/>
+		<Region Name="glass2" X="192" Y="0" Width="32" Height="32"/>
+
+		<!-- sand -->
+		<Region Name="sand0" X="224" Y="0" Width="32" Height="32"/>
+
+		<!-- grounds  -->
+		<Region Name="ground0" X="0" Y="32" Width="32" Height="32"/>
+		<Region Name="ground1" X="32" Y="32" Width="32" Height="32"/>
+		<Region Name="ground2" X="64" Y="32" Width="32" Height="32"/>
+
+		<!-- stone -->
+		<Region Name="stone0" X="96" Y="32" Width="32" Height="32"/>
+		<Region Name="stone1" X="128" Y="32" Width="32" Height="32"/>
+		<Region Name="stone2" X="160" Y="32" Width="32" Height="32"/>
+
+		<!-- water -->
+		<Region Name="water0" X="192" Y="32" Width="32" Height="32"/>
+		<Region Name="water1" X="224" Y="32" Width="32" Height="32"/>
+
+		<!-- walls -->
+		<Region Name="wall0" X="0" Y="64" Width="32" Height="32"/>
+		<Region Name="wall1" X="32" Y="64" Width="32" Height="32"/>
+		<Region Name="wall2" X="64" Y="64" Width="32" Height="32"/>
+		
+	</Regions>
+</TilesetAtlas>
