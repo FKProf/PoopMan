@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<XnaContent xmlns:ns="Microsoft.Xna.Framework">
+	<Texture>image/items/items</Texture>
+	<Regions>
+
+		<!-- Chest -->
+		<Region Name ="chest0" X="0" Y="0" Width="32" Height="32"/>
+		<Region Name ="chest1" X="32" Y="0" Width="32" Height="32"/>
+		<Region Name ="chest2" X="64" Y="0" Width="32" Height="32"/>
+		<Region Name ="chest3" X="0" Y="32" Width="32" Height="32"/>
+		<Region Name ="chest4" X="32" Y="32" Width="32" Height="32"/>
+		<Region Name ="chest5" X="64" Y="32" Width="32" Height="32"/>
+		<Region Name ="chest6" X="0" Y="64" Width="32" Height="32"/>
+		<Region Name ="chest7" X="32" Y="64" Width="32" Height="32"/>
+		<Region Name ="chest8" X="64" Y="64" Width="32" Height="32"/>
+
+		<!-- Big TNT -->
+		<Region Name ="big_tnt0" X="96" Y="0" Width="32" Height="32"/>
+		<Region Name ="big_tnt1" X="128" Y="0" Width="32" Height="32"/>
+		<Region Name ="big_tnt2" X="160" Y="0" Width="32" Height="32"/>
+		<Region Name ="big_tnt3" X="96" Y="32" Width="32" Height="32"/>
+		<Region Name ="big_tnt4" X="128" Y="32" Width="32" Height="32"/>
+		<Region Name ="big_tnt5" X="160" Y="32" Width="32" Height="32"/>
+		<Region Name ="big_tnt6" X="96" Y="64" Width="32" Height="32"/>
+		<Region Name ="big_tnt7" X="128" Y="64" Width="32" Height="32"/>
+		<Region Name ="big_tnt8" X="160" Y="64" Width="32" Height="32"/>
+
+		<!-- Small TNT-->
+		<Region Name ="small_tnt0" X="0" Y="96" Width="32" Height="32"/>
+		<Region Name ="small_tnt1" X="32" Y="96" Width="32" Height="32"/>
+		<Region Name ="small_tnt2" X="64" Y="96" Width="32" Height="32"/>
+		<Region Name ="small_tnt3" X="0" Y="128" Width="32" Height="32"/>
+		<Region Name ="small_tnt4" X="32" Y="128" Width="32" Height="32"/>
+		<Region Name ="small_tnt5" X="64" Y="128" Width="32" Height="32"/>
+		<Region Name ="small_tnt6" X="0" Y="160" Width="32" Height="32"/>
+		<Region Name ="small_tnt7" X="32" Y="160" Width="32" Height="32"/>
+		<Region Name ="small_tnt8" X="64" Y="160" Width="32" Height="32"/>
+
+		<!-- Key -->
+		<Region Name ="key0" X="96" Y="96" Width="32" Height="32"/>
+		<Region Name ="key1" X="128" Y="96" Width="32" Height="32"/>
+		<Region Name ="key2" X="160" Y="96" Width="32" Height="32"/>
+		<Region Name ="key3" X="96" Y="128" Width="32" Height="32"/>
+		<Region Name ="key4" X="128" Y="128" Width="32" Height="32"/>
+		<Region Name ="key5" X="160" Y="128" Width="32" Height="32"/>
+		<Region Name ="key6" X="96" Y="160" Width="32" Height="32"/>
+		<Region Name ="key7" X="128" Y="160" Width="32" Height="32"/>
+		<Region Name ="key8" X="160" Y="160" Width="32" Height="32"/>
+
+		<!-- Door with key-->
+		<Region Name ="door_key" X="0" Y="192" Width="32" Height="32"/>
+		<Region Name ="door_no_key" X="32" Y="192" Width="32" Height="32"/>
+		<Region Name ="door_open" X="64" Y="192" Width="32" Height="32"/>
+		<Region Name ="door_open_key" X="96" Y="192" Width="32" Height="32"/>
+
+		<!-- Door without key-->
+		<Region Name ="door_no_key" X="0" Y="224" Width="32" Height="32"/>
+		<Region Name ="door_open_no_key" X="32" Y="224" Width="32" Height="32"/>
+		<Region Name ="door_open_key" X="64" Y="224" Width="32" Height="32"/>
+		<Region Name ="door_no_key" X="96" Y="224" Width="32" Height="32"/>
+		
+		
+	</Regions>
+</XnaContent>
