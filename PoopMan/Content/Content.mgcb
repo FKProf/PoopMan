@@ -40,6 +40,16 @@
 /processorParam:TextureFormat=Color
 /build:image/enemies/bat.png
 
+#begin image/enemies/bat.xml
+/importer:XmlImporter
+/processor:PassThroughProcessor
+/build:image/enemies/bat.xml
+
+#begin image/fxs/fsx.xml
+/importer:XmlImporter
+/processor:PassThroughProcessor
+/build:image/fxs/fsx.xml
+
 #begin image/fxs/fxs.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -63,6 +73,11 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:image/items/items.png
+
+#begin image/items/items.xml
+/importer:XmlImporter
+/processor:PassThroughProcessor
+/build:image/items/items.xml
 
 #begin image/Tile/terrain.png
 /importer:TextureImporter

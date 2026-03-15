@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BatDefinition>
+	<Texture>image/enemies/bat</Texture>
+	<Region>
+
+		<!-- Dead -->
+		<Region Name="dead0" X="0" Y="0" Width="32" Height="32"/>
+		<Region Name="dead1" X="32" Y="0" Width="32" Height="32"/>
+		<Region Name="dead2" X="64" Y="0" Width="32" Height="32"/>
+		<Region Name="dead3" X="96" Y="0" Width="32" Height="32"/>
+		<Region Name="dead4" X="128" Y="0" Width="32" Height="32"/>
+
+		<!-- back -->
+		<Region Name="fly_back0" X="160" Y="0" Width="32" Height="32"/>
+		<Region Name="fly_back1" X="192" Y="0" Width="32" Height="32"/>
+		<Region Name="fly_back2" X="224" Y="0" Width="32" Height="32"/>
+
+		<!-- front -->
+		<Region Name="fly_front0" X="0" Y="32" Width="32" Height="32"/>
+		<Region Name="fly_front1" X="32" Y="32" Width="32" Height="32"/>
+		<Region Name="fly_front2" X="64" Y="32" Width="32" Height="32"/>
+
+		<!-- left -->
+		<Region Name="fly_left0" X="96" Y="32" Width="32" Height="32"/>
+		<Region Name="fly_left1" X="128" Y="32" Width="32" Height="32"/>
+		<Region Name="fly_left2" X="160" Y="32" Width="32" Height="32"/>
+
+		<!-- left angle -->
+		<Region Name="left_angle0" X="0" Y="64" Width="32" Height="32"/>
+		<Region Name="left_angle1" X="32" Y="64" Width="32" Height="32"/>
+		<Region Name="left_angle2" X="64" Y="64" Width="32" Height="32"/>
+
+		<!-- right angle -->
+		<Region Name="right_angle0" X="96" Y="64" Width="32" Height="32"/>
+		<Region Name="right_angle1" X="128" Y="64" Width="32" Height="32"/>
+		<Region Name="right_angle2" X="160" Y="64" Width="32" Height="32"/>
+
+		<!-- right -->
+		<Region Name="fly_right0" X="0" Y="96" Width="32" Height="32"/>
+		<Region Name="fly_right1" X="32" Y="96" Width="32" Height="32"/>
+		<Region Name="fly_right2" X="64" Y="96" Width="32" Height="32"/>
+
+	</Region>
+</BatDefinition>

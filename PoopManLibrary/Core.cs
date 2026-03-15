@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using PoopManLibrary.Input;
 
 namespace PoopManLibrary;
 
@@ -24,6 +25,8 @@ public class Core : Game
 
     // Gets the content manager to load game assets.
     public static ContentManager ContentManager { get; private set; }
+
+    public static InputManager Input { get; private set; }
 
     public Core (string Title, int width, int height, bool fullScreen)
     {
@@ -50,8 +53,9 @@ public class Core : Game
 
     protected override void Initialize()
     {
+        base.Initialize();
         GraphicsDevice = base.GraphicsDevice;
         SpriteBatch = new SpriteBatch(GraphicsDevice);
-        base.Initialize();
+        Input = new InputManager();
     }
 }
