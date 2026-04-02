@@ -4,11 +4,11 @@
   <Platform>Windows</Platform>
   <Config />
   <SourceFiles>
-    <File>C:/Users/fkpro/Source/Repos/PoopMan/PoopMan/Content/image/character/miner.png</File>
-    <File>C:/Users/fkpro/Source/Repos/PoopMan/PoopMan/Content/image/enemies/bat.png</File>
-    <File>C:/Users/fkpro/Source/Repos/PoopMan/PoopMan/Content/image/fxs/fxs.png</File>
-    <File>C:/Users/fkpro/Source/Repos/PoopMan/PoopMan/Content/image/items/items.png</File>
-    <File>C:/Users/fkpro/Source/Repos/PoopMan/PoopMan/Content/image/Tile/terrain.png</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/character/miner.png</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/enemies/bat.png</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/fxs/fxs.png</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/items/items.png</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/Tile/terrain.png</File>
   </SourceFiles>
   <DestFiles>
     <File xsi:nil="true" />

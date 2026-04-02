@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "UFWg8nikC3w=",
+  "dgSpecHash": "sQYTMH57pXU=",
   "success": true,
-  "projectFilePath": "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+  "projectFilePath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\fkpro\\.nuget\\packages\\monogame.framework.desktopgl\\3.8.4.1\\monogame.framework.desktopgl.3.8.4.1.nupkg.sha512",
     "C:\\Users\\fkpro\\.nuget\\packages\\monogame.library.openal\\1.24.3.2\\monogame.library.openal.1.24.3.2.nupkg.sha512",

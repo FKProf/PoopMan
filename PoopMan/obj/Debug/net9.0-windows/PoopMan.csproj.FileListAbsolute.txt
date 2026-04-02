@@ -139,3 +139,6 @@ C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\obj\Debug\net9.0-windows\refint\Poop
 C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\obj\Debug\net9.0-windows\PoopMan.pdb
 C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\obj\Debug\net9.0-windows\PoopMan.genruntimeconfig.cache
 C:\Users\fkpro\Source\Repos\PoopMan\PoopMan\obj\Debug\net9.0-windows\ref\PoopMan.dll
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\bat.xml
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\fxs\fsx.xml
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\items\items.xml

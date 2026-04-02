@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {}
+    "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {}
   },
   "projects": {
-    "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
+    "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+        "projectUniqueName": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
         "projectName": "PoopManLibrary",
-        "projectPath": "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+        "projectPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
         "packagesPath": "C:\\Users\\fkpro\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\fkpro\\Source\\Repos\\PoopMan\\PoopManLibrary\\obj\\",
+        "outputPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\fkpro\\AppData\\Roaming\\NuGet\\NuGet.Config",
@@ -40,7 +40,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.200"
       },
       "frameworks": {
         "net9.0": {
@@ -68,7 +68,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.311/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
