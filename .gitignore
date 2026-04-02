@@ -26,3 +26,6 @@ bld/
 *.vsp
 *.vspx
 *.sap
+
+# Local game data
+/ini/
