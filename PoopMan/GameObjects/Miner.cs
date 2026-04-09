@@ -462,11 +462,11 @@ namespace PoopMan.GameObjects
         {
             var potentialNextDirection = Vector2.Zero;
 
-            if (GameController.HoldUp()) potentialNextDirection = -Vector2.UnitY;
-            else if (GameController.HoldDown()) potentialNextDirection = Vector2.UnitY;
-            else if (GameController.HoldLeft()) potentialNextDirection = -Vector2.UnitX;
-            else if (GameController.HoldRight()) potentialNextDirection = Vector2.UnitX;
-            Console.WriteLine("PorcoDio");
+            if (GameController.HoldUp()) potentialNextDirection = -Vector2.UnitY; 
+            if (GameController.HoldDown()) potentialNextDirection = Vector2.UnitY;
+            if (GameController.HoldLeft()) potentialNextDirection = -Vector2.UnitX;
+            if (GameController.HoldRight()) potentialNextDirection = Vector2.UnitX;
+            
             if (potentialNextDirection == Vector2.Zero)
             {
                 _inputBuffer.Clear();
