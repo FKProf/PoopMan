@@ -1,0 +1,66 @@
+# PoopMan
+
+PoopMan is a 2D tile-based game built with MonoGame on .NET 9.  
+The game generates a procedural map, loads tile and character atlases from XML metadata, and allows player movement on walkable tiles.
+
+## Tech Stack
+
+- .NET 9 (`net9.0-windows` for the game executable)
+- C# 13
+- MonoGame 3.8 (`MonoGame.Framework.WindowsDX`)
+
+## Solution Structure
+
+- `PoopMan/` — game executable and main loop (`Game1`)
+- `PoopManLibrary/` — shared game logic
+  - `Core` — game bootstrap (window, graphics, content)
+  - `World/TileMap` — procedural map generation and rendering
+  - `Entities/Player` — movement, animation state, and drawing
+  - `Graphics/TileAtlas` — atlas registration and source rectangle lookup
+
+## Current Features
+
+- Procedural tile map generation (`23 x 39` tiles, tile size `32`)
+- Safe spawn area around `(1,1)`
+- Random water zones and nearby sand transitions
+- Grid-based movement with smooth interpolation
+- Collision on non-walkable tiles (`Wall`, `Breakable`, water variants)
+- Directional idle/walk animations loaded from XML
+
+## Controls
+
+- `W` / `A` / `S` / `D` — move
+- `Esc` — exit game
+
+> Movement is non-diagonal (priority-based input).
+
+## Assets
+
+Runtime-loaded content:
+
+- Tile texture: `Content/image/Tile/terrain`
+- Tile atlas metadata: `Content/image/Tile/TilesetAtlas.xml`
+- Character animation metadata: `Content/image/character/miner_animation.xml`
+
+Ensure these assets are included in the content pipeline output.
+
+## Build and Run
+
+1. Open the solution in Visual Studio 2022.
+2. Restore NuGet packages.
+3. Set `PoopMan` as Startup Project.
+4. Build and run.
+
+## Notes
+
+- The game currently initializes with level `1` in `Game1`.
+- Rendering uses `SamplerState.PointClamp` to prevent texture bleeding.
+- `TileMap.IsWalkable` currently allows movement only on `Empty` tiles.
+
+## Roadmap
+
+- Add bomb/interactions for breakable tiles
+- Add win/lose game states
+- Add enemies and pathfinding
+- Add level progression and deterministic map seeds
+- Add audio and visual effects polish

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TilesetAtlas>
+	<Texture>image/Tile/terrain</Texture>
+	<Regions>
+
+		<!-- woods type -->
+		<Region Name="plank0" X="0" Y="0" Width="32" Height="32"/>
+		<Region Name="plank1" X="32" Y="0" Width="32" Height="32"/>
+		<Region Name="log0" X="64" Y="0" Width="32" Height="32"/>
+		<Region Name="log1" X="96" Y="0" Width="32" Height="32"/>
+
+		<!-- glass type -->
+		<Region Name="glass0" X="128" Y="0" Width="32" Height="32"/>
+		<Region Name="glass1" X="160" Y="0" Width="32" Height="32"/>
+		<Region Name="glass2" X="192" Y="0" Width="32" Height="32"/>
+
+		<!-- sand -->
+		<Region Name="sand0" X="224" Y="0" Width="32" Height="32"/>
+
+		<!-- grounds  -->
+		<Region Name="ground0" X="0" Y="32" Width="32" Height="32"/>
+		<Region Name="ground1" X="32" Y="32" Width="32" Height="32"/>
+		<Region Name="ground2" X="64" Y="32" Width="32" Height="32"/>
+
+		<!-- stone -->
+		<Region Name="stone0" X="96" Y="32" Width="32" Height="32"/>
+		<Region Name="stone1" X="128" Y="32" Width="32" Height="32"/>
+		<Region Name="stone2" X="160" Y="32" Width="32" Height="32"/>
+
+		<!-- water -->
+		<Region Name="water0" X="192" Y="32" Width="32" Height="32"/>
+		<Region Name="water1" X="224" Y="32" Width="32" Height="32"/>
+
+		<!-- walls -->
+		<Region Name="wall0" X="0" Y="64" Width="32" Height="32"/>
+		<Region Name="wall1" X="32" Y="64" Width="32" Height="32"/>
+		<Region Name="wall2" X="64" Y="64" Width="32" Height="32"/>
+		
+	</Regions>
+</TilesetAtlas>

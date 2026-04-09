@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<fsxDefinitio>
+	<Texture>image/fxs/fxs</Texture>
+	<Region>
+
+		<!-- explosion -->
+		<Region Name="explosion0" X="0" Y="0" Width="32" Height="32" />
+		<Region Name="explosion1" X="32" Y="0" Width="32" Height="32" />
+		<Region Name="explosion2" X="64" Y="0" Width="32" Height="32" />
+		<Region Name="explosion3" X="0" Y="32" Width="32" Height="32" />
+		<Region Name="explosion4" X="32" Y="32" Width="32" Height="32" />
+		<Region Name="explosion5" X="64" Y="32" Width="32" Height="32" />
+
+		<!-- sparks -->
+		<Region Name="spark0" X="0" Y="64" Width="32" Height="32"/>
+		<Region Name="spark1" X="16" Y="64" Width="32" Height="32" />
+		
+	</Region>
+</fsxDefinitio>
