@@ -1,20 +1,24 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\PoopMan.csproj": {}
+    "C:\\Users\\stefa\\INF_PROJECT\\PorcoDio\\PoopMan\\PoopMan.csproj": {}
   },
   "projects": {
-    "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
+    "C:\\Users\\stefa\\INF_PROJECT\\PorcoDio\\PoopManLibrary\\PoopManLibrary.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
+        "projectUniqueName": "C:\\Users\\stefa\\INF_PROJECT\\PorcoDio\\PoopManLibrary\\PoopManLibrary.csproj",
         "projectName": "PoopManLibrary",
-        "projectPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj",
-        "packagesPath": "C:\\Users\\fkpro\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\obj\\",
+        "projectPath": "C:\\Users\\stefa\\INF_PROJECT\\PorcoDio\\PoopManLibrary\\PoopManLibrary.csproj",
+        "packagesPath": "C:\\Users\\stefa\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\stefa\\INF_PROJECT\\PorcoDio\\PoopManLibrary\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\fkpro\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\stefa\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -40,7 +44,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "10.0.200"
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net9.0": {
@@ -68,21 +72,25 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.309/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\PoopMan.csproj": {
+    "C:\\Users\\stefa\\INF_PROJECT\\PorcoDio\\PoopMan\\PoopMan.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\PoopMan.csproj",
+        "projectUniqueName": "C:\\Users\\stefa\\INF_PROJECT\\PorcoDio\\PoopMan\\PoopMan.csproj",
         "projectName": "PoopMan",
-        "projectPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\PoopMan.csproj",
-        "packagesPath": "C:\\Users\\fkpro\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopMan\\obj\\",
+        "projectPath": "C:\\Users\\stefa\\INF_PROJECT\\PorcoDio\\PoopMan\\PoopMan.csproj",
+        "packagesPath": "C:\\Users\\stefa\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\stefa\\INF_PROJECT\\PorcoDio\\PoopMan\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\fkpro\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\stefa\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -96,8 +104,8 @@
           "net9.0-windows7.0": {
             "targetAlias": "net9.0-windows",
             "projectReferences": {
-              "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj": {
-                "projectPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\PoopManLibrary.csproj"
+              "C:\\Users\\stefa\\INF_PROJECT\\PorcoDio\\PoopManLibrary\\PoopManLibrary.csproj": {
+                "projectPath": "C:\\Users\\stefa\\INF_PROJECT\\PorcoDio\\PoopManLibrary\\PoopManLibrary.csproj"
               }
             }
           }
@@ -112,7 +120,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "10.0.200"
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net9.0-windows7.0": {
@@ -146,7 +154,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.309/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
