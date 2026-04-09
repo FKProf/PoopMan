@@ -1,9 +1,1 @@
 Source File,Dest File,Processor Type,Content Type,Source File Size,Dest File Size,Build Seconds
-"C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/character/miner.png","C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/bin/Windows/Content/image/character/miner.xnb","TextureProcessor","Texture2DContent",14180,163925,0.067952
-"C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/enemies/bat.png","C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/bin/Windows/Content/image/enemies/bat.xnb","TextureProcessor","Texture2DContent",7269,131157,0.0052264
-"C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/enemies/bat.xml","C:\Users\fkpro\source\repos\PoopMan\PoopMan\Content\bin\Windows\Content\image/enemies/bat.xml","CopyItem","File",1828,1828,0.0017564
-"C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/fxs/fsx.xml","C:\Users\fkpro\source\repos\PoopMan\PoopMan\Content\bin\Windows\Content\image/fxs/fsx.xml","CopyItem","File",720,720,0.0005218
-"C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/fxs/fxs.png","C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/bin/Windows/Content/image/fxs/fxs.xnb","TextureProcessor","Texture2DContent",4496,36949,0.0022345
-"C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/items/items.png","C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/bin/Windows/Content/image/items/items.xnb","TextureProcessor","Texture2DContent",10844,196693,0.0034638
-"C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/items/items.xml","C:\Users\fkpro\source\repos\PoopMan\PoopMan\Content\bin\Windows\Content\image/items/items.xml","CopyItem","File",3277,3277,0.0004986
-"C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/Tile/terrain.png","C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/bin/Windows/Content/image/Tile/terrain.xnb","TextureProcessor","Texture2DContent",10801,98389,0.0043122

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PipelineBuildEvent xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <SourceFile>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/enemies/bat.png</SourceFile>
-  <SourceTime>2026-02-28T23:06:37.2913929+01:00</SourceTime>
-  <DestFile>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/bin/Windows/Content/image/enemies/bat.xnb</DestFile>
-  <DestTime>2026-04-02T23:26:16.4770375+02:00</DestTime>
+  <SourceFile>C:/Users/stefa/Downloads/PoopMan-master/PoopMan-main/PoopMan/Content/image/enemies/bat.png</SourceFile>
+  <SourceTime>2026-04-09T15:38:59.8813108+02:00</SourceTime>
+  <DestFile>C:/Users/stefa/Downloads/PoopMan-master/PoopMan-main/PoopMan/Content/bin/Windows/Content/image/enemies/bat.xnb</DestFile>
+  <DestTime>2026-04-09T15:47:01.1078989+02:00</DestTime>
   <Importer>TextureImporter</Importer>
   <ImporterTime>2025-10-20T16:25:32+02:00</ImporterTime>
   <Processor>TextureProcessor</Processor>
