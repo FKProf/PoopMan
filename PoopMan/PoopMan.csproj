@@ -18,7 +18,4 @@
   <ItemGroup>
     <ProjectReference Include="..\PoopManLibrary\PoopManLibrary.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Content\font\" />
-  </ItemGroup>
 </Project>

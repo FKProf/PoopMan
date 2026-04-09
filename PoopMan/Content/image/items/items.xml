@@ -54,10 +54,10 @@
 		<Region Name ="door_open_key" X="96" Y="192" Width="32" Height="32"/>
 
 		<!-- Door without key-->
-		<Region Name ="door_closed0" X="0" Y="224" Width="32" Height="32"/>
-		<Region Name ="door_opening0" X="32" Y="224" Width="32" Height="32"/>
-		<Region Name ="door_opening1" X="64" Y="224" Width="32" Height="32"/>
-		<Region Name ="door_opening2" X="96" Y="224" Width="32" Height="32"/>
+		<Region Name ="door_no_key" X="0" Y="224" Width="32" Height="32"/>
+		<Region Name ="door_open_no_key" X="32" Y="224" Width="32" Height="32"/>
+		<Region Name ="door_open_key" X="64" Y="224" Width="32" Height="32"/>
+		<Region Name ="door_no_key" X="96" Y="224" Width="32" Height="32"/>
 		
 		
 	</Regions>
