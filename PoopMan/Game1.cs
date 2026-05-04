@@ -120,8 +120,8 @@ namespace PoopMan
             string minerXml = Path.Combine(Content.RootDirectory, "image", "character", "miner_animation.xml");
             miner = new Miner(currentSpawnPoint, minerXml, Content);
 
-            // Quando il miner perde una vita, respawna in un angolo casuale con invincibilità
-            miner.NeedsRespawn += (s, e) => miner.Respawn(currentSpawnPoint);
+            // Quando il miner perde una vita, respawna dove è morto
+            miner.NeedsRespawn += (s, e) => miner.Respawn(miner.TilePosition);
 
             LoadItemAnimations();
             SpawnBats(currentLevel);
@@ -158,7 +158,18 @@ namespace PoopMan
                     }
                 }
             }
-
+            // ── Collisione esplosione ↔ miner ───────────────────────────────────
+            if (!miner.IsDead && !miner.IsInvincible)
+            {
+                foreach (var explosionTile in miner.ActiveExplosionTiles)
+                {
+                    if (miner.TilePosition == explosionTile)
+                    {
+                        miner.Kill();
+                        break;
+                    }
+                }
+            }
             // ── Miner su item droppato ──────────────────────────────────────
             if (!miner.IsDead && !miner.IsInvincible)
             {

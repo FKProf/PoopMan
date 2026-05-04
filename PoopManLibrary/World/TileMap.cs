@@ -266,9 +266,14 @@ namespace PoopManLibrary.World
             if (map[tile.Y, tile.X] != TileType.Breakable) return;
 
             map[tile.Y, tile.X] = TileType.Empty;
-            tileVariant[tile.Y, tile.X] = "glass" + new Random().Next(3);
 
-            TileBroken?.Invoke(tile); // Notifica Game1 per gestire eventuali drop
+            // Se adiacente all'acqua diventa sabbia, altrimenti vetro
+            if (HasAdjacentWater(tile.Y, tile.X, map.GetLength(0), map.GetLength(1)))
+                tileVariant[tile.Y, tile.X] = "sand0";
+            else
+                tileVariant[tile.Y, tile.X] = "glass" + new Random().Next(3);
+
+            TileBroken?.Invoke(tile);
         }
     }
 }

@@ -21,6 +21,9 @@ public class GameController
     public static bool HoldLeft() => p_keyboard.IsKeyDown(Keys.Left) || p_keyboard.IsKeyDown(Keys.A);
     public static bool HoldRight() => p_keyboard.IsKeyDown(Keys.Right) || p_keyboard.IsKeyDown(Keys.D);
 
+    public static bool MiniBomb() => p_keyboard.WasKeyJustPressed(Keys.F);
+    public static bool BigBomb() => p_keyboard.WasKeyJustPressed(Keys.G);
+
     public static bool Pause() => p_keyboard.WasKeyJustPressed(Keys.Escape);
     public static bool Action() => p_keyboard.WasKeyJustPressed(Keys.Enter);
 }

@@ -8,6 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography.Xml;
+using System.Windows.Forms;
 using System.Xml.Linq;
 
 namespace PoopMan.GameObjects
@@ -87,7 +89,6 @@ namespace PoopMan.GameObjects
         private Dictionary<string, List<Rectangle>> explosionAnimations = new();
 
         // ── Input mouse ──────────────────────────────────────────────────────
-        private MouseInfo mouse = new();
 
         /// <summary>
         /// Espone i tile attualmente colpiti da esplosioni attive.
@@ -314,10 +315,9 @@ namespace PoopMan.GameObjects
             }
 
             HandleInput();
-            mouse.Update();
-
+            
             // ── Piazzamento bomba piccola (click sinistro) ───────────────────
-            if (mouse.WasButtonJustPressed(MouseButton.Left))
+            if (GameController.MiniBomb())
             {
                 bool alreadyBombHere = bombs.Any(b =>
                 {
@@ -332,7 +332,7 @@ namespace PoopMan.GameObjects
                         bombTexture, bombAnimations, explosionTexture, explosionAnimations, false));
             }
             // ── Piazzamento bomba grande (click destro, se disponibile) ──────
-            else if (mouse.WasButtonJustPressed(MouseButton.Right) && bigBombCount > 0)
+            else if (GameController.BigBomb() && bigBombCount > 0)
             {
                 bool alreadyBombHere = bombs.Any(b =>
                 {
@@ -372,7 +372,8 @@ namespace PoopMan.GameObjects
         // ────────────────────────────────────────────────────────────────────
         // Gestisce il movimento tile-per-tile del miner consumando il buffer
         // di input e interpolando la posizione pixel.
-        // ────────────────────────────────────────────────────────────────────
+        // ───────────────────────────────────────────────────────────────────
+
         private void UpdateMovement(TileMap map, GameTime gameTime)
         {
             if (!isMoving)
@@ -462,11 +463,11 @@ namespace PoopMan.GameObjects
         {
             var potentialNextDirection = Vector2.Zero;
 
-            if (GameController.HoldUp()) potentialNextDirection = -Vector2.UnitY; 
+            if (GameController.HoldUp()) potentialNextDirection = -Vector2.UnitY;
             if (GameController.HoldDown()) potentialNextDirection = Vector2.UnitY;
             if (GameController.HoldLeft()) potentialNextDirection = -Vector2.UnitX;
             if (GameController.HoldRight()) potentialNextDirection = Vector2.UnitX;
-
+            
             if (potentialNextDirection == Vector2.Zero)
             {
                 _inputBuffer.Clear();
