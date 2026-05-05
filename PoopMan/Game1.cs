@@ -19,7 +19,7 @@ namespace PoopMan
         private SpriteBatch _spriteBatch;
         private SpriteFont scoreFont;           // Font per l'HUD
         private const int HudHeight = 32;       // Altezza in pixel della barra HUD superiore
-
+        private Texture2D minerHudTexture;
         // ── Mappa e personaggi ───────────────────────────────────────────────
         private TileAtlas atlas;
         private TileMap map;
@@ -62,8 +62,12 @@ namespace PoopMan
         private int itemAnimFrame = 0;          // Frame corrente animazione casse
 
         // ── Progressione livelli ─────────────────────────────────────────────
-        private int currentLevel = 1;
+        private int currentLevel = 0;
         private bool levelComplete = false;     // Flag sicuro per cambiare livello fuori dal foreach
+
+        // ── Sistema chiave (livello 5+) ──────────────────────────────────────
+        private HashSet<Point> keyTiles = new(); // Tile che droppano la chiave
+        private bool hasKey = false;
 
         // ────────────────────────────────────────────────────────────────────
         // Restituisce uno dei 4 angoli della mappa come punto di spawn casuale.
@@ -119,6 +123,7 @@ namespace PoopMan
             // Crea il miner in un angolo casuale
             string minerXml = Path.Combine(Content.RootDirectory, "image", "character", "miner_animation.xml");
             miner = new Miner(currentSpawnPoint, minerXml, Content);
+            minerHudTexture = Content.Load<Texture2D>("image/character/miner");
 
             // Quando il miner perde una vita, respawna dove è morto
             miner.NeedsRespawn += (s, e) => miner.Respawn(miner.TilePosition);
@@ -180,12 +185,28 @@ namespace PoopMan
                 if (droppedItems.TryGetValue(miner.TilePosition, out var item)
                     && !item.IsOpen && !item.JustSpawned)
                 {
-                    if (item.Type == "door" && !item.IsOpening)
-                        item.IsOpening = true;              // Avvia animazione apertura porta
+                    if (item.Type == "door")
+                    {
+                        // Dal livello 5 serve la chiave
+                        if (currentLevel >= 5 && !hasKey)
+                        {
+                            // Porta bloccata, non aprire
+                        }
+                        else if (!item.IsOpening)
+                        {
+                            item.IsOpening = true;
+                        }
+                    }
                     else if (item.Type == "chest_tnt")
                     {
                         item.IsOpen = true;
-                        miner.AddBigBomb();                 // Aggiunge una bomba grande all'inventario
+                        miner.AddBigBomb();
+                        droppedItems.Remove(miner.TilePosition);
+                    }
+                    else if (item.Type == "key")
+                    {
+                        item.IsOpen = true;
+                        hasKey = true;
                         droppedItems.Remove(miner.TilePosition);
                     }
                 }
@@ -278,12 +299,39 @@ namespace PoopMan
         {
             GraphicsDevice.Clear(Color.Black);
 
-            // ── HUD (senza offset) ──────────────────────────────────────────
+            // ── HUD (senza offset) ──────────────────────────────────────────────
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
+            // SCORE
             _spriteBatch.DrawString(scoreFont, $"SCORE: {score}", new Vector2(10, 8), Color.Yellow);
-            _spriteBatch.DrawString(scoreFont, $"VITE: {miner.Lives}", new Vector2(200, 8), Color.Red);
-            _spriteBatch.DrawString(scoreFont, $"BOMBE: {miner.BigBombCount}", new Vector2(400, 8), Color.Orange);
-            _spriteBatch.DrawString(scoreFont, $"LIVELLO: {currentLevel}", new Vector2(600, 8), Color.Cyan); // ← aggiunto
+
+            // VITE: icona miner ripetuta per ogni vita
+            Rectangle minerFrame = new Rectangle(128, 32, 32, 32); // idle_front0
+            for (int i = 0; i < miner.Lives; i++)
+                _spriteBatch.Draw(minerHudTexture, new Vector2(200 + i * 28, 0), minerFrame, Color.White, 0f,
+                    Vector2.Zero, 0.85f, SpriteEffects.None, 0f);
+
+            // BOMBE GRANDI: icona + quantità
+            Rectangle bigTntFrame = new Rectangle(96, 0, 32, 32); // big_tnt0
+            _spriteBatch.Draw(itemTexture, new Vector2(400, 0), bigTntFrame, Color.White, 0f,
+                Vector2.Zero, 0.85f, SpriteEffects.None, 0f);
+            _spriteBatch.DrawString(scoreFont, $"X {miner.BigBombCount}", new Vector2(430, 8), Color.Orange);
+
+            // LIVELLO
+            _spriteBatch.DrawString(scoreFont, $"LIVELLO: {currentLevel}", new Vector2(600, 8), Color.Cyan);
+
+            // CHIAVE: solo dal livello 5
+            if (currentLevel >= 5)
+            {
+                Rectangle keyFrame = new Rectangle(96, 96, 32, 32); // key0
+                if (hasKey)
+                    _spriteBatch.Draw(itemTexture, new Vector2(850, 0), keyFrame, Color.White, 0f,
+                        Vector2.Zero, 0.85f, SpriteEffects.None, 0f);
+                else
+                    _spriteBatch.Draw(itemTexture, new Vector2(850, 0), keyFrame, Color.Gray * 0.4f, 0f,
+                        Vector2.Zero, 0.85f, SpriteEffects.None, 0f);
+            }
+
             _spriteBatch.End();
             // ── Gioco (offset verso il basso di HudHeight pixel) ────────────
             var transform = Matrix.CreateTranslation(0, HudHeight, 0);
@@ -299,13 +347,25 @@ namespace PoopMan
 
                 if (item.Value.Type == "door")
                 {
-                    // Porta: mostra il frame di apertura se in animazione, altrimenti chiusa
-                    animKey = item.Value.IsOpening ? "door_opening" : "door_closed";
-                    frame = item.Value.IsOpening ? item.Value.OpeningFrame : 0;
+                    if (item.Value.IsOpening)
+                    {
+                        animKey = "door_key";       // animazione apertura con chiave
+                        frame = item.Value.OpeningFrame;
+                    }
+                    else
+                    {
+                        animKey = (currentLevel >= 5) ? "door_key_closed" : "door_closed";
+                        frame = 0;
+                    }
+                }
+                else if (item.Value.Type == "key")
+                {
+                    animKey = "key";
+                    frame = itemAnimFrame % (itemAnimations.ContainsKey("key")
+                             ? itemAnimations["key"].Count : 1);
                 }
                 else
                 {
-                    // Cassa: animazione ciclica
                     animKey = "chest";
                     frame = itemAnimFrame % (itemAnimations.ContainsKey("chest")
                              ? itemAnimations["chest"].Count : 1);
@@ -367,10 +427,18 @@ namespace PoopMan
 
         // ────────────────────────────────────────────────────────────────────
         // Chiamato da TileMap.TileBroken quando un tile breakable viene distrutto.
-        // Se il tile nascondeva una cassa, genera il drop appropriato.
+        // Se il tile nascondeva una cassa, genera il drop appropriato, e chiave.
         // ────────────────────────────────────────────────────────────────────
         private void HandleChestDrop(Point tile)
         {
+            // Drop chiave (livello 5+)
+            if (currentLevel >= 5 && keyTiles.Contains(tile))
+            {
+                keyTiles.Remove(tile);
+                droppedItems[tile] = new DroppedItem { Type = "key", IsOpen = false, JustSpawned = true };
+                return;
+            }
+
             if (!chestTiles.Contains(tile)) return;
             chestTiles.Remove(tile);
 
@@ -379,18 +447,16 @@ namespace PoopMan
 
             if (roll < 5)
             {
-                // 5% → cassa con TNT grande
                 droppedItems[tile] = new DroppedItem { Type = "chest_tnt", IsOpen = false };
             }
             else if (roll < 35)
             {
-                // 30% → spawna bat extra nel tile adiacente libero
                 string batXml = Path.Combine(Content.RootDirectory, "image", "enemies", "bat.xml");
                 Point[] neighbors = {
-                    new Point(tile.X + 1, tile.Y),
-                    new Point(tile.X - 1, tile.Y),
-                    new Point(tile.X, tile.Y + 1),
-                    new Point(tile.X, tile.Y - 1)
+                new Point(tile.X + 1, tile.Y),
+                new Point(tile.X - 1, tile.Y),
+                new Point(tile.X, tile.Y + 1),
+                new Point(tile.X, tile.Y - 1)
                 };
                 foreach (var n in neighbors)
                 {
@@ -399,7 +465,7 @@ namespace PoopMan
                         try
                         {
                             var newBat = new Bat(n, batXml, Content, map);
-                            newBat.SetInvincible(1.6f); // Protegge dall'esplosione corrente
+                            newBat.SetInvincible(1.6f);
                             bats.Add(newBat);
                         }
                         catch { }
@@ -407,18 +473,16 @@ namespace PoopMan
                     }
                 }
             }
-            // resto → niente
         }
 
         // ────────────────────────────────────────────────────────────────────
-        // Segna casualmente il 5% dei tile breakable come "casse nascoste".
+        // Segna casualmente il 5% dei tile breakable come "casse nascoste" e chiave dal livello 5 in poi.
         // ────────────────────────────────────────────────────────────────────
         private void InitChests()
         {
             Random rand = new Random();
             var breakableTiles = new List<Point>();
 
-            // Raccoglie tutti i breakable per le casse
             for (int y = 0; y < 23; y++)
                 for (int x = 0; x < 39; x++)
                 {
@@ -433,7 +497,18 @@ namespace PoopMan
                 if (rand.Next(100) < 40)
                     chestTiles.Add(tile);
 
-            // Spawna la porta direttamente su un tile walkable lontano dal miner
+            // Dal livello 5: sceglie UN breakable casuale che droppa la chiave (100%)
+            if (currentLevel >= 5)
+            {
+                hasKey = false;
+                var nonChestBreakables = breakableTiles.Where(t => !chestTiles.Contains(t)).ToList();
+                if (nonChestBreakables.Count > 0)
+                {
+                    Point keyTile = nonChestBreakables[rand.Next(nonChestBreakables.Count)];
+                    keyTiles.Add(keyTile);
+                }
+            }
+
             SpawnDoor();
         }
 
@@ -517,13 +592,13 @@ namespace PoopMan
             doorSpawned = false;
             droppedItems.Clear();
             chestTiles.Clear();
-            score += 500; // Bonus completamento livello
+            keyTiles.Clear(); 
+            hasKey = false;   
+            score += 500;
 
-            // Nuova mappa con tutti gli angoli liberi per il respawn
             map = new TileMap(atlas, 23, 39, level: currentLevel);
             map.TileBroken += HandleChestDrop;
 
-            // Reset completo del miner (posizione, bombe, invincibilità)
             miner.ResetForNewLevel(currentSpawnPoint);
 
             SpawnBats(currentLevel);
