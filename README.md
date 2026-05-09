@@ -1,7 +1,7 @@
 # PoopMan
 
-PoopMan is a 2D tile-based game built with MonoGame on .NET 9.  
-The game generates a procedural map, loads tile and character atlases from XML metadata, and allows player movement on walkable tiles.
+**PoopMan Miner** is a 2D tile-based action game built with MonoGame on .NET 9.  
+Place bombs to destroy breakable tiles, eliminate bat enemies, collect power-ups, and find the exit door to advance through procedurally-generated levels.
 
 ## Tech Stack
 
@@ -11,56 +11,115 @@ The game generates a procedural map, loads tile and character atlases from XML m
 
 ## Solution Structure
 
-- `PoopMan/` — game executable and main loop (`Game1`)
+- `PoopMan/` — game executable
+  - `Game1.cs` — window setup, fullscreen toggle, letterbox scaling
+  - `GameController.cs` — input abstraction (keyboard bindings)
+  - `Scenes/` — `TitleScene` (animated title screen), `GameScene` (gameplay loop)
+  - `GameObjects/` — `Miner` (player), `Bat` (enemy), `Bomb` (small & big)
+  - `UI/` — `GameHud` (score / HP / bombs / theme / level), `GameOverlay` (pause, game over, level flash)
 - `PoopManLibrary/` — shared game logic
-  - `Core` — game bootstrap (window, graphics, content)
-  - `World/TileMap` — procedural map generation and rendering
-  - `Entities/Player` — movement, animation state, and drawing
-  - `Graphics/TileAtlas` — atlas registration and source rectangle lookup
+  - `Core.cs` — game bootstrap (window, graphics, content, scene management)
+  - `Collision.cs` — circular hitbox system
+  - `Graphics/` — `Sprite`, `AnimatedSprite`, `TextureRegion`, `Animation`
+  - `Input/` — `InputManager`, `KeyboardInfo`, `MouseInfo`
+  - `Scenes/Scene.cs` — base scene class
+  - `World/` — `TileMap`, `TileAtlas`, `TileType`
 
 ## Current Features
 
-- Procedural tile map generation (`23 x 39` tiles, tile size `32`)
-- Safe spawn area around `(1,1)`
-- Random water zones and nearby sand transitions
-- Grid-based movement with smooth interpolation
-- Collision on non-walkable tiles (`Wall`, `Breakable`, water variants)
+### Map & Themes
+- Procedural tile map: `23 × 39` tiles at `32 px` each (base resolution `736 × 1248`)
+- Four visual themes that rotate every 3 levels: **Forest → Cave → Stone → Desert**
+- Tile types: `Wall` (indestructible), `Breakable` (destructible), `Empty` (walkable)
+- All four corners are always cleared for safe spawning
+
+### Player (Miner)
+- Grid-based movement with smooth pixel interpolation
 - Directional idle/walk animations loaded from XML
+- 3 lives; respawns in place with 2 s of blinking invincibility after each hit
+
+### Bombs
+- **Small bomb** (`Space`): fuse 2 s, explosion radius 1 tile per direction
+- **Big bomb** (`X`): fuse 2 s, explosion radius 2 tiles per direction
+- Explosions propagate orthogonally, break `Breakable` tiles, and stop at `Wall` tiles
+- Big bombs can be collected as chest drops
+
+### Enemies (Bat)
+- Spawn count: `1 + current level` bats per level
+- Movement AI: 55 % chance to chase the player, 45 % random
+- Smooth tile-to-tile interpolation at 130 px/s
+- Directional animations (`fly_front/back/left/right`, `idle`, `dead`)
+- Touching a bat or standing on an active explosion tile kills the miner
+
+### Chest System
+- ~40 % of breakable tiles hide a chest
+- Breaking a chest tile rolls a loot table:
+  - **5 %** — drop a big bomb power-up
+  - **30 %** — spawn a bat (temporarily invincible) from the tile
+  - **65 %** — nothing
+
+### Level Progression
+- A **door** spawns on every level; step into it to advance
+- From level 5 onward a **key** is hidden inside a breakable tile; the key must be collected before the door opens
+- Completing a level awards **+500 points**
+
+### Scoring
+- Kill 1 bat with a single explosion: **+100 pts**
+- Multi-kill (N bats, same explosion): `N × 25 + (N − 1) × 50` pts
+
+### HUD & UI
+- Top HUD bar: score, HP icons, big-bomb count, map theme, level, key indicator
+- **Pause overlay** (`Esc`)
+- **Game Over overlay** with final score (`R` / `Enter` to restart, `Esc` to title)
+- **Level flash** on completion (1.8 s, with theme name on every 3rd level)
+- **Title screen** with parallax scrolling clouds and key hints
+
+### Window & Rendering
+- Resizable window with **letterbox scaling** to maintain `4:3`-ish aspect ratio
+- `F11` toggles fullscreen
+- `SamplerState.PointClamp` throughout (no texture bleeding)
 
 ## Controls
 
-- `W` / `A` / `S` / `D` — move
-- `Esc` — exit game
+| Key | Action |
+|-----|--------|
+| `W` / `A` / `S` / `D` or Arrow keys | Move |
+| `Space` | Place small bomb |
+| `X` | Place big bomb (if available) |
+| `Esc` | Pause / back to title (game over) |
+| `Enter` | Start game (title) / restart (game over) |
+| `R` | Restart (game over screen) |
+| `F11` | Toggle fullscreen |
 
-> Movement is non-diagonal (priority-based input).
+> Movement is non-diagonal; input is buffered (up to 2 queued moves).
 
 ## Assets
 
-Runtime-loaded content:
+Runtime-loaded content (must be included in the MonoGame content pipeline):
 
-- Tile texture: `Content/image/Tile/terrain`
-- Tile atlas metadata: `Content/image/Tile/TilesetAtlas.xml`
-- Character animation metadata: `Content/image/character/miner_animation.xml`
-
-Ensure these assets are included in the content pipeline output.
+| Path | Description |
+|------|-------------|
+| `Content/image/Tile/terrain` | Tile spritesheet |
+| `Content/image/Tile/TilesetAtlas.xml` | Tile atlas metadata |
+| `Content/image/character/miner_animation.xml` | Miner animation metadata |
+| `Content/image/character/miner` | Miner HUD icon |
+| `Content/image/enemies/bat.xml` | Bat animation metadata |
+| `Content/image/items/items.xml` | Items / UI animation metadata |
+| `Content/image/backgound/1`, `2`, `3` | Title screen background layers |
+| `Content/image/fxs/` | Visual effect sprites |
+| `Content/font/Score` | Bitmap font used for all UI text |
 
 ## Build and Run
 
-1. Open the solution in Visual Studio 2022.
+1. Open `PoopMan.sln` in Visual Studio 2022.
 2. Restore NuGet packages.
-3. Set `PoopMan` as Startup Project.
-4. Build and run.
-
-## Notes
-
-- The game currently initializes with level `1` in `Game1`.
-- Rendering uses `SamplerState.PointClamp` to prevent texture bleeding.
-- `TileMap.IsWalkable` currently allows movement only on `Empty` tiles.
+3. Set `PoopMan` as the Startup Project.
+4. Build and run (`F5`).
 
 ## Roadmap
 
-- Add bomb/interactions for breakable tiles
-- Add win/lose game states
-- Add enemies and pathfinding
-- Add level progression and deterministic map seeds
-- Add audio and visual effects polish
+- Audio: sound effects and background music
+- Visual effects polish (particles, screen shake)
+- Deterministic map seeds for reproducible levels
+- Additional enemy types and pathfinding improvements
+- Win condition / ending screen beyond infinite level loop
