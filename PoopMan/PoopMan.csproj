@@ -20,5 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Content\font\" />
+    <Folder Include="UI\" />
   </ItemGroup>
 </Project>
