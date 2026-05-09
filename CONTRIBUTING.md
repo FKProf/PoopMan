@@ -11,7 +11,7 @@ Thanks for your interest in contributing to PoopMan.
 ## Development setup
 
 1. Install Visual Studio 2022 with .NET 9 support.
-2. Restore NuGet packages for `/home/runner/work/PoopMan/PoopMan/PoopMan.sln`.
+2. Restore NuGet packages for `PoopMan.sln`.
 3. Set `PoopMan` as the startup project.
 4. Build and run the game locally.
 
