@@ -10,19 +10,17 @@ using PoopManLibrary.World;
 
 namespace PoopMan.GameObjects
 {
-    internal class Bat
+    public class Bat
     {
-        // ── Posizione e movimento ────────────────────────────────────────────
-        public Point TilePosition;              // Tile attuale (aggiornato alla partenza)
-        public Vector2 Position;               // Posizione pixel interpolata
-        private Vector2 targetPosition;        // Pixel di destinazione del tile corrente
-        private float moveSpeed = 90f;         // Pixel al secondo
+        public Point TilePosition;
+        public Vector2 Position;
+        private Vector2 targetPosition;
+        private float moveSpeed = 130f;
         private bool isMoving = false;
 
-        // ── Animazione ───────────────────────────────────────────────────────
         private Texture2D texture;
         private float animationTimer = 0f;
-        private float animationSpeed = 0.12f;  // Secondi per frame (più veloce del miner)
+        private float animationSpeed = 0.12f;
         private int currentFrame = 0;
         private Dictionary<string, List<Rectangle>> animations = new();
         private string currentAnimation = "idle";
@@ -36,8 +34,11 @@ namespace PoopMan.GameObjects
         private Facing facing = Facing.Front;
 
         // ── Randomizzazione condivisa ────────────────────────────────────────
-        // Static per evitare seed identici con istanze create nello stesso ms
         private static readonly Random _rand = new();
+
+        // ── Inseguimento giocatore ────────────────────────────────────────────
+        private Point _playerTile;   // Aggiornato da GameScene ogni frame
+        private const float ChaseChance = 0.55f;
 
         // ── Timer attesa tra un movimento e l'altro ──────────────────────────
         private float waitTimer = 0f;
@@ -154,6 +155,9 @@ namespace PoopMan.GameObjects
             invincibilityTimer = duration;
         }
 
+        /// <summary>Aggiorna la posizione del giocatore per l'inseguimento.</summary>
+        public void SetPlayerTarget(Point playerTile) => _playerTile = playerTile;
+
         /// <summary>
         /// Segna il bat come morto e avvia l'animazione di morte.
         /// Idempotente: chiamate successive non hanno effetto.
@@ -212,10 +216,26 @@ namespace PoopMan.GameObjects
                 waitTimer -= dt;
                 if (waitTimer <= 0f)
                 {
-                    // Prova le 4 direzioni in ordine casuale
-                    var dirs = new List<Vector2> { -Vector2.UnitY, Vector2.UnitY, -Vector2.UnitX, Vector2.UnitX }
-                        .OrderBy(_ => _rand.Next())
-                        .ToList();
+                    // Ordina le direzioni: 55% di probabilità di preferire quelle verso il giocatore
+                    var dirs = new List<Vector2> { -Vector2.UnitY, Vector2.UnitY, -Vector2.UnitX, Vector2.UnitX };
+
+                    if (_rand.NextDouble() < ChaseChance)
+                    {
+                        // Priorità alle direzioni che avvicinano al giocatore
+                        int dx = _playerTile.X - TilePosition.X;
+                        int dy = _playerTile.Y - TilePosition.Y;
+
+                        dirs.Sort((a, b) =>
+                        {
+                            int scoreA = (int)(a.X * dx + a.Y * dy);
+                            int scoreB = (int)(b.X * dx + b.Y * dy);
+                            return scoreB.CompareTo(scoreA);  // decrescente (verso player)
+                        });
+                    }
+                    else
+                    {
+                        dirs = dirs.OrderBy(_ => _rand.Next()).ToList();
+                    }
 
                     foreach (var d in dirs)
                     {
@@ -225,7 +245,6 @@ namespace PoopMan.GameObjects
 
                         if (map.IsWalkable(nextTile))
                         {
-                            // Aggiorna facing per l'animazione direzionale
                             if (d == -Vector2.UnitY) facing = Facing.Back;
                             else if (d == Vector2.UnitY) facing = Facing.Front;
                             else if (d == -Vector2.UnitX) facing = Facing.Left;
@@ -242,8 +261,8 @@ namespace PoopMan.GameObjects
                         }
                     }
 
-                    // Attesa casuale tra 0.2 e 1.0 secondi prima del prossimo tentativo
-                    waitDuration = (float)(_rand.NextDouble() * 0.8 + 0.2);
+                    // Attesa ridotta: tra 0.1 e 0.5 secondi
+                    waitDuration = (float)(_rand.NextDouble() * 0.4 + 0.1);
                     waitTimer = waitDuration;
                 }
             }
@@ -384,10 +403,11 @@ namespace PoopMan.GameObjects
                 return Collision.Empty;
 
             var frame = frames[Math.Min(currentFrame, frames.Count - 1)];
+            // Hitbox ridotta al 35% del frame, centrata
             return new Collision(
-                (int)(Position.X + frame.Width * 0.5f),
+                (int)(Position.X + frame.Width  * 0.5f),
                 (int)(Position.Y + frame.Height * 0.5f),
-                (int)(frame.Width * 0.5f));
+                (int)(frame.Width * 0.175f));
         }
     }
 }

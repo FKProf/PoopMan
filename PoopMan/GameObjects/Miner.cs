@@ -17,7 +17,7 @@ namespace PoopMan.GameObjects
         public Point TilePosition;              // Tile di destinazione (aggiornato subito)
         public Vector2 Position;               // Posizione pixel interpolata
         private Vector2 targetPosition;        // Pixel target del tile di destinazione
-        private float moveSpeed = 100f;        // Pixel al secondo
+        private float moveSpeed = 160f;        // Pixel al secondo (era 100)
         private bool isMoving = false;
         internal bool IsMoving => isMoving;
 
@@ -299,22 +299,30 @@ namespace PoopMan.GameObjects
         {
             var potentialNextDirection = Vector2.Zero;
 
-            if (GameController.HoldUp()) potentialNextDirection = -Vector2.UnitY;
-            if (GameController.HoldDown()) potentialNextDirection = Vector2.UnitY;
-            if (GameController.HoldLeft()) potentialNextDirection = -Vector2.UnitX;
-            if (GameController.HoldRight()) potentialNextDirection = Vector2.UnitX;
-            
+            if (GameController.HoldUp())    potentialNextDirection = -Vector2.UnitY;
+            if (GameController.HoldDown())  potentialNextDirection =  Vector2.UnitY;
+            if (GameController.HoldLeft())  potentialNextDirection = -Vector2.UnitX;
+            if (GameController.HoldRight()) potentialNextDirection =  Vector2.UnitX;
+
             if (potentialNextDirection == Vector2.Zero)
             {
                 _inputBuffer.Clear();
                 return;
             }
 
-            var last = _inputBuffer.Count > 0 ? _inputBuffer.Last() : Vector2.Zero;
-            if (last == potentialNextDirection) return; // Evita duplicati
+            var last = _inputBuffer.Count > 0 ? _inputBuffer.Last() : _currentDirection;
 
-            if (_inputBuffer.Count < MAX_BUFFER_SIZE)
+            // Se la direzione è cambiata, svuota il buffer e aggiungi subito la nuova
+            // Questo rende la risposta immediata senza dover aspettare il tile corrente
+            if (last != potentialNextDirection)
+            {
+                _inputBuffer.Clear();
                 _inputBuffer.Enqueue(potentialNextDirection);
+            }
+            else if (_inputBuffer.Count < MAX_BUFFER_SIZE)
+            {
+                _inputBuffer.Enqueue(potentialNextDirection);
+            }
         }
 
         // ────────────────────────────────────────────────────────────────────
@@ -347,7 +355,11 @@ namespace PoopMan.GameObjects
                     if (currentFrame >= currentAnimationFrames.Count)
                     {
                         currentFrame = currentAnimationFrames.Count - 1;
-                        _deathAnimationFinished = true;
+                        if (!_deathAnimationFinished)
+                        {
+                            _deathAnimationFinished = true;
+                            DeathAnimationFinished?.Invoke(this, EventArgs.Empty);
+                        }
                     }
                 }
                 return;
@@ -610,10 +622,12 @@ namespace PoopMan.GameObjects
                 return Collision.Empty;
 
             var frame = frames[Math.Min(currentFrame, frames.Count - 1)];
+            // Hitbox ridotta al 40% del frame, centrata
+            int radius = (int)(frame.Width * 0.20f);
             return new Collision(
-                (int)Position.X + frame.Width / 2,
-                (int)Position.Y + frame.Height / 2,
-                frame.Width / 2);
+                (int)(Position.X + frame.Width  * 0.5f),
+                (int)(Position.Y + frame.Height * 0.5f),
+                radius);
         }
 
         // ────────────────────────────────────────────────────────────────────
@@ -635,7 +649,6 @@ namespace PoopMan.GameObjects
             currentFrame = 0;
             animationTimer = 0f;
             bombs.Clear();      // Rimuovi tutte le bombe piazzate
-            bigBombCount = 0;   // Resetta le bombe grandi
             isInvincible = false;
             invincibilityTimer = 0f;
             blinkVisible = true;

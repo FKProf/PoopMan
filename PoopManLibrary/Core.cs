@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using PoopManLibrary.Input;
+using PoopManLibrary.Scenes;
 
 namespace PoopManLibrary;
 
@@ -22,6 +23,10 @@ public class Core : Game
     public static ContentManager ContentManager { get; private set; }
 
     public static InputManager Input { get; private set; }
+
+    private static Scene p_activeScene;
+
+    private static Scene p_nextScene;
 
     public Core(string Title, int width, int height, bool fullScreen)
     {
@@ -55,6 +60,47 @@ public class Core : Game
     protected override void Update(GameTime gameTime)
     {
         Input.Update(); // ✅ aggiorna keyboard/mouse ogni frame
+
+        if (p_nextScene != null)
+        {
+            TransitionScene();
+        }
+
+        if (p_activeScene != null)
+        {
+            p_activeScene.Update(gameTime);
+        }
+
         base.Update(gameTime);
+    }
+
+    protected override void Draw(GameTime gameTime)
+    {
+        GraphicsDevice.Clear(Color.CornflowerBlue);
+        if (p_activeScene != null)
+        {
+            p_activeScene.Draw(gameTime);
+        }
+        base.Draw(gameTime);
+    }
+
+    public static void ChangeScene(Scene newScene)
+    {
+        if (p_activeScene != newScene)
+            p_nextScene = newScene;
+    }
+
+    private static void TransitionScene()
+    {
+        if (p_activeScene != null) 
+            p_activeScene.Dispose();
+
+        GC.Collect();
+
+        p_activeScene = p_nextScene;
+        p_nextScene = null;
+
+        if (p_activeScene != null)
+            p_activeScene.Initialize();
     }
 }
