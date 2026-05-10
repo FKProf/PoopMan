@@ -15,6 +15,11 @@ namespace PoopMan.GameObjects
         public Point TilePosition;
         public Vector2 Position;
         private Vector2 targetPosition;
+
+        /// <summary>Tile visiva del bat basata sulla posizione pixel corrente.</summary>
+        public Point VisualTilePosition =>
+            new Point((int)Math.Round(Position.X / TileMap.TileSize),
+                      (int)Math.Round(Position.Y / TileMap.TileSize));
         private float moveSpeed = 130f;
         private bool isMoving = false;
 
@@ -34,17 +39,66 @@ namespace PoopMan.GameObjects
         private static readonly Random _rand = new();
 
         private Point _playerTile;
-        private float _chaseChance = 0.55f;
+        private bool _playerSeen = false;       // ha mai visto il giocatore?
+        private Point _lastKnownPlayerTile;     // ultima posizione conosciuta del giocatore
+
+        // ── Macchina a stati AI ───────────────────────────────────────────────
+        private enum AiState { Wander, Chase, Flee, Patrol }
+        private AiState _aiState = AiState.Wander;
+
+        // ── Parametri AI ──────────────────────────────────────────────────────
+        private float _chaseChance        = 0.60f;
+        private int   _sightRange         = 8;    // tile di visibilità (line of sight)
+        private float _wanderChangeChance = 0.30f;// probabilità di cambiare direzione in wander
+
+        // ── Cache percorso A* ─────────────────────────────────────────────────
+        private List<Point> _path       = new();
+        private Point       _pathTarget = new(-1, -1);
+        private int         _pathStep   = 0;
+        private float       _pathCacheTime = 0f;
+        private const float PathCacheMax   = 0.5f; // ricalcola il percorso ogni 0.5s
+
+        // ── Separazione tra bat ───────────────────────────────────────────────
+        private static readonly List<Point> _allBatPositions = new();
+        private Point _registeredPos;
+
+        // ── Evasione bombe ────────────────────────────────────────────────────
+        private HashSet<Point> _dangerTiles = new();
+        // ── Bombe solide (non attraversabili) ─────────────────────────────────
+        private HashSet<Point> _solidBombTiles = new();
+
+        // ── Direzione wander corrente ─────────────────────────────────────────
+        private Point _wanderDir = new(1, 0);
+
+        /// <summary>Aggiorna le tile pericolose (bombe + esplosioni previste).</summary>
+        public void SetDangerTiles(IEnumerable<Point> bombTiles, IEnumerable<Point> explosionTiles)
+        {
+            _dangerTiles.Clear();
+            foreach (var t in bombTiles)      _dangerTiles.Add(t);
+            foreach (var t in explosionTiles) _dangerTiles.Add(t);
+        }
+
+        /// <summary>Aggiorna le tile occupate da bombe solide: il bat non può attraversarle.</summary>
+        public void SetSolidBombTiles(IEnumerable<Point> solidTiles)
+        {
+            _solidBombTiles.Clear();
+            foreach (var t in solidTiles) _solidBombTiles.Add(t);
+        }
+
+        /// <summary>True se il tile è bloccato da pericolo O da una bomba solida.</summary>
+        private bool IsBlocked(Point tile) =>
+            _dangerTiles.Contains(tile) || _solidBombTiles.Contains(tile);
 
         /// <summary>Aumenta velocità e aggressione in base al livello.</summary>
         public void SetAggressionLevel(int level)
         {
-            _chaseChance = Math.Min(0.55f + level * 0.05f, 0.90f);
-            moveSpeed = Math.Min(130f + level * 5f, 220f);
-            waitDuration = Math.Max(0.35f - level * 0.02f, 0.10f);
+            _chaseChance  = Math.Min(0.60f + level * 0.05f, 0.95f);
+            moveSpeed     = Math.Min(130f   + level * 8f,   240f);
+            waitDuration  = Math.Max(0.35f  - level * 0.02f, 0.08f);
+            _sightRange   = Math.Min(8 + level, 16);
         }
 
-        private float waitTimer = -1f;   // -1 = muoviti subito al primo frame
+        private float waitTimer    = -1f;
         private float waitDuration = 0.35f;
 
         private bool isDead = false;
@@ -171,75 +225,60 @@ namespace PoopMan.GameObjects
 
             if (isDead)
             {
+                // Deregistra dalla lista separazione
+                _allBatPositions.Remove(_registeredPos);
                 UpdateAnimation(gameTime);
                 return;
             }
+
+            // ── Aggiorna registrazione separazione ────────────────────────────
+            _allBatPositions.Remove(_registeredPos);
+            _registeredPos = TilePosition;
+            _allBatPositions.Add(_registeredPos);
+
+            _pathCacheTime += dt;
 
             if (!isMoving)
             {
                 waitTimer -= dt;
                 if (waitTimer <= 0f)
                 {
-                    var dirs = new List<Vector2> { -Vector2.UnitY, Vector2.UnitY, -Vector2.UnitX, Vector2.UnitX };
+                    Point nextMove = ChooseNextTile(map, dt);
 
-                    if (_rand.NextDouble() < _chaseChance)
+                    if (nextMove != Point.Zero && nextMove != TilePosition)
                     {
-                        int dx = _playerTile.X - TilePosition.X;
-                        int dy = _playerTile.Y - TilePosition.Y;
+                        int ddx = nextMove.X - TilePosition.X;
+                        int ddy = nextMove.Y - TilePosition.Y;
+                        if      (ddy < 0) facing = Facing.Back;
+                        else if (ddy > 0) facing = Facing.Front;
+                        else if (ddx < 0) facing = Facing.Left;
+                        else              facing = Facing.Right;
 
-                        dirs.Sort((a, b) =>
-                        {
-                            int scoreA = (int)(a.X * dx + a.Y * dy);
-                            int scoreB = (int)(b.X * dx + b.Y * dy);
-                            return scoreB.CompareTo(scoreA);
-                        });
-                    }
-                    else
-                    {
-                        dirs = dirs.OrderBy(_ => _rand.Next()).ToList();
-                    }
-
-                    foreach (var d in dirs)
-                    {
-                        Point nextTile = new Point(
-                            TilePosition.X + (int)d.X,
-                            TilePosition.Y + (int)d.Y);
-
-                        if (map.IsWalkable(nextTile))
-                        {
-                            if (d == -Vector2.UnitY) facing = Facing.Back;
-                            else if (d == Vector2.UnitY) facing = Facing.Front;
-                            else if (d == -Vector2.UnitX) facing = Facing.Left;
-                            else facing = Facing.Right;
-
-                            TilePosition = nextTile;
-                            targetPosition = new Vector2(nextTile.X * TileMap.TileSize,
-                                                         nextTile.Y * TileMap.TileSize);
-                            isMoving = true;
-                            state = BatState.Fly;
-                            animationTimer = 0f;
-                            currentFrame = 0;
-                            break;
-                        }
+                        TilePosition    = nextMove;
+                        targetPosition  = new Vector2(nextMove.X * TileMap.TileSize,
+                                                      nextMove.Y * TileMap.TileSize);
+                        isMoving        = true;
+                        state           = BatState.Fly;
+                        animationTimer  = 0f;
+                        currentFrame    = 0;
                     }
 
-                    waitDuration = (float)(_rand.NextDouble() * (waitDuration * 0.8f) + waitDuration * 0.2f);
-                    waitTimer = waitDuration;
+                    waitTimer = waitDuration * (float)(0.8 + _rand.NextDouble() * 0.4);
                 }
             }
 
             if (isMoving)
             {
                 Vector2 direction = targetPosition - Position;
-                float distance = direction.Length();
+                float distance    = direction.Length();
 
                 if (distance <= moveSpeed * dt)
                 {
-                    Position = targetPosition;
-                    isMoving = false;
-                    state = BatState.Idle;
-                    waitTimer = (float)(_rand.NextDouble() * waitDuration * 0.5f + waitDuration * 0.2f);
-                    currentFrame = 0;
+                    Position       = targetPosition;
+                    isMoving       = false;
+                    state          = BatState.Idle;
+                    waitTimer      = (float)(_rand.NextDouble() * waitDuration * 0.5f + waitDuration * 0.2f);
+                    currentFrame   = 0;
                     animationTimer = 0f;
                 }
                 else
@@ -249,6 +288,259 @@ namespace PoopMan.GameObjects
             }
 
             UpdateAnimation(gameTime);
+        }
+
+        // ── Macchina a stati: sceglie la prossima tile ────────────────────────
+        private Point ChooseNextTile(TileMap map, float dt)
+        {
+            bool inDanger = _dangerTiles.Contains(TilePosition);
+
+            // ── FLEE: priorità assoluta su tutto ──────────────────────────────
+            if (inDanger)
+            {
+                _aiState = AiState.Flee;
+                _path.Clear();
+                return BfsToSafeTile(map);
+            }
+
+            // ── Aggiorna stato AI in base alla visibilità del giocatore ───────
+            bool canSee = HasLineOfSight(map, TilePosition, _playerTile, _sightRange);
+            if (canSee)
+            {
+                _lastKnownPlayerTile = _playerTile;
+                _playerSeen = true;
+                _aiState = _rand.NextDouble() < _chaseChance ? AiState.Chase : AiState.Patrol;
+            }
+            else if (_aiState == AiState.Chase && _playerSeen)
+            {
+                // Perde la visuale → va verso ultima posizione conosciuta
+                _aiState = AiState.Patrol;
+            }
+            else if (_aiState == AiState.Patrol && TilePosition == _lastKnownPlayerTile)
+            {
+                // Ha raggiunto l'ultima posizione nota → wander
+                _aiState    = AiState.Wander;
+                _playerSeen = false;
+            }
+
+            return _aiState switch
+            {
+                AiState.Chase   => ChaseStep(map),
+                AiState.Patrol  => PatrolStep(map),
+                AiState.Flee    => BfsToSafeTile(map),
+                _               => WanderStep(map),
+            };
+        }
+
+        // ── CHASE: A* verso il giocatore con cache ────────────────────────────
+        private Point ChaseStep(TileMap map)
+        {
+            bool needRepath = _pathStep >= _path.Count
+                           || _pathCacheTime >= PathCacheMax
+                           || (_path.Count > 0 && _path[^1] != _playerTile);
+
+            if (needRepath)
+            {
+                _path       = AStarPath(map, TilePosition, _playerTile);
+                _pathStep   = 0;
+                _pathCacheTime = 0f;
+            }
+
+            if (_path.Count == 0) return WanderStep(map);
+
+            // Avanza sul percorso
+            while (_pathStep < _path.Count && _path[_pathStep] == TilePosition)
+                _pathStep++;
+
+            if (_pathStep >= _path.Count) return WanderStep(map);
+
+            Point next = _path[_pathStep];
+
+            // Separazione: evita tile occupate da altri bat
+            if (_allBatPositions.Contains(next) && next != TilePosition)
+            {
+                // Cerca step successivo libero
+                for (int s = _pathStep + 1; s < Math.Min(_pathStep + 3, _path.Count); s++)
+                {
+                    if (!_allBatPositions.Contains(_path[s]) || _path[s] == TilePosition)
+                        return _path[s];
+                }
+                return WanderStep(map); // aspetta o si sposta lateralmente
+            }
+
+            return next;
+        }
+
+        // ── PATROL: A* verso ultima posizione nota del giocatore ──────────────
+        private Point PatrolStep(TileMap map)
+        {
+            bool needRepath = _pathStep >= _path.Count
+                           || _pathCacheTime >= PathCacheMax
+                           || (_path.Count > 0 && _path[^1] != _lastKnownPlayerTile);
+
+            if (needRepath)
+            {
+                _path      = AStarPath(map, TilePosition, _lastKnownPlayerTile);
+                _pathStep  = 0;
+                _pathCacheTime = 0f;
+            }
+
+            if (_path.Count == 0) return WanderStep(map);
+
+            while (_pathStep < _path.Count && _path[_pathStep] == TilePosition)
+                _pathStep++;
+
+            if (_pathStep >= _path.Count) return WanderStep(map);
+            return _path[_pathStep];
+        }
+
+        // ── WANDER: continua nella stessa direzione, cambia se bloccato ───────
+        private Point WanderStep(TileMap map)
+        {
+            // Prova a continuare nella direzione corrente
+            Point preferred = new(TilePosition.X + _wanderDir.X, TilePosition.Y + _wanderDir.Y);
+            if (map.IsWalkable(preferred) && !IsBlocked(preferred) &&
+                !_allBatPositions.Contains(preferred))
+            {
+                // Piccola chance di cambiare direzione comunque (comportamento naturale)
+                if (_rand.NextDouble() >= _wanderChangeChance)
+                    return preferred;
+            }
+
+            // Scegli nuova direzione
+            var dirs = new[] { new Point(0,-1), new Point(0,1), new Point(-1,0), new Point(1,0) }
+                       .OrderBy(_ => _rand.Next()).ToArray();
+
+            foreach (var d in dirs)
+            {
+                Point cand = new(TilePosition.X + d.X, TilePosition.Y + d.Y);
+                if (map.IsWalkable(cand) && !IsBlocked(cand) &&
+                    !_allBatPositions.Contains(cand))
+                {
+                    _wanderDir = d;
+                    return cand;
+                }
+            }
+            // Fallback senza separazione
+            foreach (var d in dirs)
+            {
+                Point cand = new(TilePosition.X + d.X, TilePosition.Y + d.Y);
+                if (map.IsWalkable(cand) && !IsBlocked(cand))
+                {
+                    _wanderDir = d;
+                    return cand;
+                }
+            }
+
+            return Point.Zero;
+        }
+
+        // ── Line Of Sight semplice (ray cast tile per tile) ───────────────────
+        private static bool HasLineOfSight(TileMap map, Point from, Point to, int maxRange)
+        {
+            int dist = Math.Abs(to.X - from.X) + Math.Abs(to.Y - from.Y);
+            if (dist > maxRange) return false;
+
+            // Bresenham line
+            int x = from.X, y = from.Y;
+            int dx = Math.Abs(to.X - x), dy = Math.Abs(to.Y - y);
+            int sx = to.X > x ? 1 : -1, sy = to.Y > y ? 1 : -1;
+            int err = dx - dy;
+
+            while (x != to.X || y != to.Y)
+            {
+                if (!map.IsWalkable(new Point(x, y))) return false;
+                int e2 = 2 * err;
+                if (e2 > -dy) { err -= dy; x += sx; }
+                if (e2 <  dx) { err += dx; y += sy; }
+            }
+            return true;
+        }
+
+        // ── A* pathfinding ────────────────────────────────────────────────────
+        private List<Point> AStarPath(TileMap map, Point from, Point to)
+        {
+            if (from == to) return new List<Point>();
+
+            var open   = new SortedSet<(float f, int id, Point p)>(
+                Comparer<(float f, int id, Point p)>.Create((a, b) =>
+                    a.f != b.f ? a.f.CompareTo(b.f) : a.id.CompareTo(b.id)));
+            var gScore = new Dictionary<Point, float>();
+            var parent = new Dictionary<Point, Point>();
+            int idSeq  = 0;
+
+            gScore[from] = 0f;
+            open.Add((Heuristic(from, to), idSeq++, from));
+
+            Point[] dirs = { new(0,-1), new(0,1), new(-1,0), new(1,0) };
+
+            while (open.Count > 0)
+            {
+                var (_, _, cur) = open.Min;
+                open.Remove(open.Min);
+
+                if (cur == to)
+                {
+                    // Ricostruisce percorso
+                    var path = new List<Point>();
+                    var c = cur;
+                    while (c != from) { path.Add(c); c = parent[c]; }
+                    path.Reverse();
+                    return path;
+                }
+
+                foreach (var d in dirs)
+                {
+                    Point next = new(cur.X + d.X, cur.Y + d.Y);
+                    if (!map.IsWalkable(next)) continue;
+                    if (IsBlocked(next)) continue;
+
+                    float ng = gScore[cur] + 1f;
+                    if (!gScore.TryGetValue(next, out float existing) || ng < existing)
+                    {
+                        gScore[next] = ng;
+                        parent[next] = cur;
+                        open.Add((ng + Heuristic(next, to), idSeq++, next));
+                    }
+                }
+            }
+            return new List<Point>(); // nessun percorso
+        }
+
+        private static float Heuristic(Point a, Point b)
+            => Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
+
+        // ── BFS verso tile sicura (fuga bombe) ───────────────────────────────
+        private Point BfsToSafeTile(TileMap map)
+        {
+            if (!_dangerTiles.Contains(TilePosition)) return Point.Zero;
+
+            var queue  = new Queue<Point>();
+            var parent = new Dictionary<Point, Point>();
+            queue.Enqueue(TilePosition);
+            parent[TilePosition] = TilePosition;
+
+            Point[] dirs = { new(0,-1), new(0,1), new(-1,0), new(1,0) };
+
+            while (queue.Count > 0)
+            {
+                var cur = queue.Dequeue();
+                if (!_dangerTiles.Contains(cur) && cur != TilePosition)
+                {
+                    while (parent[cur] != TilePosition) cur = parent[cur];
+                    return cur;
+                }
+                foreach (var d in dirs)
+                {
+                    Point next = new(cur.X + d.X, cur.Y + d.Y);
+                    if (!parent.ContainsKey(next) && map.IsWalkable(next))
+                    {
+                        parent[next] = cur;
+                        queue.Enqueue(next);
+                    }
+                }
+            }
+            return Point.Zero;
         }
 
         private void UpdateAnimation(GameTime gameTime)

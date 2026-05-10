@@ -77,6 +77,7 @@ namespace PoopMan.GameObjects
         private Queue<Vector2> _inputBuffer = new(MAX_BUFFER_SIZE);
 
         // ── Risorse bombe ────────────────────────────────────────────────────
+        private const int MaxActiveBombs = 3;   // massimo bombe contemporanee
         private Texture2D itemTexture;
         private Dictionary<string, List<Rectangle>> itemAnimations = new();
         private List<Bomb> bombs = new();
@@ -85,15 +86,31 @@ namespace PoopMan.GameObjects
         private Texture2D explosionTexture;
         private Dictionary<string, List<Rectangle>> explosionAnimations = new();
 
-        // ── Input mouse ──────────────────────────────────────────────────────
+        /// <summary>Tile su cui si trova visivamente il miner (basato su Position pixel).</summary>
+        public Point VisualTilePosition =>
+            new Point((int)Math.Round(Position.X / TileMap.TileSize),
+                      (int)Math.Round(Position.Y / TileMap.TileSize));
 
-        /// <summary>
-        /// Espone i tile attualmente colpiti da esplosioni attive.
-        /// Usato da Game1 per controllare collisioni bat/casse.
-        /// </summary>
+        /// <summary>Tile colpiti da esplosioni attive (usato da GameScene e Bat).</summary>
         public IEnumerable<Point> ActiveExplosionTiles =>
             bombs.Where(b => !b.IsFinished)
                  .SelectMany(b => b.ExplosionTiles);
+
+        /// <summary>Tile dove c'è una bomba non ancora esplosa (per la fuga del bat).</summary>
+        public IEnumerable<Point> ActiveBombTiles =>
+            bombs.Where(b => !b.IsFinished)
+                 .Select(b => new Point((int)(b.Position.X / TileMap.TileSize),
+                                        (int)(b.Position.Y / TileMap.TileSize)));
+
+        /// <summary>Tile occupate da bombe solide (escluso il tile del miner stesso, grace period).</summary>
+        public IEnumerable<Point> SolidBombTiles =>
+            bombs.Where(b => !b.IsFinished && !b.IsExploding)
+                 .Select(b => new Point((int)(b.Position.X / TileMap.TileSize),
+                                        (int)(b.Position.Y / TileMap.TileSize)))
+                 .Where(t => t != VisualTilePosition); // grace: il miner può uscire dal proprio tile
+
+        /// <summary>Ritorna true se il tile è occupato da una bomba solida (il miner non può entrarci).</summary>
+        public bool IsSolidBombTile(Point tile) => SolidBombTiles.Contains(tile);
 
         // ────────────────────────────────────────────────────────────────────
         // Costruttore: carica animazioni, posiziona il miner e carica le risorse
@@ -152,32 +169,31 @@ namespace PoopMan.GameObjects
 
             HandleInput();
             
-            // ── Piazzamento bomba piccola (click sinistro) ───────────────────
+            // ── Piazzamento bomba piccola ─────────────────────────────────────
             if (GameController.MiniBomb())
             {
-                bool alreadyBombHere = bombs.Any(b =>
-                {
-                    Point bombTile = new((int)(b.Position.X / TileMap.TileSize),
-                                          (int)(b.Position.Y / TileMap.TileSize));
-                    return bombTile == TilePosition && !b.IsFinished;
-                });
+                // Usa la tile visiva per piazzare la bomba dove il miner si trova visivamente
+                Point placeTile = VisualTilePosition;
+                int activeBombs = bombs.Count(b => !b.IsFinished);
+                bool tileOccupied = bombs.Any(b => !b.IsFinished &&
+                    new Point((int)(b.Position.X / TileMap.TileSize),
+                              (int)(b.Position.Y / TileMap.TileSize)) == placeTile);
 
-                if (!alreadyBombHere)
+                if (!tileOccupied && activeBombs < MaxActiveBombs)
                     bombs.Add(new Bomb(
-                        new Vector2(TilePosition.X * TileMap.TileSize, TilePosition.Y * TileMap.TileSize),
+                        new Vector2(placeTile.X * TileMap.TileSize, placeTile.Y * TileMap.TileSize),
                         bombTexture, bombAnimations, explosionTexture, explosionAnimations, false));
             }
-            // ── Piazzamento bomba grande (click destro, se disponibile) ──────
+            // ── Piazzamento bomba grande ──────────────────────────────────────
             else if (GameController.BigBomb() && bigBombCount > 0)
             {
-                bool alreadyBombHere = bombs.Any(b =>
-                {
-                    Point bombTile = new((int)(b.Position.X / TileMap.TileSize),
-                                          (int)(b.Position.Y / TileMap.TileSize));
-                    return bombTile == TilePosition && !b.IsFinished;
-                });
+                Point placeTile = VisualTilePosition;
+                int activeBombs = bombs.Count(b => !b.IsFinished);
+                bool tileOccupied = bombs.Any(b => !b.IsFinished &&
+                    new Point((int)(b.Position.X / TileMap.TileSize),
+                              (int)(b.Position.Y / TileMap.TileSize)) == placeTile);
 
-                if (!alreadyBombHere)
+                if (!tileOccupied && activeBombs < MaxActiveBombs)
                 {
                     bigBombCount--;
                     bombs.Add(new Bomb(
@@ -189,16 +205,9 @@ namespace PoopMan.GameObjects
             // ── Aggiornamento bombe attive ───────────────────────────────────
             for (int i = bombs.Count - 1; i >= 0; i--)
             {
-                Bomb bomb = bombs[i];
-                bomb.Update(gameTime, map);
-
-                // Quando l'esplosione è finita, prova a rompere i tile rimanenti e rimuovi
-                if (bomb.IsFinished)
-                {
-                    foreach (var t in bomb.ExplosionTiles)
-                        map.BreakTile(t);
-                    bombs.RemoveAt(i);
-                }
+                bombs[i].Update(gameTime, map);
+                if (bombs[i].IsFinished)
+                    bombs.RemoveAt(i);  // BreakTile già fatto in Explode()
             }
 
             UpdateMovement(map, gameTime);
@@ -221,7 +230,10 @@ namespace PoopMan.GameObjects
                     Point nextTile = new(TilePosition.X + (int)_currentDirection.X,
                                          TilePosition.Y + (int)_currentDirection.Y);
 
-                    if (map.IsWalkable(nextTile))
+                    // Bombe solide: il miner non può entrare su tile già occupate da una bomba
+                    bool blockedByBomb = IsSolidBombTile(nextTile);
+
+                    if (map.IsWalkable(nextTile) && !blockedByBomb)
                     {
                         // Aggiorna segmenti corpo (legacy snake)
                         for (int i = _bodySegments.Count - 1; i > 0; i--)

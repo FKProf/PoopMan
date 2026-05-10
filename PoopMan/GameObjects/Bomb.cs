@@ -27,6 +27,7 @@ namespace PoopMan.GameObjects
         /// <summary>Tile colpiti dall'esplosione (usato per collisioni e drop).</summary>
         public List<Point> ExplosionTiles { get; private set; } = new();
         public bool IsFinished => isFinished;
+        public bool IsExploding => isExploding;
         public Vector2 Position => position;
         public bool BigBomb => bigBomb;
 

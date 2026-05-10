@@ -251,7 +251,7 @@ public class GameScene : Scene
             {
                 foreach (var b in _bats)
                 {
-                    if (!b.IsDead && !b.IsInvincible && b.TilePosition == tile)
+                    if (!b.IsDead && !b.IsInvincible && b.VisualTilePosition == tile)
                     {
                         b.Kill();
                         _killStreak++;
@@ -267,11 +267,20 @@ public class GameScene : Scene
 
         if (_miner.IsDead) return;
 
+        // Raccoglie tile pericolose e bombe solide per i bat
+        var bombTiles      = _miner.ActiveBombTiles.ToList();
+        var explosionTiles = _miner.ActiveExplosionTiles.ToList();
+        var solidBombs     = _miner.SolidBombTiles.ToList();
+
         for (int i = _bats.Count - 1; i >= 0; i--)
         {
+            // Grace period: la bomba non blocca il bat già sopra di essa
+            var solidForThisBat = solidBombs.Where(t => t != _bats[i].TilePosition);
+            _bats[i].SetDangerTiles(bombTiles, explosionTiles);
+            _bats[i].SetSolidBombTiles(solidForThisBat);
             _bats[i].Update(_map, gameTime);
             if (!_bats[i].IsDead)
-                _bats[i].SetPlayerTarget(_miner.TilePosition);
+                _bats[i].SetPlayerTarget(_miner.VisualTilePosition);
             if (_bats[i].IsDeathAnimationFinished)
                 _bats.RemoveAt(i);
         }
@@ -309,8 +318,11 @@ public class GameScene : Scene
 
             if (item.Value.Type == "door")
             {
-                animKey = item.Value.IsOpening ? "door_key"
-                        : (_currentLevel >= 5 ? "door_key_closed" : "door_closed");
+                bool needsKey = _currentLevel >= 5;
+                if (item.Value.IsOpening)
+                    animKey = needsKey ? "door_key" : "door_opening";
+                else
+                    animKey = needsKey ? "door_key_closed" : "door_closed";
                 frame = item.Value.IsOpening ? item.Value.OpeningFrame : 0;
             }
             else if (item.Value.Type == "key")
@@ -384,7 +396,9 @@ public class GameScene : Scene
 
             if (!_map.IsWalkable(tile)) continue;
 
-            _bats.Add(new Bat(tile, batXml, Content, _map));
+            var bat = new Bat(tile, batXml, Content, _map);
+            bat.SetAggressionLevel(level);
+            _bats.Add(bat);
         }
     }
 
@@ -418,7 +432,13 @@ public class GameScene : Scene
             {
                 if (_map.IsWalkable(n))
                 {
-                    try { var nb = new Bat(n, batXml, Content, _map); nb.SetInvincible(1.6f); _bats.Add(nb); }
+                    try
+                    {
+                        var nb = new Bat(n, batXml, Content, _map);
+                        nb.SetInvincible(1.6f);
+                        nb.SetAggressionLevel(_currentLevel);
+                        _bats.Add(nb);
+                    }
                     catch { }
                     break;
                 }
