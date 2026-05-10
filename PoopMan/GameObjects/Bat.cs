@@ -26,47 +26,42 @@ namespace PoopMan.GameObjects
         private string currentAnimation = "idle";
         private List<Rectangle> currentAnimationFrames;
 
-        // ── Stato e direzione ────────────────────────────────────────────────
         private enum BatState { Idle, Fly }
         private BatState state = BatState.Idle;
-
         private enum Facing { Front, Back, Left, Right }
         private Facing facing = Facing.Front;
 
-        // ── Randomizzazione condivisa ────────────────────────────────────────
         private static readonly Random _rand = new();
 
-        // ── Inseguimento giocatore ────────────────────────────────────────────
-        private Point _playerTile;   // Aggiornato da GameScene ogni frame
-        private const float ChaseChance = 0.55f;
+        private Point _playerTile;
+        private float _chaseChance = 0.55f;
 
-        // ── Timer attesa tra un movimento e l'altro ──────────────────────────
-        private float waitTimer = 0f;
-        private float waitDuration = 0.3f;     // Durata iniziale; poi randomizzata
+        /// <summary>Aumenta velocità e aggressione in base al livello.</summary>
+        public void SetAggressionLevel(int level)
+        {
+            _chaseChance = Math.Min(0.55f + level * 0.05f, 0.90f);
+            moveSpeed = Math.Min(130f + level * 5f, 220f);
+            waitDuration = Math.Max(0.35f - level * 0.02f, 0.10f);
+        }
 
-        // ── Morte ────────────────────────────────────────────────────────────
+        private float waitTimer = -1f;   // -1 = muoviti subito al primo frame
+        private float waitDuration = 0.35f;
+
         private bool isDead = false;
         public bool IsDead => isDead;
 
-        /// <summary>
-        /// true quando il bat è morto e l'animazione di morte ha raggiunto l'ultimo frame.
-        /// Game1 lo usa per rimuovere il bat dalla lista.
-        /// </summary>
         public bool IsDeathAnimationFinished =>
-            isDead && currentFrame >= currentAnimationFrames.Count - 1;
+            isDead && currentAnimationFrames != null &&
+            currentFrame >= currentAnimationFrames.Count - 1;
 
-        // ── Invincibilità temporanea (dopo spawn da cassa) ───────────────────
         private bool isInvincible = false;
         private float invincibilityTimer = 0f;
         public bool IsInvincible => isInvincible;
 
-        // ────────────────────────────────────────────────────────────────────
-        // Costruttore: il tile di partenza deve essere walkable.
-        // ────────────────────────────────────────────────────────────────────
         internal Bat(Point startTile, string xmlPath, ContentManager content, TileMap map)
         {
             if (!map.IsWalkable(startTile))
-                throw new ArgumentException("Start tile must be empty/walkable", nameof(startTile));
+                throw new ArgumentException("Start tile must be walkable", nameof(startTile));
 
             LoadAnimationsFromXml(xmlPath, content);
 
@@ -76,27 +71,21 @@ namespace PoopMan.GameObjects
             targetPosition = Position;
         }
 
-        // ────────────────────────────────────────────────────────────────────
-        // Carica le animazioni dall'XML.
-        // Il formato atteso è: Name="animazione_N" dove N è il numero del frame.
-        // I frame vengono ordinati per numero e raggruppati per nome base.
-        // ────────────────────────────────────────────────────────────────────
         private void LoadAnimationsFromXml(string xmlPath, ContentManager content)
         {
             XDocument doc = XDocument.Load(xmlPath);
             var root = doc.Root ?? throw new InvalidOperationException($"XML root missing in {xmlPath}");
 
             var textureEl = root.Element("Texture")
-                ?? throw new InvalidOperationException($"Missing <Texture> element in {xmlPath}");
+                ?? throw new InvalidOperationException($"Missing <Texture> in {xmlPath}");
             texture = content.Load<Texture2D>(textureEl.Value);
 
             var regionElements = root.Descendants("Region")
                 .Where(r => r.Attribute("Name") != null);
 
             if (!regionElements.Any())
-                throw new InvalidOperationException($"No <Region> elements with Name in {xmlPath}");
+                throw new InvalidOperationException($"No <Region> elements in {xmlPath}");
 
-            // Accumula frame con numero per ordinarli correttamente
             var temp = new Dictionary<string, List<(int frame, Rectangle rect)>>();
 
             foreach (var region in regionElements)
@@ -107,7 +96,6 @@ namespace PoopMan.GameObjects
                 if (!int.TryParse(region.Attribute("Width")?.Value, out int w)) continue;
                 if (!int.TryParse(region.Attribute("Height")?.Value, out int h)) continue;
 
-                // Separa il numero finale dal nome (es. "fly_front3" → "fly_front" + 3)
                 int frameNumberStart = fullName.Length;
                 while (frameNumberStart > 0 && char.IsDigit(fullName[frameNumberStart - 1]))
                     frameNumberStart--;
@@ -122,7 +110,6 @@ namespace PoopMan.GameObjects
                 temp[animationName].Add((frameNumber, new Rectangle(x, y, w, h)));
             }
 
-            // Ordina i frame per numero e crea il dizionario finale
             animations = temp.ToDictionary(
                 p => p.Key,
                 p => p.Value.OrderBy(f => f.frame).Select(f => f.rect).ToList()
@@ -130,14 +117,12 @@ namespace PoopMan.GameObjects
 
             if (animations.Count > 0)
             {
-                // Preferisce animazioni di volo/idle, evita "dead" come animazione iniziale
                 string preferred = new[]
                 {
                     "fly_front", "fly_right", "fly_left", "fly_back",
-                    "idle", "walk", "fly", "dead"
+                    "idle", "walk", "fly"
                 }.FirstOrDefault(k => animations.ContainsKey(k))
-                ?? animations.Keys.FirstOrDefault(k =>
-                    !k.Equals("dead", StringComparison.OrdinalIgnoreCase))
+                ?? animations.Keys.FirstOrDefault(k => !k.Equals("dead", StringComparison.OrdinalIgnoreCase))
                 ?? animations.Keys.First();
 
                 currentAnimation = preferred;
@@ -145,27 +130,17 @@ namespace PoopMan.GameObjects
             }
         }
 
-        /// <summary>
-        /// Attiva l'invincibilità per <paramref name="duration"/> secondi.
-        /// Usato quando il bat spawna da una cassa per proteggerlo dall'esplosione corrente.
-        /// </summary>
         public void SetInvincible(float duration)
         {
             isInvincible = true;
             invincibilityTimer = duration;
         }
 
-        /// <summary>Aggiorna la posizione del giocatore per l'inseguimento.</summary>
         public void SetPlayerTarget(Point playerTile) => _playerTile = playerTile;
 
-        /// <summary>
-        /// Segna il bat come morto e avvia l'animazione di morte.
-        /// Idempotente: chiamate successive non hanno effetto.
-        /// </summary>
         internal void Kill()
         {
             if (isDead) return;
-
             isDead = true;
             isMoving = false;
             state = BatState.Idle;
@@ -177,51 +152,38 @@ namespace PoopMan.GameObjects
                 currentAnimation = "dead";
                 currentAnimationFrames = animations[currentAnimation];
             }
-            else
+            else if (animations.Count > 0)
             {
-                // Fallback se l'animazione "dead" non esiste
-                if (animations.Count > 0)
-                {
-                    currentAnimation = animations.Keys.First();
-                    currentAnimationFrames = animations[currentAnimation];
-                }
+                currentAnimation = animations.Keys.First();
+                currentAnimationFrames = animations[currentAnimation];
             }
         }
 
-        // ────────────────────────────────────────────────────────────────────
-        // Aggiornamento principale: invincibilità, movimento casuale, animazione.
-        // ────────────────────────────────────────────────────────────────────
         internal void Update(TileMap map, GameTime gameTime)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // ── Decremento invincibilità ─────────────────────────────────────
             if (isInvincible)
             {
                 invincibilityTimer -= dt;
-                if (invincibilityTimer <= 0f)
-                    isInvincible = false;
+                if (invincibilityTimer <= 0f) isInvincible = false;
             }
 
-            // ── Se morto aggiorna solo l'animazione ──────────────────────────
             if (isDead)
             {
                 UpdateAnimation(gameTime);
                 return;
             }
 
-            // ── Scelta prossima direzione (quando fermo) ─────────────────────
             if (!isMoving)
             {
                 waitTimer -= dt;
                 if (waitTimer <= 0f)
                 {
-                    // Ordina le direzioni: 55% di probabilità di preferire quelle verso il giocatore
                     var dirs = new List<Vector2> { -Vector2.UnitY, Vector2.UnitY, -Vector2.UnitX, Vector2.UnitX };
 
-                    if (_rand.NextDouble() < ChaseChance)
+                    if (_rand.NextDouble() < _chaseChance)
                     {
-                        // Priorità alle direzioni che avvicinano al giocatore
                         int dx = _playerTile.X - TilePosition.X;
                         int dy = _playerTile.Y - TilePosition.Y;
 
@@ -229,7 +191,7 @@ namespace PoopMan.GameObjects
                         {
                             int scoreA = (int)(a.X * dx + a.Y * dy);
                             int scoreB = (int)(b.X * dx + b.Y * dy);
-                            return scoreB.CompareTo(scoreA);  // decrescente (verso player)
+                            return scoreB.CompareTo(scoreA);
                         });
                     }
                     else
@@ -261,13 +223,11 @@ namespace PoopMan.GameObjects
                         }
                     }
 
-                    // Attesa ridotta: tra 0.1 e 0.5 secondi
-                    waitDuration = (float)(_rand.NextDouble() * 0.4 + 0.1);
+                    waitDuration = (float)(_rand.NextDouble() * (waitDuration * 0.8f) + waitDuration * 0.2f);
                     waitTimer = waitDuration;
                 }
             }
 
-            // ── Interpolazione verso il tile di destinazione ─────────────────
             if (isMoving)
             {
                 Vector2 direction = targetPosition - Position;
@@ -278,8 +238,7 @@ namespace PoopMan.GameObjects
                     Position = targetPosition;
                     isMoving = false;
                     state = BatState.Idle;
-                    waitDuration = (float)(_rand.NextDouble() * 0.8 + 0.2);
-                    waitTimer = waitDuration;
+                    waitTimer = (float)(_rand.NextDouble() * waitDuration * 0.5f + waitDuration * 0.2f);
                     currentFrame = 0;
                     animationTimer = 0f;
                 }
@@ -292,15 +251,10 @@ namespace PoopMan.GameObjects
             UpdateAnimation(gameTime);
         }
 
-        // ────────────────────────────────────────────────────────────────────
-        // Sceglie l'animazione appropriata in base a stato e direzione,
-        // con fallback progressivi per animazioni mancanti.
-        // ────────────────────────────────────────────────────────────────────
         private void UpdateAnimation(GameTime gameTime)
         {
             if (isDead)
             {
-                // Forza "dead" se disponibile
                 if (animations.ContainsKey("dead") && currentAnimation != "dead")
                 {
                     currentAnimation = "dead";
@@ -309,19 +263,17 @@ namespace PoopMan.GameObjects
                     animationTimer = 0f;
                 }
 
-                // Avanza i frame (ciclica anche da morto, per l'animazione di morte)
-                if (currentAnimationFrames?.Count > 1)
+                // Animazione morte non ciclica: si ferma all'ultimo frame
+                if (currentAnimationFrames != null &&
+                    currentFrame < currentAnimationFrames.Count - 1)
                 {
                     animationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                     if (animationTimer >= animationSpeed)
                     {
                         animationTimer = 0f;
-                        currentFrame++;
-                        if (currentFrame >= currentAnimationFrames.Count)
-                            currentFrame = 0; // Cicla l'animazione di morte
+                        currentFrame = Math.Min(currentFrame + 1, currentAnimationFrames.Count - 1);
                     }
                 }
-                else currentFrame = 0;
                 return;
             }
 
@@ -334,32 +286,26 @@ namespace PoopMan.GameObjects
                 _ => "front"
             };
 
-            // Costruisce lista di candidati con priorità decrescente
             var candidates = new List<string>();
 
             if (state == BatState.Fly)
             {
-                candidates.Add($"fly_{faceName}"); // Animazione direzionale specifica
-                candidates.Add("fly");             // Fallback generico
+                candidates.Add($"fly_{faceName}");
+                candidates.Add("fly");
                 candidates.Add("walk");
             }
-            else // Idle
+            else
             {
                 candidates.Add("idle");
                 candidates.Add($"idle_{faceName}");
-                candidates.Add($"fly_{faceName}"); // Usa fly come posa idle se idle non esiste
+                candidates.Add($"fly_{faceName}");
                 candidates.Add("fly");
-
-                // Qualsiasi animazione non-dead come ultimo fallback sicuro
                 var nonDead = animations.Keys.FirstOrDefault(k =>
                     !k.Equals("dead", StringComparison.OrdinalIgnoreCase));
                 if (nonDead != null) candidates.Add(nonDead);
-
-                candidates.Add("dead"); // Solo come ultima risorsa assoluta
             }
 
-            if (animations.Count > 0)
-                candidates.Add(animations.Keys.First()); // Safety net finale
+            if (animations.Count > 0) candidates.Add(animations.Keys.First());
 
             string desired = candidates.FirstOrDefault(c => animations.ContainsKey(c))
                              ?? currentAnimation;
@@ -393,19 +339,14 @@ namespace PoopMan.GameObjects
             spriteBatch.Draw(texture, Position, frames[currentFrame], Color.White);
         }
 
-        /// <summary>
-        /// Restituisce la hitbox circolare del bat per le collisioni.
-        /// Compatibile con il formato usato da Miner.GetBounds().
-        /// </summary>
         public Collision GetBounds()
         {
             if (!animations.TryGetValue(currentAnimation, out var frames) || frames.Count == 0)
                 return Collision.Empty;
 
             var frame = frames[Math.Min(currentFrame, frames.Count - 1)];
-            // Hitbox ridotta al 35% del frame, centrata
             return new Collision(
-                (int)(Position.X + frame.Width  * 0.5f),
+                (int)(Position.X + frame.Width * 0.5f),
                 (int)(Position.Y + frame.Height * 0.5f),
                 (int)(frame.Width * 0.175f));
         }
