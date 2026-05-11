@@ -13,6 +13,132 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin Audio/BMG/beanfeast.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/BMG/beanfeast.ogg
+
+#begin Audio/BMG/dramatic_boi_v3.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/BMG/dramatic_boi_v3.ogg
+
+#begin Audio/BMG/dramatic_boi.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/BMG/dramatic_boi.ogg
+
+#begin Audio/BMG/frozen_winter.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/BMG/frozen_winter.ogg
+
+#begin Audio/BMG/hope.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/BMG/hope.ogg
+
+#begin Audio/BMG/woo_scary.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/BMG/woo_scary.ogg
+
+#begin Audio/FxsSound/fxs.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/FxsSound/fxs.wav
+
+#begin Audio/FxsSound/fxsBig.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/FxsSound/fxsBig.wav
+
+#begin Audio/PlaceBomb/Fart_1.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/PlaceBomb/Fart_1.wav
+
+#begin Audio/PlaceBomb/Fart_10.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/PlaceBomb/Fart_10.wav
+
+#begin Audio/PlaceBomb/Fart_2.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/PlaceBomb/Fart_2.wav
+
+#begin Audio/PlaceBomb/Fart_3.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/PlaceBomb/Fart_3.wav
+
+#begin Audio/PlaceBomb/Fart_4.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/PlaceBomb/Fart_4.wav
+
+#begin Audio/PlaceBomb/Fart_5.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/PlaceBomb/Fart_5.wav
+
+#begin Audio/PlaceBomb/Fart_6.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/PlaceBomb/Fart_6.wav
+
+#begin Audio/PlaceBomb/Fart_7.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/PlaceBomb/Fart_7.wav
+
+#begin Audio/PlaceBomb/Fart_8.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/PlaceBomb/Fart_8.wav
+
+#begin Audio/PlaceBomb/Fart_9.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/PlaceBomb/Fart_9.wav
+
+#begin Audio/UISounds/UISound.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/UISounds/UISound.wav
+
+#begin Audio/FxsSound/fxs.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/FxsSound/fxs.wav
+
+#begin Audio/FxsSound/fxsBig.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/FxsSound/fxsBig.wav
+
 #begin font/Score.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor

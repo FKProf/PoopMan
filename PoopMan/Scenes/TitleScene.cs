@@ -1,6 +1,8 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using PoopMan.UI;
 using PoopManLibrary;
 using PoopManLibrary.Scenes;
 
@@ -8,23 +10,35 @@ namespace PoopMan.Scenes;
 
 public class TitleScene : Scene
 {
+    // ── Grafica ────────────────────────────────────────────────────────
     private SpriteBatch _sb;
     private SpriteFont  _font;
     private Texture2D   _pixel;
+    private Texture2D   _bgFixed;
+    private Texture2D   _cloud1;
+    private Texture2D   _cloud2;
 
-    private Texture2D _bgFixed;     // 1.png — sfondo fisso
-    private Texture2D _cloud1;      // 2.png — nuvole veloci
-    private Texture2D _cloud2;      // 3.png — nuvole lente
-
-    // Posizioni X di scroll per ciascun layer nuvola (due copie per seamless loop)
+    // ── Nuvole ────────────────────────────────────────────────────────
     private float _c1X = 0f;
     private float _c2X = 0f;
+    private const float Cloud1Speed = 55f;
+    private const float Cloud2Speed = 28f;
 
-    private const float Cloud1Speed =  55f;   // px/s (più veloci)
-    private const float Cloud2Speed =  28f;   // px/s (più lente)
+    // ── Menu ──────────────────────────────────────────────────────────
+    private enum MenuScreen { Main, Audio, Istruzioni }
+    private MenuScreen _screen       = MenuScreen.Main;
+    private int        _selectedItem = 0;
 
-    private float _blinkTimer   = 0f;
-    private bool  _blinkVisible = true;
+    private static readonly string[] MenuItems = { "GIOCA", "ISTRUZIONI", "AUDIO" };
+    private const int BtnW = 260;
+    private const int BtnH = 36;
+    private const int BtnGap = 14;
+
+    // ── Audio Panel ───────────────────────────────────────────────────
+    private AudioSettingsPanel _audioPanel;
+
+    // ── Animazione cursore ────────────────────────────────────────────
+    private float _cursorPulse = 0f;
 
     public override void LoadContent()
     {
@@ -36,9 +50,13 @@ public class TitleScene : Scene
         _cloud1  = Content.Load<Texture2D>("image/backgound/2");
         _cloud2  = Content.Load<Texture2D>("image/backgound/3");
 
-        // Pixel 1x1 bianco per rettangoli
         _pixel = new Texture2D(Core.GraphicsDevice, 1, 1);
         _pixel.SetData(new[] { Color.White });
+
+        _audioPanel = new AudioSettingsPanel(_font, _pixel);
+
+        AudioManager.Load(Content);
+        AudioManager.StartTitleAudio();
     }
 
     public override void Update(GameTime gameTime)
@@ -46,16 +64,52 @@ public class TitleScene : Scene
         base.Update(gameTime);
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-        // Scorrimento nuvole: si spostano a sinistra e wrappano
         _c1X -= Cloud1Speed * dt;
         _c2X -= Cloud2Speed * dt;
+        _cursorPulse += dt * 3.5f;
 
-        // Blink
-        _blinkTimer += dt;
-        if (_blinkTimer >= 0.55f) { _blinkTimer = 0f; _blinkVisible = !_blinkVisible; }
+        var kb = Core.Input.Keyboard;
 
-        if (Core.Input.Keyboard.WasKeyJustPressed(Keys.Enter))
-            Core.ChangeScene(new GameScene());
+        // ── Pannello audio ────────────────────────────────────────────
+        if (_screen == MenuScreen.Audio)
+        {
+            _audioPanel.Update(gameTime);
+            if (kb.WasKeyJustPressed(Keys.Escape) || kb.WasKeyJustPressed(Keys.Back))
+                _screen = MenuScreen.Main;
+            return;
+        }
+
+        // ── Pannello istruzioni ───────────────────────────────────────
+        if (_screen == MenuScreen.Istruzioni)
+        {
+            if (kb.WasKeyJustPressed(Keys.Escape) || kb.WasKeyJustPressed(Keys.Back) ||
+                kb.WasKeyJustPressed(Keys.Enter))
+                _screen = MenuScreen.Main;
+            return;
+        }
+
+        // ── Menu principale ───────────────────────────────────────────
+        if (kb.WasKeyJustPressed(Keys.Up))
+            _selectedItem = (_selectedItem - 1 + MenuItems.Length) % MenuItems.Length;
+        if (kb.WasKeyJustPressed(Keys.Down))
+            _selectedItem = (_selectedItem + 1) % MenuItems.Length;
+
+        if (kb.WasKeyJustPressed(Keys.Enter))
+        {
+            switch (_selectedItem)
+            {
+                case 0: // GIOCA
+                    AudioManager.StopTitleAudio();
+                    Core.ChangeScene(new GameScene());
+                    break;
+                case 1: // ISTRUZIONI
+                    _screen = MenuScreen.Istruzioni;
+                    break;
+                case 2: // AUDIO
+                    _screen = MenuScreen.Audio;
+                    break;
+            }
+        }
     }
 
     public override void Draw(GameTime gameTime)
@@ -65,52 +119,153 @@ public class TitleScene : Scene
 
         Core.GraphicsDevice.Clear(Color.Black);
 
+        // Sfondo
         _sb.Begin(samplerState: SamplerState.LinearWrap);
-
-        // ── Layer 1: sfondo fisso (1.png), copre tutta la finestra ───────
         _sb.Draw(_bgFixed, new Rectangle(0, 0, W, H), Color.White);
-
-        // ── Layer 2: nuvole veloci (2.png) in scroll seamless ─────────────
         DrawScrollingCloud(_cloud1, _c1X, W, H, 0.55f);
-
-        // ── Layer 3: nuvole lente (3.png) in scroll seamless ─────────────
         DrawScrollingCloud(_cloud2, _c2X, W, H, 0.45f);
-
-        // ── Overlay scuro per leggibilità testo ───────────────────────────
-        _sb.Draw(_pixel, new Rectangle(0, 0, W, H), Color.Black * 0.42f);
-
+        _sb.Draw(_pixel, new Rectangle(0, 0, W, H), Color.Black * 0.45f);
         _sb.End();
 
         _sb.Begin(samplerState: SamplerState.PointClamp);
 
-        // ── Titolo ────────────────────────────────────────────────────────
-        DrawTextCentered("POOPMAN",   W / 2, H / 3,       Color.Yellow,            3f);
-        DrawTextCentered("MINER",     W / 2, H / 3 + 75,  new Color(255, 160, 40), 2f);
-        _sb.Draw(_pixel, new Rectangle(W / 2 - 200, H / 2 - 15, 400, 2), new Color(70, 50, 140));
+        // Titolo
+        int titleY = H / 4;
+        DrawTextCentered("POOPMAN",  W / 2, titleY,      Color.Yellow,            3.0f);
+        DrawTextCentered("MINER",    W / 2, titleY + 78, new Color(255, 160, 40), 2.0f);
 
-        if (_blinkVisible)
-            DrawTextCentered("PREMI  ENTER  PER  INIZIARE", W / 2, H / 2 + 32, Color.White, 1f);
+        // Linea separatrice
+        int sepY = titleY + 128;
+        _sb.Draw(_pixel, new Rectangle(W / 2 - 180, sepY, 360, 2), new Color(70, 50, 140));
 
-        // ── Tasti ─────────────────────────────────────────────────────────
-        DrawTextCentered("WASD / FRECCE : muovi",                     W / 2, H * 3 / 4,       Color.LightGray, 1f);
-        DrawTextCentered("SPAZIO : bomba piccola    X : bomba grande", W / 2, H * 3 / 4 + 22, Color.LightGray, 1f);
-        DrawTextCentered("F11 : fullscreen    ESC : pausa",            W / 2, H * 3 / 4 + 44, Color.Gray,      1f);
+        switch (_screen)
+        {
+            case MenuScreen.Main:
+                DrawMainMenu(W, H, sepY + 20);
+                break;
+            case MenuScreen.Audio:
+                DrawAudioOverlay(W, H);
+                break;
+            case MenuScreen.Istruzioni:
+                DrawIstruzioniOverlay(W, H);
+                break;
+        }
 
         _sb.DrawString(_font, "v0.2", new Vector2(8, H - 18), Color.DarkGray * 0.7f);
-
         _sb.End();
     }
 
-    /// <summary>Disegna una texture in scroll orizzontale seamless (due copie affiancate).</summary>
+    // ─────────────────────────────────────────────────────────────────
+    private void DrawMainMenu(int W, int H, int startY)
+    {
+        int cx = W / 2;
+
+        for (int i = 0; i < MenuItems.Length; i++)
+        {
+            int btnY = startY + i * (BtnH + BtnGap);
+            bool sel = i == _selectedItem;
+
+            // Sfondo pulsante
+            Color bgColor  = sel ? new Color(60, 40, 140, 230) : new Color(20, 20, 50, 180);
+            Color border   = sel ? Color.Yellow : new Color(80, 80, 120);
+            float pulse    = sel ? (0.85f + 0.15f * (float)Math.Sin(_cursorPulse)) : 1f;
+
+            DrawRect(new Rectangle(cx - BtnW / 2 - 1, btnY - 1, BtnW + 2, BtnH + 2), border);
+            DrawRect(new Rectangle(cx - BtnW / 2,     btnY,     BtnW,     BtnH),     bgColor);
+
+            Color textColor = sel ? Color.Yellow * pulse : Color.LightGray;
+            float scale     = sel ? 1.05f : 1.0f;
+            DrawTextCentered(MenuItems[i], cx, btnY + BtnH / 2, textColor, scale);
+
+            // Cursore freccia
+            if (sel)
+            {
+                string arrow = ">";
+                Vector2 arSz = _font.MeasureString(arrow);
+                float arX    = cx - BtnW / 2 - arSz.X - 10;
+                _sb.DrawString(_font, arrow,
+                    new Vector2(arX, btnY + BtnH / 2 - arSz.Y / 2),
+                    Color.Yellow * pulse);
+            }
+        }
+
+        DrawTextCentered("^v: seleziona    ENTER: conferma", cx,
+            startY + MenuItems.Length * (BtnH + BtnGap) + 18,
+            Color.Gray, 0.75f);
+        DrawTextCentered("F11: schermo intero", cx,
+            startY + MenuItems.Length * (BtnH + BtnGap) + 36,
+            Color.DarkGray, 0.70f);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    private void DrawAudioOverlay(int W, int H)
+    {
+        int boxW = 440;
+        int boxH = 175;
+        int boxX = W / 2 - boxW / 2;
+        int boxY = H / 2 - boxH / 2;
+
+        _sb.Draw(_pixel, new Rectangle(0, 0, W, H), Color.Black * 0.55f);
+        _sb.Draw(_pixel, new Rectangle(boxX, boxY, boxW, boxH), new Color(18, 18, 38, 240));
+        DrawBorder(boxX, boxY, boxW, boxH, Color.CornflowerBlue);
+
+        DrawTextCentered("IMPOSTAZIONI AUDIO", W / 2, boxY + 22, Color.CornflowerBlue, 1.0f);
+        _audioPanel.Draw(_sb, W / 2, boxY + 80);
+        DrawTextCentered("ESC: indietro", W / 2, boxY + boxH - 18, Color.DarkGray, 0.75f);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    private void DrawIstruzioniOverlay(int W, int H)
+    {
+        int boxW = 520;
+        int boxH = 260;
+        int boxX = W / 2 - boxW / 2;
+        int boxY = H / 2 - boxH / 2;
+        int cx   = W / 2;
+
+        _sb.Draw(_pixel, new Rectangle(0, 0, W, H), Color.Black * 0.55f);
+        _sb.Draw(_pixel, new Rectangle(boxX, boxY, boxW, boxH), new Color(18, 18, 38, 240));
+        DrawBorder(boxX, boxY, boxW, boxH, new Color(255, 200, 60));
+
+        DrawTextCentered("ISTRUZIONI", cx, boxY + 22, Color.Yellow, 1.1f);
+
+        int ly = boxY + 55;
+        const int lineH = 22;
+        void Line(string t, Color c, float sc = 0.9f)
+        {
+            DrawTextCentered(t, cx, ly, c, sc);
+            ly += lineH;
+        }
+
+        Line("WASD / FRECCE  :  muovi il minatore",     Color.LightGray);
+        Line("SPAZIO         :  piazza bomba piccola",   Color.LightGray);
+        Line("X              :  piazza bomba grande",    Color.LightGray);
+        Line("ESC            :  pausa / menu",           Color.LightGray);
+        Line("F11            :  schermo intero",         Color.LightGray);
+        Line("Raccogli chiave, apri porta, avanza!",     new Color(180, 255, 160), 0.85f);
+        Line("Guadagna vite extra ogni 500 punti.",      new Color(255, 220, 80),  0.80f);
+
+        DrawTextCentered("ESC / ENTER: chiudi", cx, boxY + boxH - 18, Color.DarkGray, 0.75f);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     private void DrawScrollingCloud(Texture2D tex, float offsetX, int W, int H, float alpha)
     {
-        // Normalizza l'offset in [0, W) per il loop
         float x = offsetX % W;
-        if (x > 0) x -= W;   // mantieni sempre a sinistra di zero
-
-        // Due copie affiancate per coprire tutta la larghezza senza buco
+        if (x > 0) x -= W;
         _sb.Draw(tex, new Rectangle((int)x,     0, W, H), Color.White * alpha);
         _sb.Draw(tex, new Rectangle((int)x + W, 0, W, H), Color.White * alpha);
+    }
+
+    private void DrawRect(Rectangle r, Color c)
+        => _sb.Draw(_pixel, r, c);
+
+    private void DrawBorder(int x, int y, int w, int h, Color c)
+    {
+        _sb.Draw(_pixel, new Rectangle(x, y, w, 2),     c);
+        _sb.Draw(_pixel, new Rectangle(x, y + h - 2, w, 2), c);
+        _sb.Draw(_pixel, new Rectangle(x, y, 2, h),     c);
+        _sb.Draw(_pixel, new Rectangle(x + w - 2, y, 2, h), c);
     }
 
     private void DrawTextCentered(string text, int cx, int cy, Color color, float scale)
@@ -118,6 +273,6 @@ public class TitleScene : Scene
         Vector2 origin = _font.MeasureString(text) * 0.5f;
         Vector2 pos    = new Vector2(cx, cy);
         _sb.DrawString(_font, text, pos + new Vector2(2, 2) * scale, Color.Black * 0.55f, 0f, origin, scale, SpriteEffects.None, 0f);
-        _sb.DrawString(_font, text, pos,                              color,               0f, origin, scale, SpriteEffects.None, 0f);
+        _sb.DrawString(_font, text, pos, color, 0f, origin, scale, SpriteEffects.None, 0f);
     }
 }

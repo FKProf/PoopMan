@@ -31,6 +31,9 @@ namespace PoopMan.GameObjects
         public Vector2 Position => position;
         public bool BigBomb => bigBomb;
 
+        /// <summary>Scattato nel momento in cui la bomba esplode. Arg: true = bomba grande.</summary>
+        public event EventHandler<bool>? Exploded;
+
         public Bomb(Vector2 pos,
                     Texture2D bombTex,
                     Dictionary<string, List<Rectangle>> bombAnim,
@@ -100,6 +103,7 @@ namespace PoopMan.GameObjects
             currentFrame = 0;
             animationTimer = 0f;
             ExplosionTiles.Clear();
+            Exploded?.Invoke(this, bigBomb);
 
             Point center = new((int)(position.X / TileMap.TileSize),
                                (int)(position.Y / TileMap.TileSize));

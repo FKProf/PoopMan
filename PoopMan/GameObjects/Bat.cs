@@ -81,13 +81,19 @@ namespace PoopMan.GameObjects
         /// <summary>Aggiorna le tile occupate da bombe solide: il bat non può attraversarle.</summary>
         public void SetSolidBombTiles(IEnumerable<Point> solidTiles)
         {
-            _solidBombTiles.Clear();
-            foreach (var t in solidTiles) _solidBombTiles.Add(t);
+            var newSet = new HashSet<Point>(solidTiles);
+            // Invalida la cache A* se le bombe solide sono cambiate
+            if (!newSet.SetEquals(_solidBombTiles))
+            {
+                _solidBombTiles = newSet;
+                _pathCacheTime = PathCacheMax; // forza ricalcolo immediato
+                _path.Clear();
+            }
         }
 
-        /// <summary>True se il tile è bloccato da pericolo O da una bomba solida.</summary>
+        /// <summary>True se il tile è bloccato da pericolo O da una bomba solida (Ghost bypassa le bombe).</summary>
         private bool IsBlocked(Point tile) =>
-            _dangerTiles.Contains(tile) || _solidBombTiles.Contains(tile);
+            _dangerTiles.Contains(tile) || (!_isGhosting && _solidBombTiles.Contains(tile));
 
         /// <summary>Aumenta velocità e aggressione in base al livello.</summary>
         public void SetAggressionLevel(int level)
@@ -96,6 +102,63 @@ namespace PoopMan.GameObjects
             moveSpeed     = Math.Min(130f   + level * 8f,   240f);
             waitDuration  = Math.Max(0.35f  - level * 0.02f, 0.08f);
             _sightRange   = Math.Min(8 + level, 16);
+
+            // ── Poteri speciali per livello ───────────────────────────────────
+            _canDash    = level >= 3;   // Livello 3+: scatta di 2 tile
+            _canGhost   = level >= 5;   // Livello 5+: attraversa bombe solide
+            _canSplit   = level >= 7;   // Livello 7+: alla morte spawna 2 mini-bat
+            _canBerserk = level >= 9;   // Livello 9+: berserk se giocatore vicino
+            _level      = level;
+        }
+
+        // ── Poteri speciali ───────────────────────────────────────────────────
+        private int   _level      = 0;
+        private bool  _canDash    = false;
+        private bool  _canGhost   = false;
+        private bool  _canSplit   = false;
+        private bool  _canBerserk = false;
+
+        // Dash
+        private float _dashCooldown    = 0f;
+        private const float DashCooldownMax = 3f;
+        private const float DashChance     = 0.25f; // 25% chance per step quando disponibile
+
+        // Ghost (attraversa bombe solide)
+        private bool  _isGhosting      = false;
+        private float _ghostTimer      = 0f;
+        private float _ghostCooldown   = 0f;
+        private const float GhostDuration    = 2f;
+        private const float GhostCooldownMax = 8f;
+        private const float GhostChance      = 0.10f;
+
+        // Split (spawn mini-bat alla morte)
+        public bool CanSplit => _canSplit && !_isMini;
+        private bool _isMini = false; // true = già un mini-bat, non può splittare ancora
+        public void SetMini() { _isMini = true; moveSpeed *= 0.8f; }
+
+        // Berserk
+        private bool  _isBerserk    = false;
+        private float _berserkTimer = 0f;
+        private const float BerserkRange    = 3f;
+        private const float BerserkDuration = 2f;
+        private const float BerserkSpeedMul = 2.2f;
+
+        // Evento split (GameScene ascolta e spawna i mini-bat)
+        public event Action<Point>? OnSplit;
+
+        /// <summary>Punti base per uccidere questo bat (aumenta con i poteri).</summary>
+        public int KillPoints
+        {
+            get
+            {
+                int pts = 100;
+                if (_canDash)    pts += 50;   // Livello 3+
+                if (_canGhost)   pts += 100;  // Livello 5+
+                if (_canSplit)   pts += 150;  // Livello 7+
+                if (_canBerserk) pts += 200;  // Livello 9+
+                if (_isMini)     pts = 50;    // mini-bat vale meno
+                return pts;
+            }
         }
 
         private float waitTimer    = -1f;
@@ -201,6 +264,10 @@ namespace PoopMan.GameObjects
             currentFrame = 0;
             animationTimer = 0f;
 
+            // Split: notifica GameScene di spawnare 2 mini-bat
+            if (CanSplit)
+                OnSplit?.Invoke(TilePosition);
+
             if (animations.ContainsKey("dead"))
             {
                 currentAnimation = "dead";
@@ -238,6 +305,34 @@ namespace PoopMan.GameObjects
 
             _pathCacheTime += dt;
 
+            // ── Cooldown dash ─────────────────────────────────────────────────
+            if (_dashCooldown > 0f) _dashCooldown -= dt;
+
+            // ── Ghost: decrementa timer e ripristina solidità ──────────────────
+            if (_isGhosting)
+            {
+                _ghostTimer -= dt;
+                if (_ghostTimer <= 0f) { _isGhosting = false; _ghostCooldown = GhostCooldownMax; }
+            }
+            else if (_ghostCooldown > 0f) _ghostCooldown -= dt;
+
+            // ── Berserk: attiva se giocatore vicino ───────────────────────────
+            if (_canBerserk)
+            {
+                float distToPlayer = Math.Abs(TilePosition.X - _playerTile.X)
+                                   + Math.Abs(TilePosition.Y - _playerTile.Y);
+                if (!_isBerserk && distToPlayer <= BerserkRange)
+                {
+                    _isBerserk    = true;
+                    _berserkTimer = BerserkDuration;
+                }
+                if (_isBerserk)
+                {
+                    _berserkTimer -= dt;
+                    if (_berserkTimer <= 0f) _isBerserk = false;
+                }
+            }
+
             if (!isMoving)
             {
                 waitTimer -= dt;
@@ -269,10 +364,31 @@ namespace PoopMan.GameObjects
 
             if (isMoving)
             {
+                // Se la destinazione è diventata bloccata (bomba piazzata nel frattempo), annulla
+                if (_solidBombTiles.Contains(TilePosition))
+                {
+                    // Torna al tile precedente
+                    TilePosition    = VisualTilePosition; // il tile più vicino alla posizione attuale
+                    targetPosition  = new Vector2(TilePosition.X * TileMap.TileSize,
+                                                  TilePosition.Y * TileMap.TileSize);
+                    // Forza riallineamento: torna indietro scegliendo una tile libera adiacente
+                    var rollback = new[] { new Point(0,-1), new Point(0,1), new Point(-1,0), new Point(1,0) }
+                        .Select(d => new Point(TilePosition.X + d.X, TilePosition.Y + d.Y))
+                        .FirstOrDefault(t => map.IsWalkable(t) && !_solidBombTiles.Contains(t));
+                    if (rollback != Point.Zero)
+                    {
+                        TilePosition   = rollback;
+                        targetPosition = new Vector2(rollback.X * TileMap.TileSize,
+                                                     rollback.Y * TileMap.TileSize);
+                    }
+                    _path.Clear();
+                }
+
                 Vector2 direction = targetPosition - Position;
                 float distance    = direction.Length();
+                float currentSpeed = moveSpeed * (_isBerserk ? BerserkSpeedMul : 1f);
 
-                if (distance <= moveSpeed * dt)
+                if (distance <= currentSpeed * dt)
                 {
                     Position       = targetPosition;
                     isMoving       = false;
@@ -283,7 +399,7 @@ namespace PoopMan.GameObjects
                 }
                 else
                 {
-                    Position += Vector2.Normalize(direction) * moveSpeed * dt;
+                    Position += Vector2.Normalize(direction) * currentSpeed * dt;
                 }
             }
 
@@ -294,6 +410,20 @@ namespace PoopMan.GameObjects
         private Point ChooseNextTile(TileMap map, float dt)
         {
             bool inDanger = _dangerTiles.Contains(TilePosition);
+
+            // ── GHOST: attiva se una bomba solida blocca tutti i percorsi ─────
+            if (_canGhost && !_isGhosting && _ghostCooldown <= 0f)
+            {
+                bool surrounded = new[] { new Point(0,-1), new Point(0,1), new Point(-1,0), new Point(1,0) }
+                    .All(d => { var t = new Point(TilePosition.X+d.X, TilePosition.Y+d.Y);
+                                return !map.IsWalkable(t) || _solidBombTiles.Contains(t); });
+                if (surrounded || (_solidBombTiles.Count > 0 && _rand.NextDouble() < GhostChance))
+                {
+                    _isGhosting = true;
+                    _ghostTimer = GhostDuration;
+                    _path.Clear(); // ricalcola percorso ignorando bombe solide
+                }
+            }
 
             // ── FLEE: priorità assoluta su tutto ──────────────────────────────
             if (inDanger)
@@ -325,11 +455,36 @@ namespace PoopMan.GameObjects
 
             return _aiState switch
             {
-                AiState.Chase   => ChaseStep(map),
-                AiState.Patrol  => PatrolStep(map),
+                AiState.Chase   => ApplyDash(map, ChaseStep(map)),
+                AiState.Patrol  => ApplyDash(map, PatrolStep(map)),
                 AiState.Flee    => BfsToSafeTile(map),
                 _               => WanderStep(map),
             };
+        }
+
+        // ── DASH: prova a saltare un tile extra nella stessa direzione ────────
+        private Point ApplyDash(TileMap map, Point nextStep)
+        {
+            if (!_canDash || _dashCooldown > 0f || nextStep == Point.Zero)
+                return nextStep;
+            if (_rand.NextDouble() >= DashChance) return nextStep;
+
+            int ddx = nextStep.X - TilePosition.X;
+            int ddy = nextStep.Y - TilePosition.Y;
+            Point dashTile = new(nextStep.X + ddx, nextStep.Y + ddy);
+
+            bool dashOk = map.IsWalkable(dashTile) &&
+                          !_dangerTiles.Contains(dashTile) &&
+                          (_isGhosting || !_solidBombTiles.Contains(dashTile));
+
+            if (dashOk)
+            {
+                _dashCooldown = DashCooldownMax;
+                // Aggiorna facing e posizione logica intermedia anche per il tile skippato
+                TilePosition = nextStep; // passa dal tile intermedio
+                return dashTile;
+            }
+            return nextStep;
         }
 
         // ── CHASE: A* verso il giocatore con cache ────────────────────────────

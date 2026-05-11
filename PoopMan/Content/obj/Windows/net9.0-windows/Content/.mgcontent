@@ -4,6 +4,25 @@
   <Platform>Windows</Platform>
   <Config />
   <SourceFiles>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/BMG/beanfeast.ogg</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/BMG/dramatic_boi_v3.ogg</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/BMG/dramatic_boi.ogg</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/BMG/frozen_winter.ogg</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/BMG/hope.ogg</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/BMG/woo_scary.ogg</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_1.wav</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_10.wav</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_2.wav</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_3.wav</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_4.wav</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_5.wav</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_6.wav</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_7.wav</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_8.wav</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_9.wav</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/UISounds/UISound.wav</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/FxsSound/fxs.wav</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/FxsSound/fxsBig.wav</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/font/Score.spritefont</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/backgound/1.png</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/backgound/2.png</File>
@@ -15,6 +34,25 @@
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/Tile/terrain.png</File>
   </SourceFiles>
   <DestFiles>
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
     <File xsi:nil="true" />
     <File xsi:nil="true" />
     <File xsi:nil="true" />

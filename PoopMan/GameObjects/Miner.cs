@@ -32,7 +32,35 @@ namespace PoopMan.GameObjects
 
         // ── Vite ─────────────────────────────────────────────────────────────
         private int lives = 3;
+        private const int MaxLives = 5;
         public int Lives => lives;
+
+        // ── Vita extra per punteggio ──────────────────────────────────────────
+        private const int ExtraLifeEvery = 1000;  // punti per ogni vita extra
+        private int _extraLifeThreshold  = ExtraLifeEvery;
+        // ── Evento vita extra ─────────────────────────────────────────────────
+        public event EventHandler? ExtraLifeEarned;  // notifica GameScene (flash HUD)
+
+        // ── Evento piazza bomba (per audio) ───────────────────────────────────
+        public event EventHandler? BombPlaced;
+
+        /// <summary>Scattato quando una bomba esplode. Arg: true = bomba grande.</summary>
+        public event EventHandler<bool>? BombExploded;
+
+        /// <summary>
+        /// Controlla se il punteggio corrente ha raggiunto la soglia per una vita extra.
+        /// Da chiamare ogni frame da GameScene dopo aver aggiornato il punteggio.
+        /// </summary>
+        public void CheckExtraLife(int score)
+        {
+            if (lives >= MaxLives) { _extraLifeThreshold = score + ExtraLifeEvery; return; }
+            if (score >= _extraLifeThreshold)
+            {
+                lives++;
+                _extraLifeThreshold += ExtraLifeEvery;
+                ExtraLifeEarned?.Invoke(this, EventArgs.Empty);
+            }
+        }
 
         // ── Evento respawn ───────────────────────────────────────────────────
         // Lanciato quando il miner perde una vita ma ne ha ancora
@@ -180,9 +208,14 @@ namespace PoopMan.GameObjects
                               (int)(b.Position.Y / TileMap.TileSize)) == placeTile);
 
                 if (!tileOccupied && activeBombs < MaxActiveBombs)
-                    bombs.Add(new Bomb(
+                {
+                    var b = new Bomb(
                         new Vector2(placeTile.X * TileMap.TileSize, placeTile.Y * TileMap.TileSize),
-                        bombTexture, bombAnimations, explosionTexture, explosionAnimations, false));
+                        bombTexture, bombAnimations, explosionTexture, explosionAnimations, false);
+                    b.Exploded += (s, isBig) => BombExploded?.Invoke(this, isBig);
+                    bombs.Add(b);
+                    BombPlaced?.Invoke(this, EventArgs.Empty);
+                }
             }
             // ── Piazzamento bomba grande ──────────────────────────────────────
             else if (GameController.BigBomb() && bigBombCount > 0)
@@ -196,9 +229,12 @@ namespace PoopMan.GameObjects
                 if (!tileOccupied && activeBombs < MaxActiveBombs)
                 {
                     bigBombCount--;
-                    bombs.Add(new Bomb(
+                    var b = new Bomb(
                         new Vector2(TilePosition.X * TileMap.TileSize, TilePosition.Y * TileMap.TileSize),
-                        bombTexture, bombAnimations, explosionTexture, explosionAnimations, true));
+                        bombTexture, bombAnimations, explosionTexture, explosionAnimations, true);
+                    b.Exploded += (s, isBig) => BombExploded?.Invoke(this, isBig);
+                    bombs.Add(b);
+                    BombPlaced?.Invoke(this, EventArgs.Empty);
                 }
             }
 

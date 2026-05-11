@@ -102,6 +102,19 @@ public class GameOverlay
         }
     }
 
+    // ── Flash vita extra ──────────────────────────────────────────────────
+    public void DrawExtraLife(SpriteBatch sb, float elapsed, float duration)
+    {
+        int vw = sb.GraphicsDevice.Viewport.Width;
+        int vh = sb.GraphicsDevice.Viewport.Height;
+
+        float alpha = 1f - (elapsed / duration);
+
+        DrawRect(sb, new Rectangle(0, 0, vw, vh), Color.Black * (alpha * 0.35f));
+        DrawTextCentered(sb, "+1 VITA!",           vw / 2, vh / 2 - 18, Color.LimeGreen * alpha, 2.5f);
+        DrawTextCentered(sb, "VITA BONUS GUADAGNATA", vw / 2, vh / 2 + 28, Color.White * alpha, 0.9f);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────
     private void DrawRect(SpriteBatch sb, Rectangle r, Color c)
         => sb.Draw(_pixel, r, c);

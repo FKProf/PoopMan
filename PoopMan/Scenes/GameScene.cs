@@ -36,8 +36,22 @@ public class GameScene : Scene
     private int  _score         = 0;
     private int  _killStreak    = 0;
     private bool _isPaused      = false;
+    private AudioSettingsPanel _audioPanel;
     private bool _showLevelFlash = false;
     private float _levelFlashTimer = 0f;
+    private bool _showExtraLifeFlash = false;
+    private float _extraLifeFlashTimer = 0f;
+    private const float ExtraLifeFlashDuration = 1.5f;
+
+    // ── Menu pausa ────────────────────────────────────────────────────────
+    private enum PauseScreen { Menu, Audio }
+    private PauseScreen _pauseScreen    = PauseScreen.Menu;
+    private int         _pauseMenuItem  = 0;
+    private float       _pausePulse     = 0f;
+    private static readonly string[] PauseMenuItems = { "RIPRENDI", "AUDIO", "MENU PRINCIPALE" };
+    private const int PauseBtnW = 280;
+    private const int PauseBtnH = 34;
+    private const int PauseBtnGap = 10;
 
     // ── Sistema casse e item droppati ────────────────────────────────────
     private Texture2D _itemTexture;
@@ -120,6 +134,9 @@ public class GameScene : Scene
         _minerHudTexture = Content.Load<Texture2D>("image/character/miner");
         _miner.NeedsRespawn += (s, e) => _miner.Respawn(_miner.TilePosition);
         _miner.DeathAnimationFinished += (s, e) => _showGameOver = true;
+        _miner.ExtraLifeEarned += (s, e) => { _showExtraLifeFlash = true; _extraLifeFlashTimer = 0f; };
+        _miner.BombPlaced   += (s, e)      => AudioManager.PlayBombPlaced();
+        _miner.BombExploded += (s, isBig)  => AudioManager.PlayExplosion(isBig);
 
         // ── Pixel 1x1 per rettangoli HUD ─────────────────────────────────────
         _pixel = new Texture2D(Core.GraphicsDevice, 1, 1);
@@ -132,9 +149,14 @@ public class GameScene : Scene
         // ── UI (dopo LoadItemAnimations che popola _itemTexture) ───────────
         _hud     = new GameHud(_scoreFont, _minerHudTexture, _itemTexture, _pixel);
         _overlay = new GameOverlay(_scoreFont, _pixel);
+        _audioPanel = new AudioSettingsPanel(_scoreFont, _pixel);
 
         SpawnBats(_currentLevel);
         InitChests();
+
+        // ── Audio: avvia BGM per il tema corrente ─────────────────────────
+        AudioManager.Load(Content);                      // no-op se già caricato
+        AudioManager.StartGameAudio((int)_map.Theme);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -142,21 +164,69 @@ public class GameScene : Scene
     {
         if (GameController.ToggleFullScreen()) { /* gestito in Game1 */ }
 
-        if (GameController.Pause())
-        {
-            _isPaused = !_isPaused;
-        }
+        bool pausePressed = GameController.Pause();
 
         if (_showGameOver)
         {
             if (GameController.Restart() || GameController.Action())
                 Core.ChangeScene(new GameScene());
-            else if (GameController.Pause())
+            else if (pausePressed)
+            {
+                AudioManager.StopGameAudio();
                 Core.ChangeScene(new TitleScene());
+            }
             return;
         }
 
-        if (_isPaused) return;
+        if (pausePressed)
+        {
+            if (_isPaused && _pauseScreen == PauseScreen.Audio)
+            {
+                // ESC dal pannello audio → torna al menu pausa
+                _pauseScreen = PauseScreen.Menu;
+            }
+            else
+            {
+                _isPaused = !_isPaused;
+                _pauseScreen   = PauseScreen.Menu;
+                _pauseMenuItem = 0;
+            }
+        }
+
+        if (_isPaused)
+        {
+            _pausePulse += (float)gameTime.ElapsedGameTime.TotalSeconds * 3.5f;
+
+            if (_pauseScreen == PauseScreen.Audio)
+            {
+                _audioPanel.Update(gameTime);
+            }
+            else
+            {
+                var kb = Core.Input.Keyboard;
+                if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Up))
+                    _pauseMenuItem = (_pauseMenuItem - 1 + PauseMenuItems.Length) % PauseMenuItems.Length;
+                if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Down))
+                    _pauseMenuItem = (_pauseMenuItem + 1) % PauseMenuItems.Length;
+                if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Enter))
+                {
+                    switch (_pauseMenuItem)
+                    {
+                        case 0: // RIPRENDI
+                            _isPaused = false;
+                            break;
+                        case 1: // AUDIO
+                            _pauseScreen = PauseScreen.Audio;
+                            break;
+                        case 2: // MENU PRINCIPALE
+                            AudioManager.StopGameAudio();
+                            Core.ChangeScene(new TitleScene());
+                            break;
+                    }
+                }
+            }
+            return;
+        }
 
         // ── Collisione miner ↔ bat ────────────────────────────────────────
         if (!_miner.IsDead && !_miner.IsInvincible)
@@ -253,13 +323,21 @@ public class GameScene : Scene
                 {
                     if (!b.IsDead && !b.IsInvincible && b.VisualTilePosition == tile)
                     {
+                        _score += b.KillPoints;
                         b.Kill();
                         _killStreak++;
                     }
                 }
             }
-            if (_killStreak == 1) _score += 100;
-            else if (_killStreak >= 2) _score += _killStreak * 25 + (_killStreak - 1) * 50;
+            // Bonus streak (2+ bat uccisi nella stessa esplosione)
+            if (_killStreak >= 2) _score += (_killStreak - 1) * 75;
+            _miner.CheckExtraLife(_score);
+        }
+
+        if (_showExtraLifeFlash)
+        {
+            _extraLifeFlashTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_extraLifeFlashTimer >= ExtraLifeFlashDuration) _showExtraLifeFlash = false;
         }
 
         // ── Aggiorna entità ───────────────────────────────────────────────
@@ -350,10 +428,104 @@ public class GameScene : Scene
 
         // ── Overlay (pausa / game over / flash livello) ───────────────────
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-        if      (_showGameOver)   _overlay.DrawGameOver(_spriteBatch, _score);
-        else if (_isPaused)       _overlay.DrawPause(_spriteBatch);
-        else if (_showLevelFlash) _overlay.DrawLevelFlash(_spriteBatch, _currentLevel, _levelFlashTimer, _map.Theme);
+        if      (_showGameOver)       _overlay.DrawGameOver(_spriteBatch, _score);
+        else if (_isPaused)           DrawPauseWithAudio();
+        else if (_showExtraLifeFlash) _overlay.DrawExtraLife(_spriteBatch, _extraLifeFlashTimer, ExtraLifeFlashDuration);
+        else if (_showLevelFlash)     _overlay.DrawLevelFlash(_spriteBatch, _currentLevel, _levelFlashTimer, _map.Theme);
         _spriteBatch.End();
+    }
+
+    private void DrawPauseWithAudio()
+    {
+        int vw = _spriteBatch.GraphicsDevice.Viewport.Width;
+        int vh = _spriteBatch.GraphicsDevice.Viewport.Height;
+        int cx = vw / 2;
+
+        // Sfondo scuro
+        _spriteBatch.Draw(_pixel, new Rectangle(0, 0, vw, vh), Color.Black * 0.60f);
+
+        if (_pauseScreen == PauseScreen.Audio)
+        {
+            DrawPauseAudioPanel(cx, vh / 2);
+            return;
+        }
+
+        // ── Menu pausa ────────────────────────────────────────────────────
+        int totalMenuH = PauseMenuItems.Length * (PauseBtnH + PauseBtnGap) - PauseBtnGap;
+        int boxW  = PauseBtnW + 60;
+        int boxH  = 52 + totalMenuH + 28;
+        int boxX  = cx - boxW / 2;
+        int boxY  = vh / 2 - boxH / 2;
+
+        // Riquadro
+        DrawRect(new Rectangle(boxX, boxY, boxW, boxH), new Color(15, 15, 35, 240));
+        DrawBorderRect(boxX, boxY, boxW, boxH, Color.Yellow);
+
+        DrawTextCentered("PAUSA", cx, boxY + 22, Color.Yellow, 1.8f);
+
+        // Linea separatrice
+        DrawRect(new Rectangle(boxX + 16, boxY + 44, boxW - 32, 2), new Color(80, 60, 160));
+
+        int menuStartY = boxY + 54;
+        for (int i = 0; i < PauseMenuItems.Length; i++)
+        {
+            int btnY = menuStartY + i * (PauseBtnH + PauseBtnGap);
+            bool sel = i == _pauseMenuItem;
+
+            Color bg     = sel ? new Color(60, 40, 140, 230) : new Color(25, 25, 55, 180);
+            Color border = sel ? Color.Yellow : new Color(70, 70, 110);
+            float pulse  = sel ? (0.85f + 0.15f * (float)Math.Sin(_pausePulse)) : 1f;
+
+            DrawRect(new Rectangle(cx - PauseBtnW / 2 - 1, btnY - 1, PauseBtnW + 2, PauseBtnH + 2), border);
+            DrawRect(new Rectangle(cx - PauseBtnW / 2,     btnY,     PauseBtnW,     PauseBtnH),     bg);
+
+            // Icona colorata per Home
+            Color textColor = i == 2
+                ? (sel ? new Color(255, 120, 120) * pulse : new Color(200, 100, 100))
+                : (sel ? Color.Yellow * pulse : Color.LightGray);
+
+            DrawTextCentered(PauseMenuItems[i], cx, btnY + PauseBtnH / 2, textColor, sel ? 1.05f : 1.0f);
+
+            if (sel)
+            {
+                string arrow = ">";
+                Vector2 arSz = _scoreFont.MeasureString(arrow);
+                float arX = cx - PauseBtnW / 2 - arSz.X - 8;
+                _spriteBatch.DrawString(_scoreFont, arrow,
+                    new Vector2(arX, btnY + PauseBtnH / 2 - arSz.Y / 2),
+                    Color.Yellow * pulse);
+            }
+        }
+
+        DrawTextCentered("^v: seleziona   ENTER: conferma   ESC: riprendi",
+            cx, boxY + boxH - 14, Color.DarkGray, 0.72f);
+    }
+
+    private void DrawPauseAudioPanel(int cx, int midY)
+    {
+        int boxW = 460;
+        int boxH = 190;
+        int boxX = cx - boxW / 2;
+        int boxY = midY - boxH / 2;
+
+        DrawRect(new Rectangle(boxX, boxY, boxW, boxH), new Color(15, 15, 35, 245));
+        DrawBorderRect(boxX, boxY, boxW, boxH, Color.CornflowerBlue);
+
+        DrawTextCentered("IMPOSTAZIONI AUDIO", cx, boxY + 22, Color.CornflowerBlue, 1.0f);
+        DrawRect(new Rectangle(boxX + 16, boxY + 40, boxW - 32, 2), new Color(40, 80, 160));
+
+        _audioPanel.Draw(_spriteBatch, cx, boxY + 85, showHint: false);
+
+        DrawTextCentered("< > volume    ^ v seleziona", cx, boxY + 138, new Color(100, 100, 130), 0.78f);
+        DrawTextCentered("ESC: indietro", cx, boxY + boxH - 16, Color.DarkGray, 0.75f);
+    }
+
+    private void DrawBorderRect(int x, int y, int w, int h, Color c)
+    {
+        DrawRect(new Rectangle(x,         y,         w, 2), c);
+        DrawRect(new Rectangle(x,         y + h - 2, w, 2), c);
+        DrawRect(new Rectangle(x,         y,         2, h), c);
+        DrawRect(new Rectangle(x + w - 2, y,         2, h), c);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -375,6 +547,31 @@ public class GameScene : Scene
     // ─────────────────────────────────────────────────────────────────────
     private Point GetRandomCornerSpawn()
         => Corners[new Random().Next(Corners.Length)];
+
+    private void SpawnMiniBats(Point origin)
+    {
+        string batXml = Path.Combine(Content.RootDirectory, "image", "enemies", "bat.xml");
+        Point[] dirs  = { new(1,0), new(-1,0), new(0,1), new(0,-1) };
+        int spawned   = 0;
+
+        foreach (var d in dirs.OrderBy(_ => new Random().Next()))
+        {
+            if (spawned >= 2) break;
+            Point tile = new(origin.X + d.X, origin.Y + d.Y);
+            if (!_map.IsWalkable(tile)) continue;
+            try
+            {
+                var mini = new Bat(tile, batXml, Content, _map);
+                mini.SetAggressionLevel(_currentLevel);
+                mini.SetMini();          // mini-bat non può splittarsi ulteriormente
+                mini.SetInvincible(1f);
+                mini.OnSplit += SpawnMiniBats; // non farà nulla (SetMini blocca CanSplit)
+                _bats.Add(mini);
+                spawned++;
+            }
+            catch { }
+        }
+    }
 
     private void SpawnBats(int level)
     {
@@ -398,6 +595,7 @@ public class GameScene : Scene
 
             var bat = new Bat(tile, batXml, Content, _map);
             bat.SetAggressionLevel(level);
+            bat.OnSplit += SpawnMiniBats;
             _bats.Add(bat);
         }
     }
@@ -437,6 +635,7 @@ public class GameScene : Scene
                         var nb = new Bat(n, batXml, Content, _map);
                         nb.SetInvincible(1.6f);
                         nb.SetAggressionLevel(_currentLevel);
+                        nb.OnSplit += SpawnMiniBats;
                         _bats.Add(nb);
                     }
                     catch { }
@@ -544,5 +743,8 @@ public class GameScene : Scene
 
         SpawnBats(_currentLevel);
         InitChests();
+
+        // ── Aggiorna BGM al nuovo tema ────────────────────────────────────
+        AudioManager.OnLevelChanged((int)_map.Theme);
     }
 }
