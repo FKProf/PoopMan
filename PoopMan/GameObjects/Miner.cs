@@ -1,4 +1,6 @@
-﻿using Microsoft.Xna.Framework;
+﻿//rimuovere quando spwan immunita, immunita avviene solo dopo un colpo, non dopo ogni spawn
+
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using PoopMan.UI;

@@ -1,3 +1,5 @@
+// da sistemare la generazione della mappa, attualmente troppo semplice e con poca varieta (soprattutto nei breakable)
+
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using PoopManLibrary.World;
