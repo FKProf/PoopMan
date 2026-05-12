@@ -23,6 +23,7 @@ namespace PoopMan.GameObjects
         private float fuseTimer = 0f;
         private float fuseDuration = 2f;    // Secondi prima dell'esplosione
         private bool bigBomb;               // true = raggio 2, false = raggio 1
+        private int  _extraRange = 0;       // bonus raggio da upgrade
 
         /// <summary>Tile colpiti dall'esplosione (usato per collisioni e drop).</summary>
         public List<Point> ExplosionTiles { get; private set; } = new();
@@ -39,7 +40,9 @@ namespace PoopMan.GameObjects
                     Dictionary<string, List<Rectangle>> bombAnim,
                     Texture2D explTex,
                     Dictionary<string, List<Rectangle>> explAnim,
-                    bool big)
+                    bool big,
+                    int extraRange   = 0,
+                    float fuseReduce = 0f)
         {
             position = pos;
             bombTexture = bombTex;
@@ -47,6 +50,8 @@ namespace PoopMan.GameObjects
             explosionTexture = explTex;
             explosionAnimations = explAnim;
             bigBomb = big;
+            _extraRange  = extraRange;
+            fuseDuration = Math.Max(0.5f, fuseDuration - fuseReduce);
 
             currentAnimation = bigBomb ? "big_tnt" : "small_tnt";
             currentFrames = bombAnimations[currentAnimation];
@@ -116,7 +121,7 @@ namespace PoopMan.GameObjects
                     map.BreakTile(center);
             }
 
-            int range = bigBomb ? 2 : 1;
+            int range = (bigBomb ? 2 : 1) + _extraRange;
             int[] dx = { 0, 0, -1, 1 };
             int[] dy = { -1, 1, 0, 0 };
 

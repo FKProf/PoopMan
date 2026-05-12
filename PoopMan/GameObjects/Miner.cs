@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using PoopMan.UI;
 using PoopManLibrary;
 using PoopManLibrary.World;
 using System;
@@ -31,9 +32,10 @@ namespace PoopMan.GameObjects
         private List<Rectangle> currentAnimationFrames;
 
         // ── Vite ─────────────────────────────────────────────────────────────
-        private int lives = 3;
-        private const int MaxLives = 5;
-        public int Lives => lives;
+        private int lives    = 3;
+        private int maxLives = 5;         // può salire con MaxLifeUp
+        public int Lives    => lives;
+        public int MaxLives => maxLives;
 
         // ── Vita extra per punteggio ──────────────────────────────────────────
         private const int ExtraLifeEvery = 1000;  // punti per ogni vita extra
@@ -53,13 +55,173 @@ namespace PoopMan.GameObjects
         /// </summary>
         public void CheckExtraLife(int score)
         {
-            if (lives >= MaxLives) { _extraLifeThreshold = score + ExtraLifeEvery; return; }
+            if (lives >= maxLives) { _extraLifeThreshold = score + ExtraLifeEvery; return; }
             if (score >= _extraLifeThreshold)
             {
                 lives++;
                 _extraLifeThreshold += ExtraLifeEvery;
                 ExtraLifeEarned?.Invoke(this, EventArgs.Empty);
             }
+        }
+
+        /// <summary>Applica il potenziamento scelto dal giocatore nel menu upgrade.</summary>
+        public void ApplyUpgrade(UpgradeType upgrade)
+        {
+            switch (upgrade)
+            {
+                // ── Vita ──────────────────────────────────────────────────────
+                case UpgradeType.ExtraLife:
+                    if (lives < maxLives) { lives++; ExtraLifeEarned?.Invoke(this, EventArgs.Empty); }
+                    break;
+                case UpgradeType.MaxLifeUp:
+                    if (_maxLifeSteps < UpgradeRegistry.MaxLifeSteps)
+                    {
+                        _maxLifeSteps++;
+                        maxLives++;
+                        lives = Math.Min(lives + 1, maxLives);
+                        ExtraLifeEarned?.Invoke(this, EventArgs.Empty);
+                    }
+                    break;
+                case UpgradeType.SlowRegen:
+                    _regenLevelsAccum = 0;
+                    _slowRegenActive = true;
+                    break;
+
+                // ── Offensivi ─────────────────────────────────────────────────
+                case UpgradeType.IncreasedDamage:
+                case UpgradeType.BiggerBlast:
+                    if (_explosionRangeSteps < UpgradeRegistry.MaxExplosionRange)
+                    {
+                        _explosionRangeSteps++;
+                        _bonusExplosionRange++;
+                    }
+                    break;
+                case UpgradeType.FasterBomb:
+                    if (_fasterBombSteps < UpgradeRegistry.MaxFasterBombSteps)
+                    {
+                        _fasterBombSteps++;
+                        _bombTimerBonus += 0.4f;
+                    }
+                    break;
+                case UpgradeType.ExtraBomb:
+                    if (_extraBombSteps < UpgradeRegistry.MaxExtraBombs)
+                    {
+                        _extraBombSteps++;
+                        _maxActiveBombs++;
+                    }
+                    break;
+                case UpgradeType.ChainExplosion:
+                    if (_chainSteps < UpgradeRegistry.MaxChainSteps)
+                    {
+                        _chainSteps++;
+                        ChainExplosionChance = Math.Min(ChainExplosionChance + 0.15f, 0.60f);
+                    }
+                    break;
+
+                // ── Movimento ─────────────────────────────────────────────────
+                case UpgradeType.FasterMovement:
+                    if (_moveSteps < UpgradeRegistry.MaxMoveSteps)
+                    {
+                        _moveSteps++;
+                        moveSpeed = Math.Min(moveSpeed + 20f, 280f);
+                    }
+                    break;
+                case UpgradeType.DashAfterHit:
+                    UpgradeDashAfterHit = true;
+                    break;
+
+                // ── Difensivi ─────────────────────────────────────────────────
+                case UpgradeType.ExplosionResistance:
+                    invincibilityDuration = Math.Min(invincibilityDuration + 1f, UpgradeRegistry.MaxInvincibility);
+                    break;
+                case UpgradeType.DamageReduction:
+                    invincibilityDuration = Math.Min(invincibilityDuration + 0.5f, UpgradeRegistry.MaxInvincibility);
+                    break;
+                case UpgradeType.Shield:
+                    UpgradeShield = true;
+                    _shieldActive = true;
+                    break;
+
+                // ── Speciali ──────────────────────────────────────────────────
+                case UpgradeType.MultiHit:
+                    UpgradeMultiHit = true;
+                    break;
+                case UpgradeType.CriticalChance:
+                    UpgradeCritical = true;
+                    break;
+                case UpgradeType.Magnet:
+                    UpgradeMagnet = true;
+                    break;
+                case UpgradeType.StunOnHit:
+                    UpgradeStunOnHit = true;
+                    break;
+                case UpgradeType.SlowOnHit:
+                    UpgradeSlowOnHit = true;
+                    break;
+                case UpgradeType.BonusLoot:
+                    BonusLootChance = Math.Min(BonusLootChance + 0.15f, 0.60f);
+                    break;
+                case UpgradeType.DoubleDrop:
+                    if (_doubleDropSteps < UpgradeRegistry.MaxDoubleDropSteps)
+                    {
+                        _doubleDropSteps++;
+                        DoubleDropChance = Math.Min(DoubleDropChance + 0.15f, 0.60f);
+                    }
+                    break;
+            }
+        }
+
+        // SlowRegen: GameScene chiama questo ogni volta che il livello avanza
+        public bool SlowRegenActive => _slowRegenActive;
+        public void NotifyLevelUp()
+        {
+            // Rigenerazione lenta
+            if (_slowRegenActive)
+            {
+                _regenLevelsAccum++;
+                if (_regenLevelsAccum >= 10)
+                {
+                    _regenLevelsAccum = 0;
+                    if (lives < maxLives) { lives++; ExtraLifeEarned?.Invoke(this, EventArgs.Empty); }
+                }
+            }
+
+            // Ricarica scudo
+            if (UpgradeShield && !_shieldActive)
+            {
+                _shieldRechargeLevel++;
+                if (_shieldRechargeLevel >= _shieldRechargePeriod)
+                {
+                    _shieldRechargeLevel = 0;
+                    _shieldActive = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tenta di assorbire un colpo con lo scudo.
+        /// Restituisce true se il danno è stato assorbito e non deve applicarsi.
+        /// </summary>
+        public bool TryAbsorbWithShield()
+        {
+            if (_shieldActive)
+            {
+                _shieldActive = false;
+                _shieldRechargeLevel = 0;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Attiva il dash post-danno se l'upgrade è presente.
+        /// Da chiamare in GameScene quando il miner subisce un colpo.
+        /// </summary>
+        public void TriggerDashAfterHit()
+        {
+            if (!UpgradeDashAfterHit) return;
+            _dashTimer = 3f;
+            _dashSpeedBonus = moveSpeed * 0.4f;
         }
 
         // ── Evento respawn ───────────────────────────────────────────────────
@@ -69,11 +231,13 @@ namespace PoopMan.GameObjects
         // ── Invincibilità (dopo respawn) ─────────────────────────────────────
         private bool isInvincible = false;
         private float invincibilityTimer = 0f;
-        private float invincibilityDuration = 2f;   // Secondi di protezione
+        private float invincibilityDuration = 3f;   // Secondi di protezione (safe zone spawn)
         private float blinkTimer = 0f;
         private float blinkInterval = 0.1f;         // Secondi tra un blink e l'altro
         private bool blinkVisible = true;
         public bool IsInvincible => isInvincible;
+        /// <summary>Percentuale di invincibilità residua [0-1]. 1 = appena iniziata, 0 = finita.</summary>
+        public float InvincibilityRatio => isInvincible ? Math.Clamp(invincibilityTimer / invincibilityDuration, 0f, 1f) : 0f;
 
         // ── Bombe grandi ─────────────────────────────────────────────────────
         private int bigBombCount = 0;
@@ -104,8 +268,43 @@ namespace PoopMan.GameObjects
         private const int MAX_BUFFER_SIZE = 2;
         private Queue<Vector2> _inputBuffer = new(MAX_BUFFER_SIZE);
 
+        // ── Upgrade potenziamenti ─────────────────────────────────────────────
+        private int   _bonusExplosionRange = 0;   // tile extra per il raggio esplosione
+        private float _bombTimerBonus      = 0f;  // secondi sottratti al timer bomba
+        public int BonusExplosionRange => _bonusExplosionRange;
+
+        // Upgrade speciali (flag)
+        public bool UpgradeMultiHit      { get; private set; } = false;
+        public bool UpgradeCritical      { get; private set; } = false;
+        public bool UpgradeMagnet        { get; private set; } = false;
+        public float ChainExplosionChance{ get; private set; } = 0f;   // 0–60%
+        public float DoubleDropChance    { get; private set; } = 0f;   // 0–60%
+        public bool UpgradeStunOnHit     { get; private set; } = false;
+        public bool UpgradeSlowOnHit     { get; private set; } = false;
+        public bool UpgradeDashAfterHit  { get; private set; } = false;
+        public bool UpgradeShield        { get; private set; } = false;
+        private bool _shieldActive       = false;
+        private int  _shieldRechargeLevel= 0;
+        private int  _shieldRechargePeriod= 5;
+        public bool  ShieldActive => _shieldActive;
+        public float BonusLootChance     { get; private set; } = 0f;
+        private float _dashTimer         = 0f;
+        private float _dashSpeedBonus    = 0f;
+        private bool  _slowRegenActive   = false;
+        private int   _regenLevelsAccum  = 0;
+
+        // Contatori upgrade cumulativi (per rispettare i cap)
+        private int _explosionRangeSteps = 0;
+        private int _extraBombSteps      = 0;
+        private int _fasterBombSteps     = 0;
+        private int _moveSteps           = 0;
+        private int _maxLifeSteps        = 0;
+        private int _chainSteps          = 0;
+        private int _doubleDropSteps     = 0;
+
         // ── Risorse bombe ────────────────────────────────────────────────────
-        private const int MaxActiveBombs = 3;   // massimo bombe contemporanee
+        private int _maxActiveBombs = 3;        // cresce con ExtraBomb
+        private int MaxActiveBombs => _maxActiveBombs;
         private Texture2D itemTexture;
         private Dictionary<string, List<Rectangle>> itemAnimations = new();
         private List<Bomb> bombs = new();
@@ -196,7 +395,14 @@ namespace PoopMan.GameObjects
             }
 
             HandleInput();
-            
+
+            // ── Dash post-danno ───────────────────────────────────────────────
+            if (_dashTimer > 0f)
+            {
+                _dashTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_dashTimer <= 0f)
+                    _dashTimer = 0f;
+            }
             // ── Piazzamento bomba piccola ─────────────────────────────────────
             if (GameController.MiniBomb())
             {
@@ -211,7 +417,8 @@ namespace PoopMan.GameObjects
                 {
                     var b = new Bomb(
                         new Vector2(placeTile.X * TileMap.TileSize, placeTile.Y * TileMap.TileSize),
-                        bombTexture, bombAnimations, explosionTexture, explosionAnimations, false);
+                        bombTexture, bombAnimations, explosionTexture, explosionAnimations, false,
+                        _bonusExplosionRange, _bombTimerBonus);
                     b.Exploded += (s, isBig) => BombExploded?.Invoke(this, isBig);
                     bombs.Add(b);
                     BombPlaced?.Invoke(this, EventArgs.Empty);
@@ -231,7 +438,8 @@ namespace PoopMan.GameObjects
                     bigBombCount--;
                     var b = new Bomb(
                         new Vector2(TilePosition.X * TileMap.TileSize, TilePosition.Y * TileMap.TileSize),
-                        bombTexture, bombAnimations, explosionTexture, explosionAnimations, true);
+                        bombTexture, bombAnimations, explosionTexture, explosionAnimations, true,
+                        _bonusExplosionRange, _bombTimerBonus);
                     b.Exploded += (s, isBig) => BombExploded?.Invoke(this, isBig);
                     bombs.Add(b);
                     BombPlaced?.Invoke(this, EventArgs.Empty);
@@ -311,7 +519,8 @@ namespace PoopMan.GameObjects
 
             if (isMoving)
             {
-                float distance = moveSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                float effectiveSpeed = moveSpeed + (_dashTimer > 0f ? _dashSpeedBonus : 0f);
+                float distance = effectiveSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
                 Vector2 direction = targetPosition - Position;
 
                 if (direction.Length() <= distance)
@@ -570,11 +779,14 @@ namespace PoopMan.GameObjects
             if (currentAnimationFrames == null || currentAnimationFrames.Count == 0) return;
             if (currentFrame >= currentAnimationFrames.Count) currentFrame = 0;
 
-            // Non disegnare durante i frame "blink off"
-            if (!blinkVisible) return;
-
             foreach (var bomb in bombs)
                 bomb.Draw(spriteBatch);
+
+            if (isInvincible)
+            {
+                // Blink: non disegnare il frame principale nei frame "off"
+                if (!blinkVisible) return;
+            }
 
             spriteBatch.Draw(texture, Position,
                 currentAnimationFrames[currentFrame], Color.White);
@@ -697,8 +909,11 @@ namespace PoopMan.GameObjects
             currentFrame = 0;
             animationTimer = 0f;
             bombs.Clear();      // Rimuovi tutte le bombe piazzate
-            isInvincible = false;
-            invincibilityTimer = 0f;
+
+            // Attiva safe zone all'inizio di ogni livello
+            isInvincible = true;
+            invincibilityTimer = invincibilityDuration;
+            blinkTimer = blinkInterval;
             blinkVisible = true;
         }
     }

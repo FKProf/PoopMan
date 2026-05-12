@@ -82,6 +82,12 @@ public class GameScene : Scene
     private int _currentLevel = 0;
     private bool _levelComplete = false;
 
+    // ── Menu Upgrade ──────────────────────────────────────────────────────
+    private bool _showUpgradeMenu = false;
+    private List<UpgradeDef> _upgradeOptions = new();
+    private int   _upgradeSelected = 0;
+    private float _upgradePulse    = 0f;
+
     // ── Chiave (livello 5+) ───────────────────────────────────────────────
     private HashSet<Point> _keyTiles = new();
     private bool _hasKey = false;
@@ -125,7 +131,7 @@ public class GameScene : Scene
 
         // ── TileMap ───────────────────────────────────────────────────────
         _spawnPoint = GetRandomCornerSpawn();
-        _map = new TileMap(_atlas, rows: 23, cols: 39, level: _currentLevel);
+        _map = new TileMap(_atlas, rows: 23, cols: 39, level: _currentLevel, playerSpawn: _spawnPoint);
         _map.TileBroken += HandleChestDrop;
 
         // ── Miner ─────────────────────────────────────────────────────────
@@ -174,6 +180,28 @@ public class GameScene : Scene
             {
                 AudioManager.StopGameAudio();
                 Core.ChangeScene(new TitleScene());
+            }
+            return;
+        }
+
+        // ── Menu Upgrade ──────────────────────────────────────────────────
+        if (_showUpgradeMenu)
+        {
+            _upgradePulse += (float)gameTime.ElapsedGameTime.TotalSeconds * 4f;
+            var kb = Core.Input.Keyboard;
+
+            if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Left) ||
+                kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.A))
+                _upgradeSelected = (_upgradeSelected - 1 + _upgradeOptions.Count) % _upgradeOptions.Count;
+
+            if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Right) ||
+                kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.D))
+                _upgradeSelected = (_upgradeSelected + 1) % _upgradeOptions.Count;
+
+            if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Enter))
+            {
+                _miner.ApplyUpgrade(_upgradeOptions[_upgradeSelected].Type);
+                _showUpgradeMenu = false;
             }
             return;
         }
@@ -231,6 +259,7 @@ public class GameScene : Scene
         // ── Collisione miner ↔ bat ────────────────────────────────────────
         if (!_miner.IsDead && !_miner.IsInvincible)
         {
+            var rand = new Random();
             foreach (var b in _bats)
             {
                 if (b.IsDead) continue;
@@ -238,7 +267,21 @@ public class GameScene : Scene
                 var mc = _miner.GetBounds();
                 if (bc != Collision.Empty && mc != Collision.Empty && bc.Intersects(mc))
                 {
-                    _miner.Kill();
+                    // Critico: 20% probabilità di uccidere il bat invece del miner
+                    if (_miner.UpgradeCritical && rand.Next(100) < 20)
+                    {
+                        _score += b.KillPoints * 2; // doppio punteggio sul critico
+                        b.Kill();
+                    }
+                    else if (_miner.TryAbsorbWithShield())
+                    {
+                        // scudo assorbe il colpo
+                    }
+                    else
+                    {
+                        _miner.TriggerDashAfterHit();
+                        _miner.Kill();
+                    }
                     break;
                 }
             }
@@ -249,7 +292,15 @@ public class GameScene : Scene
         {
             foreach (var tile in _miner.ActiveExplosionTiles)
             {
-                if (_miner.TilePosition == tile) { _miner.Kill(); break; }
+                if (_miner.TilePosition == tile)
+                {
+                    if (!_miner.TryAbsorbWithShield())
+                    {
+                        _miner.TriggerDashAfterHit();
+                        _miner.Kill();
+                    }
+                    break;
+                }
             }
         }
 
@@ -258,6 +309,22 @@ public class GameScene : Scene
         {
             foreach (var it in _droppedItems.Values)
                 it.JustSpawned = false;
+
+            // Calamita: raccoglie automaticamente item entro 3 tile
+            if (_miner.UpgradeMagnet)
+            {
+                var toCollect = _droppedItems
+                    .Where(kv => !kv.Value.IsOpen && kv.Value.Type != "door"
+                        && Math.Abs(kv.Key.X - _miner.VisualTilePosition.X) <= 3
+                        && Math.Abs(kv.Key.Y - _miner.VisualTilePosition.Y) <= 3)
+                    .Select(kv => kv.Key).ToList();
+                foreach (var t in toCollect)
+                {
+                    var it = _droppedItems[t];
+                    if (it.Type == "chest_tnt") { _miner.AddBigBomb(); _droppedItems.Remove(t); }
+                    else if (it.Type == "key")  { _hasKey = true;      _droppedItems.Remove(t); }
+                }
+            }
 
             if (_droppedItems.TryGetValue(_miner.TilePosition, out var item)
                 && !item.IsOpen && !item.JustSpawned)
@@ -317,18 +384,50 @@ public class GameScene : Scene
         if (!_miner.IsDead)
         {
             _killStreak = 0;
-            foreach (var tile in _miner.ActiveExplosionTiles)
+
+            // Tile adiacenti alle esplosioni (per shockwave stun/slow)
+            var explosionSet = _miner.ActiveExplosionTiles.ToHashSet();
+            var adjacentTiles = explosionSet
+                .SelectMany(t => new[]
+                {
+                    new Point(t.X + 1, t.Y), new Point(t.X - 1, t.Y),
+                    new Point(t.X, t.Y + 1), new Point(t.X, t.Y - 1)
+                })
+                .Where(t => !explosionSet.Contains(t))
+                .ToHashSet();
+
+            foreach (var tile in explosionSet)
             {
                 foreach (var b in _bats)
                 {
                     if (!b.IsDead && !b.IsInvincible && b.VisualTilePosition == tile)
                     {
-                        _score += b.KillPoints;
-                        b.Kill();
-                        _killStreak++;
+                        bool killed = b.TakeDamage();
+                        if (killed)
+                        {
+                            _score += b.KillPoints;
+                            _killStreak++;
+
+                            if (_miner.ChainExplosionChance > 0f &&
+                                new Random().NextDouble() < _miner.ChainExplosionChance)
+                                TriggerChainAt(tile);
+                        }
                     }
                 }
             }
+
+            // Shockwave: stordimento/rallentamento sui bat adiacenti che sopravvivono
+            if (_miner.UpgradeStunOnHit || _miner.UpgradeSlowOnHit)
+            {
+                foreach (var b in _bats)
+                {
+                    if (b.IsDead) continue;
+                    if (!adjacentTiles.Contains(b.VisualTilePosition)) continue;
+                    if (_miner.UpgradeStunOnHit)  b.ApplyStun(1.5f);
+                    if (_miner.UpgradeSlowOnHit)  b.ApplySlow(0.4f, 3.0f);
+                }
+            }
+
             // Bonus streak (2+ bat uccisi nella stessa esplosione)
             if (_killStreak >= 2) _score += (_killStreak - 1) * 75;
             _miner.CheckExtraLife(_score);
@@ -358,9 +457,20 @@ public class GameScene : Scene
             _bats[i].SetSolidBombTiles(solidForThisBat);
             _bats[i].Update(_map, gameTime);
             if (!_bats[i].IsDead)
-                _bats[i].SetPlayerTarget(_miner.VisualTilePosition);
+            {
+                // Durante la safe zone del miner i bat non aggiornano il target
+                // (vagano per la mappa invece di convergere sullo spawn)
+                if (!_miner.IsInvincible)
+                    _bats[i].SetPlayerTarget(_miner.VisualTilePosition);
+            }
             if (_bats[i].IsDeathAnimationFinished)
+            {
+                // DoubleDrop: probabilità di spawnare un item alla morte del bat
+                if (_miner.DoubleDropChance > 0f &&
+                    new Random().NextDouble() < _miner.DoubleDropChance)
+                    TryDropItem(_bats[i].TilePosition, forceChest: true);
                 _bats.RemoveAt(i);
+            }
         }
 
         // ── Timer animazione item ─────────────────────────────────────────
@@ -422,13 +532,17 @@ public class GameScene : Scene
         }
 
         _miner.Draw(_spriteBatch);
+
+
+
         foreach (var b in _bats) b.Draw(_spriteBatch);
 
         _spriteBatch.End();
 
-        // ── Overlay (pausa / game over / flash livello) ───────────────────
+        // ── Overlay (pausa / game over / flash livello / upgrade) ────────
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
         if      (_showGameOver)       _overlay.DrawGameOver(_spriteBatch, _score);
+        else if (_showUpgradeMenu)    _overlay.DrawUpgradeMenu(_spriteBatch, _upgradeOptions, _upgradeSelected, (float)Math.Sin(_upgradePulse));
         else if (_isPaused)           DrawPauseWithAudio();
         else if (_showExtraLifeFlash) _overlay.DrawExtraLife(_spriteBatch, _extraLifeFlashTimer, ExtraLifeFlashDuration);
         else if (_showLevelFlash)     _overlay.DrawLevelFlash(_spriteBatch, _currentLevel, _levelFlashTimer, _map.Theme);
@@ -548,6 +662,107 @@ public class GameScene : Scene
     private Point GetRandomCornerSpawn()
         => Corners[new Random().Next(Corners.Length)];
 
+    /// <summary>
+    /// Gestisce l'esplosione di un bat esplosivo alla sua morte.
+    /// Danneggia tutti i bat e il miner nei tile circostanti (raggio 1 o 2),
+    /// rompe i breakable e riproduce il suono di esplosione.
+    /// </summary>
+    private void TriggerBatExplosion(Point origin, bool big)
+    {
+        int range = big ? 2 : 1;
+
+        // Calcola tutti i tile colpiti (identico alla logica di Bomb.Explode)
+        var hitTiles = new HashSet<Point>();
+        if (_map.GetTile(origin) != PoopManLibrary.World.TileType.Wall)
+            hitTiles.Add(origin);
+
+        int[] dx = { 0, 0, -1, 1 };
+        int[] dy = { -1, 1, 0, 0 };
+        for (int dir = 0; dir < 4; dir++)
+        {
+            for (int step = 1; step <= range; step++)
+            {
+                Point t = new(origin.X + dx[dir] * step, origin.Y + dy[dir] * step);
+                if (!_map.IsInside(t)) break;
+                var tileType = _map.GetTile(t);
+                if (tileType == PoopManLibrary.World.TileType.Wall) break;
+                if (tileType == PoopManLibrary.World.TileType.Breakable)
+                {
+                    _map.BreakTile(t);
+                    break;
+                }
+                hitTiles.Add(t);
+            }
+        }
+
+        // Danno ai bat nei tile colpiti (le esplosioni dei bat ignorano la resistenza)
+        foreach (var b in _bats)
+        {
+            if (!b.IsDead && !b.IsInvincible && hitTiles.Contains(b.VisualTilePosition))
+            {
+                if (b.TakeDamage()) _score += b.KillPoints;
+            }
+}
+
+        // Danno al miner
+        if (!_miner.IsDead && !_miner.IsInvincible && hitTiles.Contains(_miner.VisualTilePosition))
+            _miner.Kill();
+
+        // Audio esplosione
+        AudioManager.PlayExplosion(big);
+    }
+
+    /// <summary>
+    /// Prova a spawnare un item sul tile specificato se è libero.
+    /// Se <paramref name="forceChest"/> è true, spawna sempre una cassa TNT.
+    /// Altrimenti usa la probabilità base + BonusLootChance del miner.
+    /// </summary>
+    private void TryDropItem(Point tile, bool forceChest = false)
+    {
+        if (_droppedItems.ContainsKey(tile)) return;
+        if (!_map.IsWalkable(tile)) return;
+
+        var rng = new Random();
+        float roll = (float)rng.NextDouble();
+        float threshold = forceChest ? 0f : (0.20f + _miner.BonusLootChance);  // 20% base + bonus
+
+        if (forceChest || roll < threshold)
+        {
+            _droppedItems[tile] = new DroppedItem { Type = "chest_tnt", JustSpawned = true };
+        }
+    }
+
+    /// <summary>
+    /// Mini-esplosione a catena (raggio 1) sul tile dove un bat è stato ucciso.
+    /// Non può scatenare ulteriori catene (no ricorsione).
+    /// </summary>
+    private void TriggerChainAt(Point origin)
+    {
+        int[] dx = { 0, 0, -1, 1 };
+        int[] dy = { -1, 1, 0, 0 };
+        var hitTiles = new HashSet<Point> { origin };
+        for (int dir = 0; dir < 4; dir++)
+        {
+            Point t = new(origin.X + dx[dir], origin.Y + dy[dir]);
+            if (!_map.IsInside(t)) continue;
+            var tt = _map.GetTile(t);
+            if (tt == PoopManLibrary.World.TileType.Wall) continue;
+            if (tt == PoopManLibrary.World.TileType.Breakable) { _map.BreakTile(t); continue; }
+            hitTiles.Add(t);
+        }
+        foreach (var b in _bats)
+        {
+            if (!b.IsDead && !b.IsInvincible && hitTiles.Contains(b.VisualTilePosition))
+            {
+                if (b.TakeDamage()) _score += b.KillPoints;
+            }
+        }
+        if (!_miner.IsDead && !_miner.IsInvincible && hitTiles.Contains(_miner.VisualTilePosition))
+        {
+            if (!_miner.TryAbsorbWithShield()) _miner.Kill();
+        }
+    }
+
     private void SpawnMiniBats(Point origin)
     {
         string batXml = Path.Combine(Content.RootDirectory, "image", "enemies", "bat.xml");
@@ -565,7 +780,8 @@ public class GameScene : Scene
                 mini.SetAggressionLevel(_currentLevel);
                 mini.SetMini();          // mini-bat non può splittarsi ulteriormente
                 mini.SetInvincible(1f);
-                mini.OnSplit += SpawnMiniBats; // non farà nulla (SetMini blocca CanSplit)
+                mini.OnSplit         += SpawnMiniBats; // non farà nulla (SetMini blocca CanSplit)
+                mini.OnDeathExplosion += TriggerBatExplosion;
                 _bats.Add(mini);
                 spawned++;
             }
@@ -588,14 +804,15 @@ public class GameScene : Scene
             int ty = rand.Next(1, 22);
             Point tile = new Point(tx, ty);
 
-            if (Math.Abs(tx - _miner.TilePosition.X) < 4 &&
-                Math.Abs(ty - _miner.TilePosition.Y) < 4) continue;
+            if (Math.Abs(tx - _miner.TilePosition.X) < 6 &&
+                Math.Abs(ty - _miner.TilePosition.Y) < 6) continue;
 
             if (!_map.IsWalkable(tile)) continue;
 
             var bat = new Bat(tile, batXml, Content, _map);
             bat.SetAggressionLevel(level);
-            bat.OnSplit += SpawnMiniBats;
+            bat.OnSplit         += SpawnMiniBats;
+            bat.OnDeathExplosion += TriggerBatExplosion;
             _bats.Add(bat);
         }
     }
@@ -736,15 +953,26 @@ public class GameScene : Scene
         _hasKey = false;
         _score += 500;
 
-        _map = new TileMap(_atlas, 23, 39, level: _currentLevel);
+        _map = new TileMap(_atlas, 23, 39, level: _currentLevel, playerSpawn: _spawnPoint);
         _map.TileBroken += HandleChestDrop;
 
         _miner.ResetForNewLevel(_spawnPoint);
+        _miner.NotifyLevelUp(); // SlowRegen
 
         SpawnBats(_currentLevel);
         InitChests();
 
         // ── Aggiorna BGM al nuovo tema ────────────────────────────────────
         AudioManager.OnLevelChanged((int)_map.Theme);
+
+        // ── Menu upgrade ogni EveryNLevels livelli (primo al livello 3) ───
+        if (_currentLevel >= UpgradeRegistry.EveryNLevels
+            && _currentLevel % UpgradeRegistry.EveryNLevels == 0)
+        {
+            _upgradeOptions  = UpgradeRegistry.PickRandom(3);
+            _upgradeSelected = 0;
+            _upgradePulse    = 0f;
+            _showUpgradeMenu = true;
+        }
     }
 }

@@ -98,25 +98,48 @@ namespace PoopMan.GameObjects
         /// <summary>Aumenta velocità e aggressione in base al livello.</summary>
         public void SetAggressionLevel(int level)
         {
-            _chaseChance  = Math.Min(0.60f + level * 0.05f, 0.95f);
-            moveSpeed     = Math.Min(130f   + level * 8f,   240f);
-            waitDuration  = Math.Max(0.35f  - level * 0.02f, 0.08f);
-            _sightRange   = Math.Min(8 + level, 16);
+            // Livelli 0-9: bat molto più lenti e passivi; dal 10 in poi crescono normalmente
+            float easyFactor = level < 10 ? 0.35f + level * 0.035f : 1f; // 0.35 → 0.665 fino al 9, poi 1.0
+
+            _chaseChance  = Math.Min((0.25f + level * 0.05f) * easyFactor, 0.95f);
+            moveSpeed     = Math.Min((75f   + level * 8f)    * easyFactor, 240f);
+            waitDuration  = Math.Max((0.75f - level * 0.02f) * (level < 10 ? 1.4f : 1f), 0.08f);
+            _sightRange   = Math.Min(3 + level, 16);
 
             // ── Poteri speciali per livello ───────────────────────────────────
-            _canDash    = level >= 3;   // Livello 3+: scatta di 2 tile
-            _canGhost   = level >= 5;   // Livello 5+: attraversa bombe solide
-            _canSplit   = level >= 7;   // Livello 7+: alla morte spawna 2 mini-bat
-            _canBerserk = level >= 9;   // Livello 9+: berserk se giocatore vicino
+            _canDash    = level >= 5;
+            _canGhost   = level >= 10;
+            _canSplit   = level >= 15;
+            _canBerserk = level >= 20;
+            // ── Abilità esplosive (indipendenti) ─────────────────────────────
+            _canWalid  = level >= 8;
+            _canNuke    = level >= 16;
             _level      = level;
+
+            // ── Punti vita scalati sul livello ───────────────────────────────
+            // I mini-bat rimangono sempre a 1 HP.
+            // Fino al lv 19: 1 HP.  Dal lv 20 in poi: 1 HP extra ogni 5 livelli, cap 6.
+            //   lv 20-24 → 2 HP
+            //   lv 25-29 → 3 HP
+            //   lv 30-34 → 4 HP
+            //   lv 35-39 → 5 HP
+            //   lv 40+   → 6 HP (massimo)
+            if (!_isMini)
+            {
+                int hp = level >= 20 ? 2 + (level - 20) / 5 : 1;
+                _maxHitPoints = Math.Min(hp, 6);
+                _hitPoints    = _maxHitPoints;
+            }
         }
 
         // ── Poteri speciali ───────────────────────────────────────────────────
-        private int   _level      = 0;
-        private bool  _canDash    = false;
-        private bool  _canGhost   = false;
-        private bool  _canSplit   = false;
-        private bool  _canBerserk = false;
+        private int   _level         = 0;
+        private bool  _canDash       = false;
+        private bool  _canGhost      = false;
+        private bool  _canSplit      = false;
+        private bool  _canBerserk    = false;
+        private bool  _canWalid = false;  // Walid: esplode alla morte con bomba piccola
+        private bool  _canNuke   = false;  // Nuke:   esplode alla morte con bomba grande
 
         // Dash
         private float _dashCooldown    = 0f;
@@ -146,17 +169,30 @@ namespace PoopMan.GameObjects
         // Evento split (GameScene ascolta e spawna i mini-bat)
         public event Action<Point>? OnSplit;
 
+        /// <summary>
+        /// Scattato quando il bat muore e deve esplodere.
+        /// Argomento: true = Nuke (esplosione grande, livello 16+), false = Walid (piccola, livello 8+).
+        /// </summary>
+        public event Action<Point, bool>? OnDeathExplosion;
+
+        /// <summary>Walid: il bat esplode alla morte con bomba piccola (livello 8+).</summary>
+        public bool ExplodesOnDeath => _canWalid;
+        /// <summary>Nuke: il bat esplode alla morte con bomba grande (livello 16+).</summary>
+        public bool BigExplosion    => _canNuke;
+
         /// <summary>Punti base per uccidere questo bat (aumenta con i poteri).</summary>
         public int KillPoints
         {
             get
             {
                 int pts = 100;
-                if (_canDash)    pts += 50;   // Livello 3+
-                if (_canGhost)   pts += 100;  // Livello 5+
-                if (_canSplit)   pts += 150;  // Livello 7+
-                if (_canBerserk) pts += 200;  // Livello 9+
-                if (_isMini)     pts = 50;    // mini-bat vale meno
+                if (_canDash)    pts += 50;   // Livello  5+
+                if (_canGhost)   pts += 100;  // Livello 10+
+                if (_canWalid)  pts += 125;  // Livello  8+ (Walid)
+                if (_canSplit)   pts += 150;  // Livello 15+
+                if (_canNuke)    pts += 200;  // Livello 16+ (Nuke)
+                if (_canBerserk) pts += 250;  // Livello 20+
+                if (_isMini)        pts = 50;    // mini-bat vale meno
                 return pts;
             }
         }
@@ -175,6 +211,90 @@ namespace PoopMan.GameObjects
         private float invincibilityTimer = 0f;
         public bool IsInvincible => isInvincible;
 
+        // ── Stordimento e rallentamento (da upgrade miner) ───────────────────
+        private bool  _isStunned    = false;
+        private float _stunTimer    = 0f;
+        private float _slowFactor   = 1f;   // 1 = normale, < 1 = più lento
+        private float _slowTimer    = 0f;
+        public  bool  IsStunned     => _isStunned;
+
+        public void ApplyStun(float duration)
+        {
+            if (isDead) return;
+            _isStunned = true;
+            _stunTimer = duration;
+        }
+
+        public void ApplySlow(float factor, float duration)
+        {
+            if (isDead) return;
+            _slowFactor = 1f - factor;   // es. 0.4 → _slowFactor = 0.6
+            _slowTimer  = duration;
+        }
+
+        // ── Punti vita (bat normali diventano resistenti dal livello 20) ──────
+        private int _hitPoints    = 1;
+        private int _maxHitPoints = 1;
+
+        /// <summary>
+        /// Infligge 1 punto danno. Restituisce true se il bat è stato ucciso.
+        /// Da chiamare in luogo di Kill() quando si applica danno da esplosione.
+        /// </summary>
+        public bool TakeDamage()
+        {
+            if (isDead) return false;
+            _hitPoints--;
+            if (_hitPoints > 0)
+            {
+                // Breve invincibilità inter-hit per evitare danno multiplo nella stessa frame
+                SetInvincible(0.3f);
+                return false;
+            }
+            Kill();
+            return true;
+        }
+
+        /// <summary>Colore tint del bat in base al tipo speciale attivo.</summary>
+        public Color DrawColor
+        {
+            get
+            {
+                if (_isMini)     return new Color(180, 220, 255);   // azzurro chiaro
+                if (_canNuke)    return new Color(255,  60,  60);   // rosso fuoco
+                if (_canWalid)   return new Color(255, 140,  30);   // arancio
+                if (_canBerserk) return new Color(200,   0, 255);   // viola berserk
+                if (_canSplit)   return new Color(255, 220,  50);   // giallo split
+                if (_canGhost)   return new Color(160, 255, 230);   // ciano ghost
+                if (_canDash)    return new Color(255, 200, 100);   // ambra dash
+                if (_level >= 20 && _maxHitPoints > 1)
+                    return new Color(255, 100, 100);                // rosso resistente
+                return Color.White;
+            }
+        }
+
+        /// <summary>Scala visiva: i bat speciali sono leggermente più grandi.</summary>
+        public float DrawScale
+        {
+            get
+            {
+                if (_canNuke)    return 1.35f;
+                if (_canBerserk) return 1.25f;
+                if (_canSplit)   return 1.15f;
+                if (_canWalid)   return 1.10f;
+                if (_canGhost)   return 1.05f;
+                if (_isMini)     return 0.75f;
+                if (_level >= 20 && _maxHitPoints > 1) return 1.10f;
+                return 1.0f;
+            }
+        }
+
+        /// <summary>True se il bat ha l'aura pulsante (berserk attivo o ghost).</summary>
+        public bool HasAura => _isBerserk || _isGhosting;
+        public Color AuraColor =>
+            _isBerserk  ? new Color(255, 80, 255, 120) :
+            _isGhosting ? new Color(120, 255, 255,  80) :
+            Color.Transparent;
+
         internal Bat(Point startTile, string xmlPath, ContentManager content, TileMap map)
         {
             if (!map.IsWalkable(startTile))
@@ -182,11 +302,17 @@ namespace PoopMan.GameObjects
 
             LoadAnimationsFromXml(xmlPath, content);
 
+            // Pixel 1×1 bianco per occhi e aura
+            _pixel = new Texture2D(texture.GraphicsDevice, 1, 1);
+            _pixel.SetData(new[] { Color.White });
+
             TilePosition = startTile;
             Position = new Vector2(TilePosition.X * TileMap.TileSize,
                                    TilePosition.Y * TileMap.TileSize);
             targetPosition = Position;
         }
+
+        private Texture2D _pixel;
 
         private void LoadAnimationsFromXml(string xmlPath, ContentManager content)
         {
@@ -268,6 +394,10 @@ namespace PoopMan.GameObjects
             if (CanSplit)
                 OnSplit?.Invoke(TilePosition);
 
+            // Walid (livello 8+) o Nuke (livello 16+): esplode alla morte
+            if (ExplodesOnDeath)
+                OnDeathExplosion?.Invoke(TilePosition, BigExplosion);
+
             if (animations.ContainsKey("dead"))
             {
                 currentAnimation = "dead";
@@ -288,6 +418,20 @@ namespace PoopMan.GameObjects
             {
                 invincibilityTimer -= dt;
                 if (invincibilityTimer <= 0f) isInvincible = false;
+            }
+
+            // ── Stordimento ───────────────────────────────────────────────────
+            if (_isStunned)
+            {
+                _stunTimer -= dt;
+                if (_stunTimer <= 0f) { _isStunned = false; _stunTimer = 0f; }
+            }
+
+            // ── Rallentamento ─────────────────────────────────────────────────
+            if (_slowTimer > 0f)
+            {
+                _slowTimer -= dt;
+                if (_slowTimer <= 0f) { _slowTimer = 0f; _slowFactor = 1f; }
             }
 
             if (isDead)
@@ -335,6 +479,7 @@ namespace PoopMan.GameObjects
 
             if (!isMoving)
             {
+                if (_isStunned) goto skip_movement; // stordito: non si muove
                 waitTimer -= dt;
                 if (waitTimer <= 0f)
                 {
@@ -361,6 +506,7 @@ namespace PoopMan.GameObjects
                     waitTimer = waitDuration * (float)(0.8 + _rand.NextDouble() * 0.4);
                 }
             }
+            skip_movement:
 
             if (isMoving)
             {
@@ -386,7 +532,7 @@ namespace PoopMan.GameObjects
 
                 Vector2 direction = targetPosition - Position;
                 float distance    = direction.Length();
-                float currentSpeed = moveSpeed * (_isBerserk ? BerserkSpeedMul : 1f);
+                float currentSpeed = moveSpeed * (_isBerserk ? BerserkSpeedMul : 1f) * _slowFactor;
 
                 if (distance <= currentSpeed * dt)
                 {
@@ -783,7 +929,70 @@ namespace PoopMan.GameObjects
                 currentFrame >= frames.Count)
                 return;
 
-            spriteBatch.Draw(texture, Position, frames[currentFrame], Color.White);
+            var srcRect = frames[currentFrame];
+            float scale = DrawScale;
+            Color tint  = DrawColor;
+
+            // Blink se danneggiato (HP < max e invincibile inter-hit)
+            if (_hitPoints < _maxHitPoints && isInvincible)
+                tint = Color.Lerp(tint, Color.White, 0.6f);
+
+            // Ghost: semi-trasparente
+            if (_isGhosting)
+                tint *= 0.55f;
+
+            Vector2 origin = new Vector2(srcRect.Width * 0.5f, srcRect.Height * 0.5f);
+            Vector2 center = Position + new Vector2(srcRect.Width * 0.5f, srcRect.Height * 0.5f);
+
+            // Aura pulsante (berserk / ghost)
+            if (HasAura)
+            {
+                float auraScale = scale * (1.35f + 0.10f * (float)Math.Sin(
+                    Environment.TickCount64 * 0.005));
+                spriteBatch.Draw(texture, center, srcRect, AuraColor,
+                    0f, origin, auraScale, SpriteEffects.None, 0f);
+            }
+
+            spriteBatch.Draw(texture, center, srcRect, tint,
+                0f, origin, scale, SpriteEffects.None, 0f);
+
+            // Occhi luminosi per bat speciali (piccoli quadrati bianchi sopra gli occhi)
+            if (_level >= 5 && !_isMini && !isDead)
+            {
+                Color eyeColor = _canBerserk ? Color.Red :
+                                 _canNuke    ? new Color(255, 200, 50) :
+                                 _canGhost   ? Color.Cyan :
+                                 Color.White;
+                int eyeSize = (int)(2 * scale);
+                int offsetY = (int)(-srcRect.Height * 0.18f * scale);
+                // occhio sinistro
+                spriteBatch.Draw(_pixel,
+                    new Rectangle((int)center.X - (int)(4 * scale), (int)center.Y + offsetY, eyeSize, eyeSize),
+                    eyeColor);
+                // occhio destro
+                spriteBatch.Draw(_pixel,
+                    new Rectangle((int)center.X + (int)(3 * scale), (int)center.Y + offsetY, eyeSize, eyeSize),
+                    eyeColor);
+            }
+
+            // ── Barra HP (visibile solo se maxHP > 1 e bat vivo) ─────────────
+            if (_maxHitPoints > 1 && !isDead)
+            {
+                int barW = (int)(srcRect.Width  * scale);
+                int barH = Math.Max(2, (int)(3  * scale));
+                int barX = (int)(center.X - barW * 0.5f);
+                int barY = (int)(center.Y - srcRect.Height * 0.5f * scale) - barH - 2;
+                // sfondo rosso scuro
+                spriteBatch.Draw(_pixel,
+                    new Rectangle(barX, barY, barW, barH),
+                    new Color(120, 0, 0));
+                // riempimento verde proporzionale agli HP rimasti
+                int fillW = (int)(barW * (_hitPoints / (float)_maxHitPoints));
+                if (fillW > 0)
+                    spriteBatch.Draw(_pixel,
+                        new Rectangle(barX, barY, fillW, barH),
+                        new Color(50, 220, 50));
+            }
         }
 
         public Collision GetBounds()

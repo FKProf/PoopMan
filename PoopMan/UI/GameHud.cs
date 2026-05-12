@@ -30,13 +30,15 @@ public class GameHud
     private static readonly Color BgBottom   = new(22, 18, 48);
     private static readonly Color BorderColor= new(80, 55, 160);
 
-    // Colori per tema mappa
+    // Colori per bioma
     private static readonly Dictionary<TileMap.MapTheme, (Color accent, string label)> ThemeStyle = new()
     {
-        [TileMap.MapTheme.Forest]  = (new Color( 60, 180,  60), "FOREST"),
-        [TileMap.MapTheme.Cave]    = (new Color(160, 100, 220), "CAVE"),
-        [TileMap.MapTheme.Stone]   = (new Color(160, 160, 180), "STONE"),
-        [TileMap.MapTheme.Desert]  = (new Color(220, 180,  60), "DESERT"),
+        [TileMap.MapTheme.Forest] = (new Color( 60, 180,  60), "FOREST"),
+        [TileMap.MapTheme.Cave]   = (new Color(160, 100, 220), "CAVE"),
+        [TileMap.MapTheme.Lava]   = (new Color(255,  80,  20), "LAVA"),
+        [TileMap.MapTheme.Ice]    = (new Color(140, 210, 255), "ICE"),
+        [TileMap.MapTheme.Swamp]  = (new Color( 80, 160,  60), "SWAMP"),
+        [TileMap.MapTheme.Ruins]  = (new Color(200, 170, 100), "RUINS"),
     };
 
     public GameHud(SpriteFont font, Texture2D minerIcon, Texture2D itemIcon, Texture2D pixel)
