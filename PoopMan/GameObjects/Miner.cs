@@ -1,5 +1,3 @@
-﻿//rimuovere quando spwan immunita, immunita avviene solo dopo un colpo, non dopo ogni spawn
-
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -16,875 +14,594 @@ namespace PoopMan.GameObjects
 {
     public class Miner
     {
-        // ── Posizione e movimento ────────────────────────────────────────────
-        public Point TilePosition;              // Tile di destinazione (aggiornato subito)
-        public Vector2 Position;               // Posizione pixel interpolata
-        private Vector2 targetPosition;        // Pixel target del tile di destinazione
-        private float moveSpeed = 160f;        // Pixel al secondo (era 100)
-        private bool isMoving = false;
-        internal bool IsMoving => isMoving;
+        // ═══════════════════════════════════════════════════════════════════
+        // POSIZIONE E MOVIMENTO
+        // ═══════════════════════════════════════════════════════════════════
 
-        // ── Animazioni ───────────────────────────────────────────────────────
-        private Texture2D texture;
-        private float animationTimer = 0f;
-        private float animationSpeed = 0.15f;  // Secondi per frame
-        private int currentFrame = 0;
-        private Dictionary<string, List<Rectangle>> animations = new();
-        private string currentAnimation = "idle_front";
-        private List<Rectangle> currentAnimationFrames;
+        public Point   TilePosition;
+        public Vector2 Position;
 
-        // ── Vite ─────────────────────────────────────────────────────────────
-        private int lives    = 3;
-        private int maxLives = 5;         // può salire con MaxLifeUp
-        public int Lives    => lives;
-        public int MaxLives => maxLives;
+        private Vector2       _targetPosition;
+        private Vector2       _currentDirection  = Vector2.UnitX;
+        private float         _moveSpeed         = 160f;
+        private bool          _isMoving          = false;
+        private float         _movementProgress  = 0f;
 
-        // ── Vita extra per punteggio ──────────────────────────────────────────
-        private const int ExtraLifeEvery = 1000;  // punti per ogni vita extra
-        private int _extraLifeThreshold  = ExtraLifeEvery;
-        // ── Evento vita extra ─────────────────────────────────────────────────
-        public event EventHandler? ExtraLifeEarned;  // notifica GameScene (flash HUD)
+        // Legacy body segments (non attivi)
+        private List<(Vector2 from, Vector2 to)> _bodySegments = new();
 
-        // ── Evento piazza bomba (per audio) ───────────────────────────────────
-        public event EventHandler? BombPlaced;
+        internal bool IsMoving => _isMoving;
 
-        /// <summary>Scattato quando una bomba esplode. Arg: true = bomba grande.</summary>
-        public event EventHandler<bool>? BombExploded;
+        // Input buffer tile-per-tile
+        private const int      MAX_BUFFER_SIZE = 2;
+        private Queue<Vector2> _inputBuffer    = new(MAX_BUFFER_SIZE);
 
-        /// <summary>
-        /// Controlla se il punteggio corrente ha raggiunto la soglia per una vita extra.
-        /// Da chiamare ogni frame da GameScene dopo aver aggiornato il punteggio.
-        /// </summary>
-        public void CheckExtraLife(int score)
-        {
-            if (lives >= maxLives) { _extraLifeThreshold = score + ExtraLifeEvery; return; }
-            if (score >= _extraLifeThreshold)
-            {
-                lives++;
-                _extraLifeThreshold += ExtraLifeEvery;
-                ExtraLifeEarned?.Invoke(this, EventArgs.Empty);
-            }
-        }
+        // ═══════════════════════════════════════════════════════════════════
+        // ANIMAZIONI
+        // ═══════════════════════════════════════════════════════════════════
 
-        /// <summary>Applica il potenziamento scelto dal giocatore nel menu upgrade.</summary>
-        public void ApplyUpgrade(UpgradeType upgrade)
-        {
-            switch (upgrade)
-            {
-                // ── Vita ──────────────────────────────────────────────────────
-                case UpgradeType.ExtraLife:
-                    if (lives < maxLives) { lives++; ExtraLifeEarned?.Invoke(this, EventArgs.Empty); }
-                    break;
-                case UpgradeType.MaxLifeUp:
-                    if (_maxLifeSteps < UpgradeRegistry.MaxLifeSteps)
-                    {
-                        _maxLifeSteps++;
-                        maxLives++;
-                        lives = Math.Min(lives + 1, maxLives);
-                        ExtraLifeEarned?.Invoke(this, EventArgs.Empty);
-                    }
-                    break;
-                case UpgradeType.SlowRegen:
-                    _regenLevelsAccum = 0;
-                    _slowRegenActive = true;
-                    break;
+        private Texture2D                           _texture;
+        private Dictionary<string, List<Rectangle>> _animations       = new();
+        private string                              _currentAnimation = "idle_front";
+        private List<Rectangle>                     _currentFrames;
+        private int                                 _currentFrame     = 0;
+        private float                               _animTimer        = 0f;
+        private const float                         AnimSpeed         = 0.15f;
 
-                // ── Offensivi ─────────────────────────────────────────────────
-                case UpgradeType.IncreasedDamage:
-                case UpgradeType.BiggerBlast:
-                    if (_explosionRangeSteps < UpgradeRegistry.MaxExplosionRange)
-                    {
-                        _explosionRangeSteps++;
-                        _bonusExplosionRange++;
-                    }
-                    break;
-                case UpgradeType.FasterBomb:
-                    if (_fasterBombSteps < UpgradeRegistry.MaxFasterBombSteps)
-                    {
-                        _fasterBombSteps++;
-                        _bombTimerBonus += 0.4f;
-                    }
-                    break;
-                case UpgradeType.ExtraBomb:
-                    if (_extraBombSteps < UpgradeRegistry.MaxExtraBombs)
-                    {
-                        _extraBombSteps++;
-                        _maxActiveBombs++;
-                    }
-                    break;
-                case UpgradeType.ChainExplosion:
-                    if (_chainSteps < UpgradeRegistry.MaxChainSteps)
-                    {
-                        _chainSteps++;
-                        ChainExplosionChance = Math.Min(ChainExplosionChance + 0.15f, 0.60f);
-                    }
-                    break;
-
-                // ── Movimento ─────────────────────────────────────────────────
-                case UpgradeType.FasterMovement:
-                    if (_moveSteps < UpgradeRegistry.MaxMoveSteps)
-                    {
-                        _moveSteps++;
-                        moveSpeed = Math.Min(moveSpeed + 20f, 280f);
-                    }
-                    break;
-                case UpgradeType.DashAfterHit:
-                    UpgradeDashAfterHit = true;
-                    break;
-
-                // ── Difensivi ─────────────────────────────────────────────────
-                case UpgradeType.ExplosionResistance:
-                    invincibilityDuration = Math.Min(invincibilityDuration + 1f, UpgradeRegistry.MaxInvincibility);
-                    break;
-                case UpgradeType.DamageReduction:
-                    invincibilityDuration = Math.Min(invincibilityDuration + 0.5f, UpgradeRegistry.MaxInvincibility);
-                    break;
-                case UpgradeType.Shield:
-                    UpgradeShield = true;
-                    _shieldActive = true;
-                    break;
-
-                // ── Speciali ──────────────────────────────────────────────────
-                case UpgradeType.MultiHit:
-                    UpgradeMultiHit = true;
-                    break;
-                case UpgradeType.CriticalChance:
-                    UpgradeCritical = true;
-                    break;
-                case UpgradeType.Magnet:
-                    UpgradeMagnet = true;
-                    break;
-                case UpgradeType.StunOnHit:
-                    UpgradeStunOnHit = true;
-                    break;
-                case UpgradeType.SlowOnHit:
-                    UpgradeSlowOnHit = true;
-                    break;
-                case UpgradeType.BonusLoot:
-                    BonusLootChance = Math.Min(BonusLootChance + 0.15f, 0.60f);
-                    break;
-                case UpgradeType.DoubleDrop:
-                    if (_doubleDropSteps < UpgradeRegistry.MaxDoubleDropSteps)
-                    {
-                        _doubleDropSteps++;
-                        DoubleDropChance = Math.Min(DoubleDropChance + 0.15f, 0.60f);
-                    }
-                    break;
-            }
-        }
-
-        // SlowRegen: GameScene chiama questo ogni volta che il livello avanza
-        public bool SlowRegenActive => _slowRegenActive;
-        public void NotifyLevelUp()
-        {
-            // Rigenerazione lenta
-            if (_slowRegenActive)
-            {
-                _regenLevelsAccum++;
-                if (_regenLevelsAccum >= 10)
-                {
-                    _regenLevelsAccum = 0;
-                    if (lives < maxLives) { lives++; ExtraLifeEarned?.Invoke(this, EventArgs.Empty); }
-                }
-            }
-
-            // Ricarica scudo
-            if (UpgradeShield && !_shieldActive)
-            {
-                _shieldRechargeLevel++;
-                if (_shieldRechargeLevel >= _shieldRechargePeriod)
-                {
-                    _shieldRechargeLevel = 0;
-                    _shieldActive = true;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Tenta di assorbire un colpo con lo scudo.
-        /// Restituisce true se il danno è stato assorbito e non deve applicarsi.
-        /// </summary>
-        public bool TryAbsorbWithShield()
-        {
-            if (_shieldActive)
-            {
-                _shieldActive = false;
-                _shieldRechargeLevel = 0;
-                return true;
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Attiva il dash post-danno se l'upgrade è presente.
-        /// Da chiamare in GameScene quando il miner subisce un colpo.
-        /// </summary>
-        public void TriggerDashAfterHit()
-        {
-            if (!UpgradeDashAfterHit) return;
-            _dashTimer = 3f;
-            _dashSpeedBonus = moveSpeed * 0.4f;
-        }
-
-        // ── Evento respawn ───────────────────────────────────────────────────
-        // Lanciato quando il miner perde una vita ma ne ha ancora
-        public event EventHandler? NeedsRespawn;
-
-        // ── Invincibilità (dopo respawn) ─────────────────────────────────────
-        private bool isInvincible = false;
-        private float invincibilityTimer = 0f;
-        private float invincibilityDuration = 3f;   // Secondi di protezione (safe zone spawn)
-        private float blinkTimer = 0f;
-        private float blinkInterval = 0.1f;         // Secondi tra un blink e l'altro
-        private bool blinkVisible = true;
-        public bool IsInvincible => isInvincible;
-        /// <summary>Percentuale di invincibilità residua [0-1]. 1 = appena iniziata, 0 = finita.</summary>
-        public float InvincibilityRatio => isInvincible ? Math.Clamp(invincibilityTimer / invincibilityDuration, 0f, 1f) : 0f;
-
-        // ── Bombe grandi ─────────────────────────────────────────────────────
-        private int bigBombCount = 0;
-        public int BigBombCount => bigBombCount;
-        public void AddBigBomb() => bigBombCount++;
-
-        // ── Stato del miner ──────────────────────────────────────────────────
         private enum MinerState
         {
             IdleFront, IdleBack, IdleLeft, IdleRight,
             WalkFront, WalkBack, WalkLeft, WalkRight
         }
-        private MinerState state = MinerState.IdleFront;
+        private MinerState _state = MinerState.IdleFront;
 
-        // ── Morte ────────────────────────────────────────────────────────────
-        private bool isDead = false;
-        internal bool IsDead => isDead;
+        // ═══════════════════════════════════════════════════════════════════
+        // MORTE
+        // ═══════════════════════════════════════════════════════════════════
+
+        private bool _isDead           = false;
+        private bool _deathAnimFinished = false;
+
+        internal bool IsDead                   => _isDead;
+        internal bool IsDeathAnimationFinished => _deathAnimFinished;
+
         public event EventHandler? DeathAnimationFinished;
-        private bool _deathAnimationFinished = false;
-        internal bool IsDeathAnimationFinished => _deathAnimationFinished;
 
-        // ── Segmenti corpo (non usati attivamente, eredità da snake) ─────────
-        private List<(Vector2 from, Vector2 to)> _bodySegments = new();
-        private float _movementProgress = 0f;
-        private Vector2 _currentDirection = Vector2.UnitX;
+        // ═══════════════════════════════════════════════════════════════════
+        // VITE
+        // ═══════════════════════════════════════════════════════════════════
 
-        // ── Buffer input ─────────────────────────────────────────────────────
-        private const int MAX_BUFFER_SIZE = 2;
-        private Queue<Vector2> _inputBuffer = new(MAX_BUFFER_SIZE);
+        private int _lives    = 3;
+        private int _maxLives = 5;
 
-        // ── Upgrade potenziamenti ─────────────────────────────────────────────
-        private int   _bonusExplosionRange = 0;   // tile extra per il raggio esplosione
-        private float _bombTimerBonus      = 0f;  // secondi sottratti al timer bomba
-        public int BonusExplosionRange => _bonusExplosionRange;
+        public int Lives    => _lives;
+        public int MaxLives => _maxLives;
 
-        // Upgrade speciali (flag)
-        public bool UpgradeMultiHit      { get; private set; } = false;
-        public bool UpgradeCritical      { get; private set; } = false;
-        public bool UpgradeMagnet        { get; private set; } = false;
-        public float ChainExplosionChance{ get; private set; } = 0f;   // 0–60%
-        public float DoubleDropChance    { get; private set; } = 0f;   // 0–60%
-        public bool UpgradeStunOnHit     { get; private set; } = false;
-        public bool UpgradeSlowOnHit     { get; private set; } = false;
-        public bool UpgradeDashAfterHit  { get; private set; } = false;
-        public bool UpgradeShield        { get; private set; } = false;
-        private bool _shieldActive       = false;
-        private int  _shieldRechargeLevel= 0;
-        private int  _shieldRechargePeriod= 5;
-        public bool  ShieldActive => _shieldActive;
-        public float BonusLootChance     { get; private set; } = 0f;
-        private float _dashTimer         = 0f;
-        private float _dashSpeedBonus    = 0f;
-        private bool  _slowRegenActive   = false;
-        private int   _regenLevelsAccum  = 0;
+        public event EventHandler? NeedsRespawn;
+        public event EventHandler? ExtraLifeEarned;
 
-        // Contatori upgrade cumulativi (per rispettare i cap)
-        private int _explosionRangeSteps = 0;
-        private int _extraBombSteps      = 0;
-        private int _fasterBombSteps     = 0;
-        private int _moveSteps           = 0;
-        private int _maxLifeSteps        = 0;
-        private int _chainSteps          = 0;
-        private int _doubleDropSteps     = 0;
+        private const int ExtraLifeEvery      = 1000;
+        private int       _extraLifeThreshold = ExtraLifeEvery;
 
-        // ── Risorse bombe ────────────────────────────────────────────────────
-        private int _maxActiveBombs = 3;        // cresce con ExtraBomb
+        /// <summary>
+        /// Controlla se il punteggio ha raggiunto la soglia per una vita extra.
+        /// Chiamare ogni frame da GameScene dopo aver aggiornato il punteggio.
+        /// </summary>
+        public void CheckExtraLife(int score)
+        {
+            if (_lives >= _maxLives) { _extraLifeThreshold = score + ExtraLifeEvery; return; }
+            if (score >= _extraLifeThreshold)
+            {
+                _lives++;
+                _extraLifeThreshold += ExtraLifeEvery;
+                ExtraLifeEarned?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // INVINCIBILITÀ (attiva solo dopo aver perso una vita)
+        // ═══════════════════════════════════════════════════════════════════
+
+        private bool        _isInvincible         = false;
+        private float       _invincibilityTimer   = 0f;
+        private float       _invincibilityDuration = 3f;
+        private float       _blinkTimer           = 0f;
+        private const float BlinkInterval         = 0.1f;
+        private bool        _blinkVisible         = true;
+
+        public bool  IsInvincible      => _isInvincible;
+        public float InvincibilityRatio =>
+            _isInvincible ? Math.Clamp(_invincibilityTimer / _invincibilityDuration, 0f, 1f) : 0f;
+
+        // ═══════════════════════════════════════════════════════════════════
+        // BOMBE
+        // ═══════════════════════════════════════════════════════════════════
+
+        private int  _bigBombCount   = 0;
+        private int  _maxActiveBombs = 3;
+
+        public int BigBombCount  => _bigBombCount;
+        public void AddBigBomb() => _bigBombCount++;
         private int MaxActiveBombs => _maxActiveBombs;
-        private Texture2D itemTexture;
-        private Dictionary<string, List<Rectangle>> itemAnimations = new();
-        private List<Bomb> bombs = new();
-        private Texture2D bombTexture;
-        private Dictionary<string, List<Rectangle>> bombAnimations;
-        private Texture2D explosionTexture;
-        private Dictionary<string, List<Rectangle>> explosionAnimations = new();
 
-        /// <summary>Tile su cui si trova visivamente il miner (basato su Position pixel).</summary>
+        private List<Bomb>                           _bombs              = new();
+        private Texture2D                            _bombTexture;
+        private Dictionary<string, List<Rectangle>>  _bombAnimations;
+        private Texture2D                            _itemTexture;
+        private Dictionary<string, List<Rectangle>>  _itemAnimations     = new();
+        private Texture2D                            _explosionTexture;
+        private Dictionary<string, List<Rectangle>>  _explosionAnimations = new();
+
+        public event EventHandler?       BombPlaced;
+        public event EventHandler<bool>? BombExploded;
+
+        /// <summary>Tile colpiti da esplosioni attive.</summary>
+        public IEnumerable<Point> ActiveExplosionTiles =>
+            _bombs.Where(b => !b.IsFinished).SelectMany(b => b.ExplosionTiles);
+
+        /// <summary>Tile dove si trova una bomba non ancora esplosa.</summary>
+        public IEnumerable<Point> ActiveBombTiles =>
+            _bombs.Where(b => !b.IsFinished)
+                  .Select(b => new Point((int)(b.Position.X / TileMap.TileSize),
+                                         (int)(b.Position.Y / TileMap.TileSize)));
+
+        /// <summary>Tile occupate da bombe solide (il miner non può entrarci).</summary>
+        public IEnumerable<Point> SolidBombTiles =>
+            _bombs.Where(b => !b.IsFinished && !b.IsExploding)
+                  .Select(b => new Point((int)(b.Position.X / TileMap.TileSize),
+                                         (int)(b.Position.Y / TileMap.TileSize)))
+                  .Where(t => t != VisualTilePosition);
+
+        public bool IsSolidBombTile(Point tile) => SolidBombTiles.Contains(tile);
+
+        // ═══════════════════════════════════════════════════════════════════
+        // UPGRADE – OFFENSIVI
+        // ═══════════════════════════════════════════════════════════════════
+
+        private int   _bonusExplosionRange = 0;
+        private float _bombTimerBonus      = 0f;
+        private int   _explosionRangeSteps = 0;
+        private int   _extraBombSteps      = 0;
+        private int   _fasterBombSteps     = 0;
+        private int   _chainSteps          = 0;
+
+        public int   BonusExplosionRange  => _bonusExplosionRange;
+        public float ChainExplosionChance { get; private set; } = 0f;
+        public bool  UpgradeMultiHit      { get; private set; } = false;
+        public bool  UpgradeCritical      { get; private set; } = false;
+
+        // ═══════════════════════════════════════════════════════════════════
+        // UPGRADE – MOVIMENTO
+        // ═══════════════════════════════════════════════════════════════════
+
+        private int   _moveSteps      = 0;
+        private float _dashTimer      = 0f;
+        private float _dashSpeedBonus = 0f;
+
+        public bool UpgradeDashAfterHit { get; private set; } = false;
+
+        // ═══════════════════════════════════════════════════════════════════
+        // UPGRADE – DIFENSIVI
+        // ═══════════════════════════════════════════════════════════════════
+
+        private bool _shieldActive        = false;
+        private int  _shieldRechargeLevel = 0;
+        private const int ShieldRechargePeriod = 5;
+
+        public bool UpgradeShield { get; private set; } = false;
+        public bool ShieldActive  => _shieldActive;
+
+        // ═══════════════════════════════════════════════════════════════════
+        // UPGRADE – SPECIALI
+        // ═══════════════════════════════════════════════════════════════════
+
+        private int  _maxLifeSteps      = 0;
+        private int  _doubleDropSteps   = 0;
+        private bool _slowRegenActive   = false;
+        private int  _regenLevelsAccum  = 0;
+
+        public bool  UpgradeMagnet    { get; private set; } = false;
+        public bool  UpgradeStunOnHit { get; private set; } = false;
+        public bool  UpgradeSlowOnHit { get; private set; } = false;
+        public float DoubleDropChance { get; private set; } = 0f;
+        public float BonusLootChance  { get; private set; } = 0f;
+        public bool  SlowRegenActive  => _slowRegenActive;
+
+        // ═══════════════════════════════════════════════════════════════════
+        // PROPRIETÀ DERIVATE
+        // ═══════════════════════════════════════════════════════════════════
+
+        /// <summary>Tile visivo del miner basato sulla posizione pixel interpolata.</summary>
         public Point VisualTilePosition =>
             new Point((int)Math.Round(Position.X / TileMap.TileSize),
                       (int)Math.Round(Position.Y / TileMap.TileSize));
 
-        /// <summary>Tile colpiti da esplosioni attive (usato da GameScene e Bat).</summary>
-        public IEnumerable<Point> ActiveExplosionTiles =>
-            bombs.Where(b => !b.IsFinished)
-                 .SelectMany(b => b.ExplosionTiles);
+        // ═══════════════════════════════════════════════════════════════════
+        // COSTRUTTORE
+        // ═══════════════════════════════════════════════════════════════════
 
-        /// <summary>Tile dove c'è una bomba non ancora esplosa (per la fuga del bat).</summary>
-        public IEnumerable<Point> ActiveBombTiles =>
-            bombs.Where(b => !b.IsFinished)
-                 .Select(b => new Point((int)(b.Position.X / TileMap.TileSize),
-                                        (int)(b.Position.Y / TileMap.TileSize)));
-
-        /// <summary>Tile occupate da bombe solide (escluso il tile del miner stesso, grace period).</summary>
-        public IEnumerable<Point> SolidBombTiles =>
-            bombs.Where(b => !b.IsFinished && !b.IsExploding)
-                 .Select(b => new Point((int)(b.Position.X / TileMap.TileSize),
-                                        (int)(b.Position.Y / TileMap.TileSize)))
-                 .Where(t => t != VisualTilePosition); // grace: il miner può uscire dal proprio tile
-
-        /// <summary>Ritorna true se il tile è occupato da una bomba solida (il miner non può entrarci).</summary>
-        public bool IsSolidBombTile(Point tile) => SolidBombTiles.Contains(tile);
-
-        // ────────────────────────────────────────────────────────────────────
-        // Costruttore: carica animazioni, posiziona il miner e carica le risorse
-        // per bombe ed esplosioni.
-        // ────────────────────────────────────────────────────────────────────
         public Miner(Point startTile, string xmlPath, ContentManager content)
         {
             LoadAnimationsFromXml(xmlPath, content);
 
-            TilePosition = startTile;
-            Position = new Vector2(TilePosition.X * TileMap.TileSize,
-                                   TilePosition.Y * TileMap.TileSize);
-            targetPosition = Position;
+            TilePosition    = startTile;
+            Position        = new Vector2(startTile.X * TileMap.TileSize, startTile.Y * TileMap.TileSize);
+            _targetPosition = Position;
 
-            string itemXml = Path.Combine(content.RootDirectory, "image", "items", "items.xml");
-            LoadItemAnimations(itemXml, content);
-
+            string itemXml      = Path.Combine(content.RootDirectory, "image", "items", "items.xml");
             string explosionXml = Path.Combine(content.RootDirectory, "image", "fxs", "fsx.xml");
+            LoadItemAnimations(itemXml, content);
             LoadExplosionAnimations(explosionXml, content);
 
-            // Le bombe usano la stessa texture degli item
-            bombAnimations = itemAnimations;
-            bombTexture = itemTexture;
+            _bombAnimations = _itemAnimations;
+            _bombTexture    = _itemTexture;
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // AGGIORNAMENTO PRINCIPALE
-        // ════════════════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════════
+        // UPDATE
+        // ═══════════════════════════════════════════════════════════════════
+
         public void Update(TileMap map, GameTime gameTime)
         {
-            // Se morto, aggiorna solo l'animazione di morte
-            if (isDead)
-            {
-                UpdateAnimation(gameTime);
-                return;
-            }
+            if (_isDead) { UpdateAnimation(gameTime); return; }
 
-            // ── Invincibilità e blink ────────────────────────────────────────
-            if (isInvincible)
-            {
-                invincibilityTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-                blinkTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-                if (blinkTimer <= 0f)
-                {
-                    blinkVisible = !blinkVisible;
-                    blinkTimer = blinkInterval;
-                }
-
-                if (invincibilityTimer <= 0f)
-                {
-                    isInvincible = false;
-                    blinkVisible = true; // Assicura visibilità al termine
-                }
-            }
-
+            UpdateInvincibility(gameTime);
             HandleInput();
-
-            // ── Dash post-danno ───────────────────────────────────────────────
-            if (_dashTimer > 0f)
-            {
-                _dashTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (_dashTimer <= 0f)
-                    _dashTimer = 0f;
-            }
-            // ── Piazzamento bomba piccola ─────────────────────────────────────
-            if (GameController.MiniBomb())
-            {
-                // Usa la tile visiva per piazzare la bomba dove il miner si trova visivamente
-                Point placeTile = VisualTilePosition;
-                int activeBombs = bombs.Count(b => !b.IsFinished);
-                bool tileOccupied = bombs.Any(b => !b.IsFinished &&
-                    new Point((int)(b.Position.X / TileMap.TileSize),
-                              (int)(b.Position.Y / TileMap.TileSize)) == placeTile);
-
-                if (!tileOccupied && activeBombs < MaxActiveBombs)
-                {
-                    var b = new Bomb(
-                        new Vector2(placeTile.X * TileMap.TileSize, placeTile.Y * TileMap.TileSize),
-                        bombTexture, bombAnimations, explosionTexture, explosionAnimations, false,
-                        _bonusExplosionRange, _bombTimerBonus);
-                    b.Exploded += (s, isBig) => BombExploded?.Invoke(this, isBig);
-                    bombs.Add(b);
-                    BombPlaced?.Invoke(this, EventArgs.Empty);
-                }
-            }
-            // ── Piazzamento bomba grande ──────────────────────────────────────
-            else if (GameController.BigBomb() && bigBombCount > 0)
-            {
-                Point placeTile = VisualTilePosition;
-                int activeBombs = bombs.Count(b => !b.IsFinished);
-                bool tileOccupied = bombs.Any(b => !b.IsFinished &&
-                    new Point((int)(b.Position.X / TileMap.TileSize),
-                              (int)(b.Position.Y / TileMap.TileSize)) == placeTile);
-
-                if (!tileOccupied && activeBombs < MaxActiveBombs)
-                {
-                    bigBombCount--;
-                    var b = new Bomb(
-                        new Vector2(TilePosition.X * TileMap.TileSize, TilePosition.Y * TileMap.TileSize),
-                        bombTexture, bombAnimations, explosionTexture, explosionAnimations, true,
-                        _bonusExplosionRange, _bombTimerBonus);
-                    b.Exploded += (s, isBig) => BombExploded?.Invoke(this, isBig);
-                    bombs.Add(b);
-                    BombPlaced?.Invoke(this, EventArgs.Empty);
-                }
-            }
-
-            // ── Aggiornamento bombe attive ───────────────────────────────────
-            for (int i = bombs.Count - 1; i >= 0; i--)
-            {
-                bombs[i].Update(gameTime, map);
-                if (bombs[i].IsFinished)
-                    bombs.RemoveAt(i);  // BreakTile già fatto in Explode()
-            }
-
+            UpdateDash(gameTime);
+            HandleBombPlacement(map);
+            UpdateBombs(gameTime, map);
             UpdateMovement(map, gameTime);
             UpdateAnimation(gameTime);
         }
 
-        // ────────────────────────────────────────────────────────────────────
-        // Gestisce il movimento tile-per-tile del miner consumando il buffer
-        // di input e interpolando la posizione pixel.
-        // ───────────────────────────────────────────────────────────────────
+        private void UpdateInvincibility(GameTime gameTime)
+        {
+            if (!_isInvincible) return;
+
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _invincibilityTimer -= dt;
+            _blinkTimer         -= dt;
+
+            if (_blinkTimer <= 0f)
+            {
+                _blinkVisible = !_blinkVisible;
+                _blinkTimer   = BlinkInterval;
+            }
+
+            if (_invincibilityTimer <= 0f)
+            {
+                _isInvincible = false;
+                _blinkVisible = true;
+            }
+        }
+
+        private void UpdateDash(GameTime gameTime)
+        {
+            if (_dashTimer > 0f)
+                _dashTimer = Math.Max(0f, _dashTimer - (float)gameTime.ElapsedGameTime.TotalSeconds);
+        }
+
+        private void HandleBombPlacement(TileMap map)
+        {
+            if (GameController.MiniBomb())
+            {
+                TryPlaceBomb(VisualTilePosition, big: false);
+            }
+            else if (GameController.BigBomb() && _bigBombCount > 0)
+            {
+                if (TryPlaceBomb(VisualTilePosition, big: true))
+                    _bigBombCount--;
+            }
+        }
+
+        private bool TryPlaceBomb(Point placeTile, bool big)
+        {
+            int  activeBombs  = _bombs.Count(b => !b.IsFinished);
+            bool tileOccupied = _bombs.Any(b => !b.IsFinished &&
+                new Point((int)(b.Position.X / TileMap.TileSize),
+                          (int)(b.Position.Y / TileMap.TileSize)) == placeTile);
+
+            if (tileOccupied || activeBombs >= MaxActiveBombs) return false;
+
+            var bomb = new Bomb(
+                new Vector2(placeTile.X * TileMap.TileSize, placeTile.Y * TileMap.TileSize),
+                _bombTexture, _bombAnimations, _explosionTexture, _explosionAnimations,
+                big, _bonusExplosionRange, _bombTimerBonus);
+            bomb.Exploded += (s, isBig) => BombExploded?.Invoke(this, isBig);
+            _bombs.Add(bomb);
+            BombPlaced?.Invoke(this, EventArgs.Empty);
+            return true;
+        }
+
+        private void UpdateBombs(GameTime gameTime, TileMap map)
+        {
+            for (int i = _bombs.Count - 1; i >= 0; i--)
+            {
+                _bombs[i].Update(gameTime, map);
+                if (_bombs[i].IsFinished) _bombs.RemoveAt(i);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // MOVIMENTO
+        // ═══════════════════════════════════════════════════════════════════
 
         private void UpdateMovement(TileMap map, GameTime gameTime)
         {
-            if (!isMoving)
+            if (!_isMoving && _inputBuffer.Count > 0)
             {
-                if (_inputBuffer.Count > 0)
+                _currentDirection = _inputBuffer.Dequeue();
+                Point nextTile    = new(TilePosition.X + (int)_currentDirection.X,
+                                        TilePosition.Y + (int)_currentDirection.Y);
+
+                if (map.IsWalkable(nextTile) && !IsSolidBombTile(nextTile))
                 {
-                    _currentDirection = _inputBuffer.Dequeue();
+                    // Aggiorna segmenti corpo (legacy)
+                    for (int i = _bodySegments.Count - 1; i > 0; i--)
+                        _bodySegments[i] = (_bodySegments[i].to, _bodySegments[i - 1].to);
+                    if (_bodySegments.Count > 0)
+                        _bodySegments[0] = (_bodySegments[0].to, _targetPosition);
 
-                    Point nextTile = new(TilePosition.X + (int)_currentDirection.X,
-                                         TilePosition.Y + (int)_currentDirection.Y);
+                    TilePosition      = nextTile;
+                    _targetPosition   = new Vector2(nextTile.X * TileMap.TileSize, nextTile.Y * TileMap.TileSize);
+                    _isMoving         = true;
+                    _currentFrame     = 0;
+                    _animTimer        = 0f;
+                    _movementProgress = 0f;
 
-                    // Bombe solide: il miner non può entrare su tile già occupate da una bomba
-                    bool blockedByBomb = IsSolidBombTile(nextTile);
-
-                    if (map.IsWalkable(nextTile) && !blockedByBomb)
+                    _state = _currentDirection switch
                     {
-                        // Aggiorna segmenti corpo (legacy snake)
-                        for (int i = _bodySegments.Count - 1; i > 0; i--)
-                            _bodySegments[i] = (_bodySegments[i].to, _bodySegments[i - 1].to);
-                        if (_bodySegments.Count > 0)
-                            _bodySegments[0] = (_bodySegments[0].to, targetPosition);
-
-                        TilePosition = nextTile;
-                        targetPosition = new Vector2(nextTile.X * TileMap.TileSize,
-                                                     nextTile.Y * TileMap.TileSize);
-                        isMoving = true;
-                        currentFrame = 0;
-                        animationTimer = 0f;
-                        _movementProgress = 0f;
-
-                        // Imposta animazione di camminata nella direzione corretta
-                        state = _currentDirection switch
-                        {
-                            var d when d == Vector2.UnitX => MinerState.WalkRight,
-                            var d when d == -Vector2.UnitX => MinerState.WalkLeft,
-                            var d when d == -Vector2.UnitY => MinerState.WalkBack,
-                            _ => MinerState.WalkFront
-                        };
-                    }
-                    else
-                    {
-                        // Tile non percorribile: torna in idle nella direzione attuale
-                        state = state switch
-                        {
-                            MinerState.WalkFront => MinerState.IdleFront,
-                            MinerState.WalkBack => MinerState.IdleBack,
-                            MinerState.WalkLeft => MinerState.IdleLeft,
-                            MinerState.WalkRight => MinerState.IdleRight,
-                            _ => state
-                        };
-                    }
-                }
-            }
-
-            if (isMoving)
-            {
-                float effectiveSpeed = moveSpeed + (_dashTimer > 0f ? _dashSpeedBonus : 0f);
-                float distance = effectiveSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                Vector2 direction = targetPosition - Position;
-
-                if (direction.Length() <= distance)
-                {
-                    // Arrivato al tile di destinazione
-                    Position = targetPosition;
-                    isMoving = false;
-                    _movementProgress = 1f;
-
-                    state = state switch
-                    {
-                        MinerState.WalkFront => MinerState.IdleFront,
-                        MinerState.WalkBack => MinerState.IdleBack,
-                        MinerState.WalkLeft => MinerState.IdleLeft,
-                        MinerState.WalkRight => MinerState.IdleRight,
-                        _ => state
+                        var d when d ==  Vector2.UnitX => MinerState.WalkRight,
+                        var d when d == -Vector2.UnitX => MinerState.WalkLeft,
+                        var d when d == -Vector2.UnitY => MinerState.WalkBack,
+                        _                              => MinerState.WalkFront
                     };
                 }
                 else
                 {
-                    // Interpola verso il tile di destinazione
-                    Position += Vector2.Normalize(direction) * distance;
-                    _movementProgress = MathHelper.Clamp(
-                        _movementProgress + distance / TileMap.TileSize, 0f, 1f);
+                    _state = _state switch
+                    {
+                        MinerState.WalkFront => MinerState.IdleFront,
+                        MinerState.WalkBack  => MinerState.IdleBack,
+                        MinerState.WalkLeft  => MinerState.IdleLeft,
+                        MinerState.WalkRight => MinerState.IdleRight,
+                        _                    => _state
+                    };
+                }
+            }
+
+            if (_isMoving)
+            {
+                float effectiveSpeed = _moveSpeed + (_dashTimer > 0f ? _dashSpeedBonus : 0f);
+                float distance       = effectiveSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                Vector2 dir          = _targetPosition - Position;
+
+                if (dir.Length() <= distance)
+                {
+                    Position          = _targetPosition;
+                    _isMoving         = false;
+                    _movementProgress = 1f;
+                    _state = _state switch
+                    {
+                        MinerState.WalkFront => MinerState.IdleFront,
+                        MinerState.WalkBack  => MinerState.IdleBack,
+                        MinerState.WalkLeft  => MinerState.IdleLeft,
+                        MinerState.WalkRight => MinerState.IdleRight,
+                        _                    => _state
+                    };
+                }
+                else
+                {
+                    Position          += Vector2.Normalize(dir) * distance;
+                    _movementProgress  = MathHelper.Clamp(_movementProgress + distance / TileMap.TileSize, 0f, 1f);
                 }
             }
         }
 
-        // ────────────────────────────────────────────────────────────────────
-        // Legge l'input e lo aggiunge al buffer, evitando duplicati consecutivi.
-        // ────────────────────────────────────────────────────────────────────
         private void HandleInput()
         {
-            var potentialNextDirection = Vector2.Zero;
+            var dir = Vector2.Zero;
 
-            if (GameController.HoldUp())    potentialNextDirection = -Vector2.UnitY;
-            if (GameController.HoldDown())  potentialNextDirection =  Vector2.UnitY;
-            if (GameController.HoldLeft())  potentialNextDirection = -Vector2.UnitX;
-            if (GameController.HoldRight()) potentialNextDirection =  Vector2.UnitX;
+            if (GameController.HoldUp())    dir = -Vector2.UnitY;
+            if (GameController.HoldDown())  dir =  Vector2.UnitY;
+            if (GameController.HoldLeft())  dir = -Vector2.UnitX;
+            if (GameController.HoldRight()) dir =  Vector2.UnitX;
 
-            if (potentialNextDirection == Vector2.Zero)
-            {
-                _inputBuffer.Clear();
-                return;
-            }
+            if (dir == Vector2.Zero) { _inputBuffer.Clear(); return; }
 
             var last = _inputBuffer.Count > 0 ? _inputBuffer.Last() : _currentDirection;
 
-            // Se la direzione è cambiata, svuota il buffer e aggiungi subito la nuova
-            // Questo rende la risposta immediata senza dover aspettare il tile corrente
-            if (last != potentialNextDirection)
+            if (last != dir)
             {
                 _inputBuffer.Clear();
-                _inputBuffer.Enqueue(potentialNextDirection);
+                _inputBuffer.Enqueue(dir);
             }
             else if (_inputBuffer.Count < MAX_BUFFER_SIZE)
             {
-                _inputBuffer.Enqueue(potentialNextDirection);
+                _inputBuffer.Enqueue(dir);
             }
         }
 
-        // ────────────────────────────────────────────────────────────────────
-        // Sceglie l'animazione corretta in base allo stato e la fa avanzare.
-        // Gestisce separatamente il caso di morte (animazione non ciclica).
-        // ────────────────────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // ANIMAZIONI
+        // ═══════════════════════════════════════════════════════════════════
+
         private void UpdateAnimation(GameTime gameTime)
         {
-            if (isDead)
+            if (_isDead)
             {
-                // Forza animazione "dead" se disponibile
-                if (animations.ContainsKey("dead") && currentAnimation != "dead")
+                if (_animations.ContainsKey("dead") && _currentAnimation != "dead")
                 {
-                    currentAnimation = "dead";
-                    currentAnimationFrames = animations[currentAnimation];
-                    currentFrame = 0;
-                    animationTimer = 0f;
+                    _currentAnimation = "dead";
+                    _currentFrames    = _animations["dead"];
+                    _currentFrame     = 0;
+                    _animTimer        = 0f;
                 }
 
-                if (currentAnimationFrames == null || currentAnimationFrames.Count == 0)
-                    return;
+                if (_currentFrames == null || _currentFrames.Count == 0 || _deathAnimFinished) return;
 
-                if (_deathAnimationFinished) return; // Rimane sull'ultimo frame
-
-                animationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (animationTimer >= animationSpeed)
+                _animTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_animTimer >= AnimSpeed)
                 {
-                    animationTimer = 0f;
-                    currentFrame++;
-                    if (currentFrame >= currentAnimationFrames.Count)
+                    _animTimer = 0f;
+                    _currentFrame++;
+                    if (_currentFrame >= _currentFrames.Count)
                     {
-                        currentFrame = currentAnimationFrames.Count - 1;
-                        if (!_deathAnimationFinished)
-                        {
-                            _deathAnimationFinished = true;
-                            DeathAnimationFinished?.Invoke(this, EventArgs.Empty);
-                        }
+                        _currentFrame      = _currentFrames.Count - 1;
+                        _deathAnimFinished = true;
+                        DeathAnimationFinished?.Invoke(this, EventArgs.Empty);
                     }
                 }
                 return;
             }
 
-            // Animazione normale: cambia se lo stato è cambiato
-            string newAnimation = GetAnimationName(state);
-            if (newAnimation != currentAnimation)
+            string newAnim = AnimNameOf(_state);
+            if (newAnim != _currentAnimation)
             {
-                currentAnimation = newAnimation;
-                currentAnimationFrames = animations.GetValueOrDefault(newAnimation);
-                currentFrame = 0;
-                animationTimer = 0f;
+                _currentAnimation = newAnim;
+                _currentFrames    = _animations.GetValueOrDefault(newAnim);
+                _currentFrame     = 0;
+                _animTimer        = 0f;
             }
 
-            // Avanza il frame se l'animazione ha più di un frame
-            if (currentAnimationFrames?.Count > 1)
+            if (_currentFrames?.Count > 1)
             {
-                animationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (animationTimer >= animationSpeed)
+                _animTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_animTimer >= AnimSpeed)
                 {
-                    animationTimer = 0f;
-                    currentFrame = (currentFrame + 1) % currentAnimationFrames.Count;
+                    _animTimer    = 0f;
+                    _currentFrame = (_currentFrame + 1) % _currentFrames.Count;
                 }
             }
             else
             {
-                currentFrame = 0;
+                _currentFrame = 0;
             }
         }
 
-        private string GetAnimationName(MinerState state) => state switch
+        private static string AnimNameOf(MinerState s) => s switch
         {
             MinerState.IdleFront => "idle_front",
-            MinerState.IdleBack => "idle_back",
-            MinerState.IdleLeft => "idle_left",
+            MinerState.IdleBack  => "idle_back",
+            MinerState.IdleLeft  => "idle_left",
             MinerState.IdleRight => "idle_right",
             MinerState.WalkFront => "walk_front",
-            MinerState.WalkBack => "walk_back",
-            MinerState.WalkLeft => "walk_left",
+            MinerState.WalkBack  => "walk_back",
+            MinerState.WalkLeft  => "walk_left",
             MinerState.WalkRight => "walk_right",
-            _ => "idle_front"
+            _                    => "idle_front"
         };
 
-        // ────────────────────────────────────────────────────────────────────
-        // Carica le animazioni del miner dall'XML.
-        // Raggruppa i frame per nome base (es. idle_front0..N → "idle_front").
-        // ────────────────────────────────────────────────────────────────────
-        private void LoadAnimationsFromXml(string xmlPath, ContentManager content)
-        {
-            if (!File.Exists(xmlPath))
-                throw new FileNotFoundException($"File XML animazioni non trovato: {xmlPath}");
+        // ═══════════════════════════════════════════════════════════════════
+        // DRAW
+        // ═══════════════════════════════════════════════════════════════════
 
-            XDocument doc = XDocument.Load(xmlPath);
-            animations.Clear();
-
-            foreach (var region in doc.Descendants("Region"))
-            {
-                string fullName = region.Attribute("Name")?.Value ?? "";
-                int x = int.Parse(region.Attribute("X")?.Value ?? "0");
-                int y = int.Parse(region.Attribute("Y")?.Value ?? "0");
-                int width = int.Parse(region.Attribute("Width")?.Value ?? "32");
-                int height = int.Parse(region.Attribute("Height")?.Value ?? "32");
-
-                int i = fullName.Length;
-                while (i > 0 && char.IsDigit(fullName[i - 1]))
-                    i--;
-                string animName = fullName.Substring(0, i).TrimEnd('_', '-', ' ');
-                if (string.IsNullOrEmpty(animName)) continue;
-
-                if (!animations.ContainsKey(animName))
-                    animations[animName] = new List<Rectangle>();
-                animations[animName].Add(new Rectangle(x, y, width, height));
-            }
-
-            var texturePath = doc.Descendants("Texture").FirstOrDefault()?.Value
-                              ?? "image/character/miner";
-            texture = content.Load<Texture2D>(texturePath);
-            currentAnimationFrames = animations["idle_front"];
-        }
-
-        // ────────────────────────────────────────────────────────────────────
-        // Carica le animazioni degli item/bombe dall'XML.
-        // ────────────────────────────────────────────────────────────────────
-        private void LoadItemAnimations(string xmlPath, ContentManager content)
-        {
-            if (!File.Exists(xmlPath))
-                throw new FileNotFoundException($"File XML item non trovato: {xmlPath}");
-
-            XDocument doc = XDocument.Load(xmlPath);
-            itemAnimations.Clear();
-
-            foreach (var region in doc.Descendants("Region"))
-            {
-                string fullName = region.Attribute("Name")?.Value ?? "";
-                int x = int.Parse(region.Attribute("X")?.Value ?? "0");
-                int y = int.Parse(region.Attribute("Y")?.Value ?? "0");
-                int width = int.Parse(region.Attribute("Width")?.Value ?? "32");
-                int height = int.Parse(region.Attribute("Height")?.Value ?? "32");
-
-                int i = fullName.Length;
-                while (i > 0 && char.IsDigit(fullName[i - 1]))
-                    i--;
-                string animName = fullName.Substring(0, i).TrimEnd('_', '-', ' ');
-                if (string.IsNullOrEmpty(animName))
-                    animName = fullName;
-
-                if (!itemAnimations.ContainsKey(animName))
-                    itemAnimations[animName] = new List<Rectangle>();
-                itemAnimations[animName].Add(new Rectangle(x, y, width, height));
-            }
-
-            var texturePath = doc.Descendants("Texture").FirstOrDefault()?.Value
-                              ?? "image/items/items";
-            itemTexture = content.Load<Texture2D>(texturePath);
-        }
-
-        // ────────────────────────────────────────────────────────────────────
-        // Carica le animazioni delle esplosioni dall'XML.
-        // ────────────────────────────────────────────────────────────────────
-        private void LoadExplosionAnimations(string xmlPath, ContentManager content)
-        {
-            if (!File.Exists(xmlPath))
-                throw new FileNotFoundException($"File XML esplosioni non trovato: {xmlPath}");
-
-            XDocument doc = XDocument.Load(xmlPath);
-            explosionAnimations.Clear();
-
-            foreach (var region in doc.Descendants("Region"))
-            {
-                string fullName = region.Attribute("Name")?.Value ?? "";
-                int x = int.Parse(region.Attribute("X")?.Value ?? "0");
-                int y = int.Parse(region.Attribute("Y")?.Value ?? "0");
-                int width = int.Parse(region.Attribute("Width")?.Value ?? "32");
-                int height = int.Parse(region.Attribute("Height")?.Value ?? "32");
-
-                int i = fullName.Length;
-                while (i > 0 && char.IsDigit(fullName[i - 1]))
-                    i--;
-                string animName = fullName.Substring(0, i).TrimEnd('_', '-', ' ');
-                if (string.IsNullOrEmpty(animName))
-                    animName = fullName;
-
-                if (!explosionAnimations.ContainsKey(animName))
-                    explosionAnimations[animName] = new List<Rectangle>();
-                explosionAnimations[animName].Add(new Rectangle(x, y, width, height));
-            }
-
-            var texturePath = doc.Descendants("Texture").FirstOrDefault()?.Value
-                              ?? "image/fxs/fsx";
-            explosionTexture = content.Load<Texture2D>(texturePath);
-        }
-
-        // ────────────────────────────────────────────────────────────────────
-        // Disegna il miner (con eventuale blink durante invincibilità)
-        // e tutte le bombe/esplosioni attive.
-        // ────────────────────────────────────────────────────────────────────
         public void Draw(SpriteBatch spriteBatch)
         {
-            if (currentAnimationFrames == null || currentAnimationFrames.Count == 0) return;
-            if (currentFrame >= currentAnimationFrames.Count) currentFrame = 0;
+            if (_currentFrames == null || _currentFrames.Count == 0) return;
+            if (_currentFrame >= _currentFrames.Count) _currentFrame = 0;
 
-            foreach (var bomb in bombs)
-                bomb.Draw(spriteBatch);
+            foreach (var bomb in _bombs) bomb.Draw(spriteBatch);
 
-            if (isInvincible)
-            {
-                // Blink: non disegnare il frame principale nei frame "off"
-                if (!blinkVisible) return;
-            }
+            if (_isInvincible && !_blinkVisible) return;
 
-            spriteBatch.Draw(texture, Position,
-                currentAnimationFrames[currentFrame], Color.White);
+            spriteBatch.Draw(_texture, Position, _currentFrames[_currentFrame], Color.White);
         }
 
-        // ────────────────────────────────────────────────────────────────────
-        // Gestisce la perdita di una vita:
-        // - Se ha ancora vite → respawn con invincibilità
-        // - Se non ha più vite → animazione di morte definitiva
-        // ────────────────────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // VITA / MORTE / RESPAWN
+        // ═══════════════════════════════════════════════════════════════════
+
         public void Kill()
         {
-            if (isDead) return;
+            if (_isDead) return;
 
-            lives--;
+            _lives--;
 
-            if (lives > 0)
+            if (_lives > 0)
             {
-                // Ancora vite: ferma il movimento e notifica Game1 per il respawn
-                isMoving = false;
+                _isMoving         = false;
                 _movementProgress = 0f;
                 _inputBuffer.Clear();
                 NeedsRespawn?.Invoke(this, EventArgs.Empty);
                 return;
             }
 
-            // Nessuna vita rimasta: avvia animazione di morte
-            isDead = true;
-            isMoving = false;
-            _movementProgress = 0f;
-            _deathAnimationFinished = false;
+            _isDead            = true;
+            _isMoving          = false;
+            _movementProgress  = 0f;
+            _deathAnimFinished = false;
 
-            if (animations.ContainsKey("dead"))
+            if (_animations.ContainsKey("dead"))
             {
-                currentAnimation = "dead";
-                currentAnimationFrames = animations[currentAnimation];
-
-                if (currentAnimationFrames?.Count <= 1)
+                _currentAnimation = "dead";
+                _currentFrames    = _animations["dead"];
+                if (_currentFrames?.Count <= 1)
                 {
-                    _deathAnimationFinished = true;
+                    _deathAnimFinished = true;
                     DeathAnimationFinished?.Invoke(this, EventArgs.Empty);
                 }
             }
             else
             {
-                // Fallback se "dead" non esiste: usa idle_front
-                string preferred = new[] { "idle_front", "idle_back", "idle_left", "idle_right", "idle" }
-                    .FirstOrDefault(k => animations.ContainsKey(k))
-                    ?? animations.Keys.FirstOrDefault();
+                string fallback = new[] { "idle_front", "idle_back", "idle_left", "idle_right", "idle" }
+                    .FirstOrDefault(k => _animations.ContainsKey(k))
+                    ?? _animations.Keys.FirstOrDefault();
 
-                if (preferred != null)
+                if (fallback != null)
                 {
-                    currentAnimation = preferred;
-                    currentAnimationFrames = animations[currentAnimation];
+                    _currentAnimation = fallback;
+                    _currentFrames    = _animations[fallback];
                 }
 
-                _deathAnimationFinished = true;
+                _deathAnimFinished = true;
                 DeathAnimationFinished?.Invoke(this, EventArgs.Empty);
             }
 
-            currentFrame = 0;
-            animationTimer = 0f;
+            _currentFrame = 0;
+            _animTimer    = 0f;
         }
 
-        // ────────────────────────────────────────────────────────────────────
-        // Riposiziona il miner dopo la perdita di una vita.
-        // Attiva l'invincibilità lampeggiante per proteggere il respawn.
-        // ────────────────────────────────────────────────────────────────────
+        /// <summary>Riposiziona il miner dopo la perdita di una vita e attiva l'invincibilità.</summary>
         public void Respawn(Point spawnTile)
         {
-            TilePosition = spawnTile;
-            Position = new Vector2(spawnTile.X * TileMap.TileSize,
-                                   spawnTile.Y * TileMap.TileSize);
-            targetPosition = Position;
-            isMoving = false;
-            _inputBuffer.Clear();
-            _movementProgress = 0f;
-            state = MinerState.IdleFront;
-            currentAnimation = "idle_front";
-            currentAnimationFrames = animations["idle_front"];
-            currentFrame = 0;
-            animationTimer = 0f;
+            ResetPosition(spawnTile);
+            _isInvincible       = true;
+            _invincibilityTimer = _invincibilityDuration;
+            _blinkTimer         = BlinkInterval;
+            _blinkVisible       = true;
+        }
 
-            isInvincible = true;
-            invincibilityTimer = invincibilityDuration;
-            blinkTimer = blinkInterval;
-            blinkVisible = true;
+        /// <summary>Reset per cambio livello: azzera posizione e bombe, nessuna invincibilità.</summary>
+        public void ResetForNewLevel(Point spawnTile)
+        {
+            ResetPosition(spawnTile);
+            _bombs.Clear();
+            _isInvincible = false;
+            _blinkVisible = true;
+        }
+
+        private void ResetPosition(Point spawnTile)
+        {
+            TilePosition      = spawnTile;
+            Position          = new Vector2(spawnTile.X * TileMap.TileSize, spawnTile.Y * TileMap.TileSize);
+            _targetPosition   = Position;
+            _isMoving         = false;
+            _movementProgress = 0f;
+            _inputBuffer.Clear();
+            _state            = MinerState.IdleFront;
+            _currentAnimation = "idle_front";
+            _currentFrames    = _animations["idle_front"];
+            _currentFrame     = 0;
+            _animTimer        = 0f;
         }
 
         public Collision GetBounds()
         {
-            if (!animations.TryGetValue(currentAnimation, out var frames) || frames.Count == 0)
+            if (!_animations.TryGetValue(_currentAnimation, out var frames) || frames.Count == 0)
                 return Collision.Empty;
 
-            var frame = frames[Math.Min(currentFrame, frames.Count - 1)];
-            // Hitbox ridotta al 40% del frame, centrata
+            var frame  = frames[Math.Min(_currentFrame, frames.Count - 1)];
             int radius = (int)(frame.Width * 0.20f);
             return new Collision(
                 (int)(Position.X + frame.Width  * 0.5f),
@@ -892,31 +609,214 @@ namespace PoopMan.GameObjects
                 radius);
         }
 
-        // ────────────────────────────────────────────────────────────────────
-        // Reset completo per il cambio livello:
-        // azzera posizione, bombe e invincibilità senza toccare le vite.
-        // ────────────────────────────────────────────────────────────────────
-        public void ResetForNewLevel(Point spawnTile)
-        {
-            TilePosition = spawnTile;
-            Position = new Vector2(spawnTile.X * TileMap.TileSize,
-                                   spawnTile.Y * TileMap.TileSize);
-            targetPosition = Position;
-            isMoving = false;
-            _inputBuffer.Clear();
-            _movementProgress = 0f;
-            state = MinerState.IdleFront;
-            currentAnimation = "idle_front";
-            currentAnimationFrames = animations["idle_front"];
-            currentFrame = 0;
-            animationTimer = 0f;
-            bombs.Clear();      // Rimuovi tutte le bombe piazzate
+        // ═══════════════════════════════════════════════════════════════════
+        // UPGRADE
+        // ═══════════════════════════════════════════════════════════════════
 
-            // Attiva safe zone all'inizio di ogni livello
-            isInvincible = true;
-            invincibilityTimer = invincibilityDuration;
-            blinkTimer = blinkInterval;
-            blinkVisible = true;
+        /// <summary>Applica il potenziamento scelto nel menu upgrade.</summary>
+        public void ApplyUpgrade(UpgradeType upgrade)
+        {
+            switch (upgrade)
+            {
+                // ── Vita ──────────────────────────────────────────────────
+                case UpgradeType.ExtraLife:
+                    if (_lives < _maxLives) { _lives++; ExtraLifeEarned?.Invoke(this, EventArgs.Empty); }
+                    break;
+
+                case UpgradeType.MaxLifeUp:
+                    if (_maxLifeSteps < UpgradeRegistry.MaxLifeSteps)
+                    {
+                        _maxLifeSteps++;
+                        _maxLives++;
+                        _lives = Math.Min(_lives + 1, _maxLives);
+                        ExtraLifeEarned?.Invoke(this, EventArgs.Empty);
+                    }
+                    break;
+
+                case UpgradeType.SlowRegen:
+                    _regenLevelsAccum = 0;
+                    _slowRegenActive  = true;
+                    break;
+
+                // ── Offensivi ─────────────────────────────────────────────
+                case UpgradeType.IncreasedDamage:
+                case UpgradeType.BiggerBlast:
+                    if (_explosionRangeSteps < UpgradeRegistry.MaxExplosionRange)
+                    { _explosionRangeSteps++; _bonusExplosionRange++; }
+                    break;
+
+                case UpgradeType.FasterBomb:
+                    if (_fasterBombSteps < UpgradeRegistry.MaxFasterBombSteps)
+                    { _fasterBombSteps++; _bombTimerBonus += 0.4f; }
+                    break;
+
+                case UpgradeType.ExtraBomb:
+                    if (_extraBombSteps < UpgradeRegistry.MaxExtraBombs)
+                    { _extraBombSteps++; _maxActiveBombs++; }
+                    break;
+
+                case UpgradeType.ChainExplosion:
+                    if (_chainSteps < UpgradeRegistry.MaxChainSteps)
+                    { _chainSteps++; ChainExplosionChance = Math.Min(ChainExplosionChance + 0.15f, 0.60f); }
+                    break;
+
+                // ── Movimento ─────────────────────────────────────────────
+                case UpgradeType.FasterMovement:
+                    if (_moveSteps < UpgradeRegistry.MaxMoveSteps)
+                    { _moveSteps++; _moveSpeed = Math.Min(_moveSpeed + 20f, 280f); }
+                    break;
+
+                case UpgradeType.DashAfterHit:
+                    UpgradeDashAfterHit = true;
+                    break;
+
+                // ── Difensivi ─────────────────────────────────────────────
+                case UpgradeType.ExplosionResistance:
+                    _invincibilityDuration = Math.Min(_invincibilityDuration + 1f, UpgradeRegistry.MaxInvincibility);
+                    break;
+
+                case UpgradeType.DamageReduction:
+                    _invincibilityDuration = Math.Min(_invincibilityDuration + 0.5f, UpgradeRegistry.MaxInvincibility);
+                    break;
+
+                case UpgradeType.Shield:
+                    UpgradeShield = true;
+                    _shieldActive = true;
+                    break;
+
+                // ── Speciali ──────────────────────────────────────────────
+                case UpgradeType.MultiHit:       UpgradeMultiHit  = true; break;
+                case UpgradeType.CriticalChance: UpgradeCritical  = true; break;
+                case UpgradeType.Magnet:         UpgradeMagnet    = true; break;
+                case UpgradeType.StunOnHit:      UpgradeStunOnHit = true; break;
+                case UpgradeType.SlowOnHit:      UpgradeSlowOnHit = true; break;
+
+                case UpgradeType.BonusLoot:
+                    BonusLootChance = Math.Min(BonusLootChance + 0.15f, 0.60f);
+                    break;
+
+                case UpgradeType.DoubleDrop:
+                    if (_doubleDropSteps < UpgradeRegistry.MaxDoubleDropSteps)
+                    { _doubleDropSteps++; DoubleDropChance = Math.Min(DoubleDropChance + 0.15f, 0.60f); }
+                    break;
+            }
+        }
+
+        /// <summary>Chiamato da GameScene a ogni avanzamento di livello.</summary>
+        public void NotifyLevelUp()
+        {
+            // Rigenerazione lenta: +1 vita ogni 10 livelli
+            if (_slowRegenActive)
+            {
+                _regenLevelsAccum++;
+                if (_regenLevelsAccum >= 10)
+                {
+                    _regenLevelsAccum = 0;
+                    if (_lives < _maxLives) { _lives++; ExtraLifeEarned?.Invoke(this, EventArgs.Empty); }
+                }
+            }
+
+            // Ricarica scudo ogni ShieldRechargePeriod livelli
+            if (UpgradeShield && !_shieldActive)
+            {
+                _shieldRechargeLevel++;
+                if (_shieldRechargeLevel >= ShieldRechargePeriod)
+                {
+                    _shieldRechargeLevel = 0;
+                    _shieldActive        = true;
+                }
+            }
+        }
+
+        /// <summary>Tenta di assorbire un colpo con lo scudo. Restituisce true se assorbito.</summary>
+        public bool TryAbsorbWithShield()
+        {
+            if (!_shieldActive) return false;
+            _shieldActive        = false;
+            _shieldRechargeLevel = 0;
+            return true;
+        }
+
+        /// <summary>Attiva il boost di velocità post-danno se l'upgrade DashAfterHit è presente.</summary>
+        public void TriggerDashAfterHit()
+        {
+            if (!UpgradeDashAfterHit) return;
+            _dashTimer      = 3f;
+            _dashSpeedBonus = _moveSpeed * 0.4f;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // CARICAMENTO RISORSE
+        // ═══════════════════════════════════════════════════════════════════
+
+        private void LoadAnimationsFromXml(string xmlPath, ContentManager content)
+        {
+            if (!File.Exists(xmlPath))
+                throw new FileNotFoundException($"File XML animazioni non trovato: {xmlPath}");
+
+            XDocument doc = XDocument.Load(xmlPath);
+            _animations.Clear();
+            foreach (var region in doc.Descendants("Region"))
+                AddFrameToDict(_animations, region);
+
+            var texturePath = doc.Descendants("Texture").FirstOrDefault()?.Value ?? "image/character/miner";
+            _texture        = content.Load<Texture2D>(texturePath);
+            _currentFrames  = _animations["idle_front"];
+        }
+
+        private void LoadItemAnimations(string xmlPath, ContentManager content)
+        {
+            if (!File.Exists(xmlPath))
+                throw new FileNotFoundException($"File XML item non trovato: {xmlPath}");
+
+            XDocument doc = XDocument.Load(xmlPath);
+            _itemAnimations.Clear();
+            foreach (var region in doc.Descendants("Region"))
+                AddFrameToDict(_itemAnimations, region, allowEmpty: true);
+
+            var texturePath = doc.Descendants("Texture").FirstOrDefault()?.Value ?? "image/items/items";
+            _itemTexture    = content.Load<Texture2D>(texturePath);
+        }
+
+        private void LoadExplosionAnimations(string xmlPath, ContentManager content)
+        {
+            if (!File.Exists(xmlPath))
+                throw new FileNotFoundException($"File XML esplosioni non trovato: {xmlPath}");
+
+            XDocument doc = XDocument.Load(xmlPath);
+            _explosionAnimations.Clear();
+            foreach (var region in doc.Descendants("Region"))
+                AddFrameToDict(_explosionAnimations, region, allowEmpty: true);
+
+            var texturePath   = doc.Descendants("Texture").FirstOrDefault()?.Value ?? "image/fxs/fsx";
+            _explosionTexture = content.Load<Texture2D>(texturePath);
+        }
+
+        /// <summary>Aggiunge un frame XML a un dizionario di animazioni raggruppando per nome base.</summary>
+        private static void AddFrameToDict(
+            Dictionary<string, List<Rectangle>> dict,
+            XElement region,
+            bool allowEmpty = false)
+        {
+            string fullName = region.Attribute("Name")?.Value ?? "";
+            int x      = int.Parse(region.Attribute("X")?.Value      ?? "0");
+            int y      = int.Parse(region.Attribute("Y")?.Value      ?? "0");
+            int width  = int.Parse(region.Attribute("Width")?.Value  ?? "32");
+            int height = int.Parse(region.Attribute("Height")?.Value ?? "32");
+
+            int i = fullName.Length;
+            while (i > 0 && char.IsDigit(fullName[i - 1])) i--;
+            string animName = fullName[..i].TrimEnd('_', '-', ' ');
+
+            if (string.IsNullOrEmpty(animName))
+            {
+                if (!allowEmpty) return;
+                animName = fullName;
+            }
+
+            if (!dict.ContainsKey(animName)) dict[animName] = new List<Rectangle>();
+            var rect = new Rectangle(x, y, width, height);
+            if (!dict[animName].Contains(rect)) dict[animName].Add(rect);
         }
     }
 }

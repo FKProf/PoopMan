@@ -1,5 +1,3 @@
-// da sistemare la generazione della mappa, attualmente troppo semplice e con poca varieta (soprattutto nei breakable)
-
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using PoopManLibrary.World;
@@ -52,13 +50,12 @@ public class TileMap
 
     // -------------------------------------------------------------------------
     // Costruttore principale.
-    // Algoritmo semplice e robusto:
-    //   1) Bordi + pilastri fissi + riempimento uniforme (alta densita breakable)
-    //   2) Zona 3x3 libera attorno a tutti i 4 corner
+    // Algoritmo:
+    //   1) Bordi + pilastri fissi + riempimento uniforme
+    //   2) Zona 3x3 libera solo attorno allo spawn del miner
     //   3) Elementi ambientali bioma
     //   4) Protezione pericoli attorno allo spawn attivo
-    //   5) Re-enforce corner liberi dopo ambiente
-    //   6) Connettivita Manhattan tra tutti i corner
+    //   5) Re-enforce zona spawn dopo ambiente
     // -------------------------------------------------------------------------
     public TileMap(TileAtlas atlas, int rows, int cols, int level, Point? playerSpawn = null)
     {
@@ -80,10 +77,13 @@ public class TileMap
         var rand = new Random();
         var t = ThemeTiles[Theme];
 
-        // Densita breakable: 65% base, cresce con il livello fino a 80%
-        int breakableChance = Math.Clamp(65 + level * 2, 65, 80);
+        // Densita breakable: 70% base, cresce con il livello fino a 85%
+        int breakableChance = Math.Clamp(70 + level * 2, 70, 85);
 
-        // 1) Riempimento completo uniforme
+        // 1) Riempimento completo uniforme con pavimento decorato
+        // Genera una "mappa di zona" 2D con Perlin-like noise per variare i floor tile
+        float[,] noiseMap = GenerateNoiseMap(rows, cols, rand);
+
         for (int y = 0; y < rows; y++)
         {
             for (int x = 0; x < cols; x++)
@@ -101,20 +101,26 @@ public class TileMap
                 else if (rand.Next(100) < breakableChance)
                 {
                     map[y, x] = TileType.Breakable;
-                    tileVariant[y, x] = t.breakable[rand.Next(t.breakable.Length)];
+                    // Varia il breakable tile in base alla zona (noise)
+                    float n = noiseMap[y, x];
+                    int breakIdx = n < 0.4f ? 0 : n < 0.75f ? (t.breakable.Length > 1 ? 1 : 0) : (t.breakable.Length > 2 ? 2 : 0);
+                    tileVariant[y, x] = t.breakable[breakIdx % t.breakable.Length];
                 }
                 else
                 {
                     map[y, x] = TileType.Empty;
-                    tileVariant[y, x] = t.empty[rand.Next(t.empty.Length)];
+                    // Scegli il floor tile in base alla zona noise per varietà visiva
+                    float n = noiseMap[y, x];
+                    int emptyIdx = n < 0.35f ? 0 : n < 0.70f ? (t.empty.Length > 1 ? 1 : 0) : (t.empty.Length > 2 ? 2 : 0);
+                    tileVariant[y, x] = t.empty[emptyIdx % t.empty.Length];
                 }
             }
         }
 
-        // 2) Zona 3x3 libera attorno a tutti i 4 corner
-        ClearCornerZones(rows, cols, rand);
-
         Point chosenSpawn = playerSpawn ?? SpawnCorners[rand.Next(SpawnCorners.Length)];
+
+        // 2) Zona 3x3 libera solo attorno allo spawn del miner
+        ClearSpawnZone(chosenSpawn, rows, cols, rand);
 
         // 3) Elementi ambientali bioma
         AddBiomeEnvironment(rows, cols, rand, level);
@@ -122,35 +128,29 @@ public class TileMap
         // 4) Protegge lo spawn attivo da pericoli liquidi
         ProtectSpawnFromHazards(rows, cols, chosenSpawn);
 
-        // 5) Re-enforce zone corner libere (l'ambiente potrebbe averle sovrascritte)
-        ClearCornerZones(rows, cols, rand);
+        // 5) Re-enforce zona spawn (l'ambiente potrebbe averla sovrascritta)
+        ClearSpawnZone(chosenSpawn, rows, cols, rand);
 
-        // 6) Connettivita: tutti i corner raggiungibili tra loro
-        EnsureConnectivity(rows, cols, rand);
     }
 
     // -------------------------------------------------------------------------
-    // Svuota una zona 3x3 attorno a ogni corner spawn.
+    // Svuota una zona 3x3 attorno al solo spawn del miner.
     // -------------------------------------------------------------------------
-    private void ClearCornerZones(int rows, int cols, Random rand)
+    private void ClearSpawnZone(Point spawn, int rows, int cols, Random rand)
     {
-        var t = ThemeTiles[Theme];
-        foreach (var corner in SpawnCorners)
+        var theme = ThemeTiles[Theme];
+        // Libera solo il tile di spawn e i 4 vicini cardinali (croce), non i diagonali
+        Span<(int dy, int dx)> cross = [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)];
+        foreach (var (dy, dx) in cross)
         {
-            for (int dy = -1; dy <= 1; dy++)
+            int cy = spawn.Y + dy;
+            int cx = spawn.X + dx;
+            if (cy <= 0 || cy >= rows - 1 || cx <= 0 || cx >= cols - 1) continue;
+            if (cy % 2 == 0 && cx % 2 == 0) continue;
+            if (map[cy, cx] != TileType.Empty)
             {
-                for (int dx = -1; dx <= 1; dx++)
-                {
-                    int cy = corner.Y + dy;
-                    int cx = corner.X + dx;
-                    if (cy <= 0 || cy >= rows - 1 || cx <= 0 || cx >= cols - 1) continue;
-                    if (cy % 2 == 0 && cx % 2 == 0) continue;
-                    if (map[cy, cx] != TileType.Empty)
-                    {
-                        map[cy, cx] = TileType.Empty;
-                        tileVariant[cy, cx] = t.empty[rand.Next(t.empty.Length)];
-                    }
-                }
+                map[cy, cx] = TileType.Empty;
+                tileVariant[cy, cx] = theme.empty[rand.Next(theme.empty.Length)];
             }
         }
     }
@@ -161,9 +161,9 @@ public class TileMap
     private void ProtectSpawnFromHazards(int rows, int cols, Point spawn)
     {
         var t = ThemeTiles[Theme];
-        for (int dy = -2; dy <= 2; dy++)
+        for (int dy = -1; dy <= 1; dy++)
         {
-            for (int dx = -2; dx <= 2; dx++)
+            for (int dx = -1; dx <= 1; dx++)
             {
                 int y = spawn.Y + dy;
                 int x = spawn.X + dx;
@@ -250,6 +250,41 @@ public class TileMap
                     AddColumnCluster(rand.Next(1, rows - 1), rand.Next(1, cols - 1), rows, cols, rand);
                 break;
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Genera una noise map smooth (bilinear interpolation su griglia grossolana)
+    // per variare i tile di floor e breakable in zone coerenti.
+    // -------------------------------------------------------------------------
+    private static float[,] GenerateNoiseMap(int rows, int cols, Random rand)
+    {
+        // Griglia di controllo grossolana (ogni ~6 tile)
+        int gCols = cols / 6 + 2;
+        int gRows = rows / 6 + 2;
+        float[,] coarse = new float[gRows, gCols];
+        for (int y = 0; y < gRows; y++)
+            for (int x = 0; x < gCols; x++)
+                coarse[y, x] = (float)rand.NextDouble();
+
+        float[,] result = new float[rows, cols];
+        for (int y = 0; y < rows; y++)
+        {
+            for (int x = 0; x < cols; x++)
+            {
+                float gx = (float)x / 6f;
+                float gy = (float)y / 6f;
+                int x0 = (int)gx; int y0 = (int)gy;
+                int x1 = Math.Min(x0 + 1, gCols - 1);
+                int y1 = Math.Min(y0 + 1, gRows - 1);
+                float tx = gx - x0; float ty = gy - y0;
+                float v = coarse[y0, x0] * (1 - tx) * (1 - ty)
+                        + coarse[y0, x1] * tx       * (1 - ty)
+                        + coarse[y1, x0] * (1 - tx) * ty
+                        + coarse[y1, x1] * tx       * ty;
+                result[y, x] = v;
+            }
+        }
+        return result;
     }
 
     // -------------------------------------------------------------------------
@@ -379,62 +414,6 @@ public class TileMap
                     return true;
         }
         return false;
-    }
-
-    // -------------------------------------------------------------------------
-    // Garantisce connettivita tra tutti e 4 i corner.
-    // BFS da SpawnCorners[0]; per ogni corner non raggiunto scava un corridoio
-    // Manhattan passando per il centro (evita di svuotare interi bordi).
-    // -------------------------------------------------------------------------
-    private void EnsureConnectivity(int rows, int cols, Random rand)
-    {
-        var t = ThemeTiles[Theme];
-        int midY = rows / 2;
-        int midX = cols / 2;
-
-        void CarvePath(int fromY, int fromX, int toY, int toX)
-        {
-            int y = fromY, x = fromX;
-            // Prima muovi Y, poi X (percorso a L)
-            while (y != toY)
-            {
-                y += (toY > y) ? 1 : -1;
-                if (y <= 0 || y >= rows - 1) continue;
-                if (y % 2 == 0 && x % 2 == 0) continue;
-                if (map[y, x] != TileType.Empty || IsHazardVariant(tileVariant[y, x]))
-                {
-                    map[y, x] = TileType.Empty;
-                    tileVariant[y, x] = t.empty[rand.Next(t.empty.Length)];
-                }
-            }
-            while (x != toX)
-            {
-                x += (toX > x) ? 1 : -1;
-                if (x <= 0 || x >= cols - 1) continue;
-                if (y % 2 == 0 && x % 2 == 0) continue;
-                if (map[y, x] != TileType.Empty || IsHazardVariant(tileVariant[y, x]))
-                {
-                    map[y, x] = TileType.Empty;
-                    tileVariant[y, x] = t.empty[rand.Next(t.empty.Length)];
-                }
-            }
-        }
-
-        // Collega ogni corner al centro
-        foreach (var corner in SpawnCorners)
-        {
-            var reachable = FloodFill(corner, rows, cols);
-            if (!reachable.Contains(new Point(midX, midY)))
-                CarvePath(corner.Y, corner.X, midY, midX);
-        }
-
-        // Secondo passaggio: verifica che tutti i corner si raggiungano da SpawnCorners[0]
-        var mainReachable = FloodFill(SpawnCorners[0], rows, cols);
-        foreach (var corner in SpawnCorners)
-        {
-            if (!mainReachable.Contains(corner))
-                CarvePath(SpawnCorners[0].Y, SpawnCorners[0].X, corner.Y, corner.X);
-        }
     }
 
     private HashSet<Point> FloodFill(Point start, int rows, int cols)

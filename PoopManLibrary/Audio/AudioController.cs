@@ -95,7 +95,14 @@ public class AudioController : IDisposable
     public float BgmVolume
     {
         get => _bgmVolume;
-        set { _bgmVolume = Math.Clamp(value, 0f, 1f); MediaPlayer.Volume = _bgmVolume; }
+        set
+        {
+            _bgmVolume = Math.Clamp(value, 0f, 1f);
+            MediaPlayer.Volume = _bgmVolume;
+            // Aggiorna anche il volume della musica del menu (UISound)
+            if (_uiSoundInst != null)
+                _uiSoundInst.Volume = _bgmVolume * 0.7f;
+        }
     }
 
     public float SfxVolume
@@ -155,7 +162,7 @@ public class AudioController : IDisposable
         _uiSoundInst?.Stop();
         _uiSoundInst = _uiSound.CreateInstance();
         _uiSoundInst.IsLooped = loop;
-        _uiSoundInst.Volume   = _sfxVolume * 0.7f;
+        _uiSoundInst.Volume   = _bgmVolume * 0.7f;
         _uiSoundInst.Play();
     }
 

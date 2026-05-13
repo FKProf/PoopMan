@@ -61,7 +61,7 @@ public class GameHud
         return (int)(Height * scale);
     }
 
-    public void Draw(SpriteBatch sb, int score, int lives, int bigBombs,
+    public void Draw(SpriteBatch sb, int score, int lives, int maxLives, int bigBombs,
                      int level, bool hasKey, bool keyActive, TileMap.MapTheme theme)
     {
         float cy = (Height - _font.LineSpacing) / 2f;
@@ -82,18 +82,19 @@ public class GameHud
         sb.Draw(_pixel, new Rectangle(lx, 4, 1, Height - 8), BorderColor);
         lx += 10;
 
-        // ── SINISTRA: Vite (slot fissi, max 5) ──────────────────────────
+        // ── SINISTRA: Vite (slot dinamici basati su maxLives) ────────────
         sb.DrawString(_font, "HP:", new Vector2(lx, cy), new Color(200, 200, 200));
         lx += (int)_font.MeasureString("HP:").X + 6;
-        const int MaxLiveSlots = 5;
-        int iconStep = (int)(20 * iconH);
-        for (int i = 0; i < MaxLiveSlots; i++)
+        // Scala le icone vita per mantenerle ordinate anche con molte vite
+        float lifeIconScale = maxLives <= 5 ? iconH * 0.85f : iconH * (4.25f / maxLives);
+        int iconStep = Math.Max(2, (int)(32 * lifeIconScale) + 2);
+        for (int i = 0; i < maxLives; i++)
         {
             Color lifeColor = i < lives ? Color.White : new Color(60, 20, 20) * 0.6f;
             sb.Draw(_minerIcon, new Vector2(lx + i * iconStep, 2),
-                SrcMinerIcon, lifeColor, 0f, Vector2.Zero, iconH * 0.85f, SpriteEffects.None, 0f);
+                SrcMinerIcon, lifeColor, 0f, Vector2.Zero, lifeIconScale, SpriteEffects.None, 0f);
         }
-        lx += MaxLiveSlots * iconStep + 14;
+        lx += maxLives * iconStep + 14;
 
         // Separatore
         sb.Draw(_pixel, new Rectangle(lx, 4, 1, Height - 8), BorderColor);

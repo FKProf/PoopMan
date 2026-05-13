@@ -68,7 +68,8 @@ public class TitleScene : Scene
         _c2X -= Cloud2Speed * dt;
         _cursorPulse += dt * 3.5f;
 
-        var kb = Core.Input.Keyboard;
+        var kb    = Core.Input.Keyboard;
+        var mouse = Core.Input.Mouse;
 
         // ── Pannello audio ────────────────────────────────────────────
         if (_screen == MenuScreen.Audio)
@@ -83,7 +84,8 @@ public class TitleScene : Scene
         if (_screen == MenuScreen.Istruzioni)
         {
             if (kb.WasKeyJustPressed(Keys.Escape) || kb.WasKeyJustPressed(Keys.Back) ||
-                kb.WasKeyJustPressed(Keys.Enter))
+                kb.WasKeyJustPressed(Keys.Enter) ||
+                mouse.WasButtonJustPressed(PoopManLibrary.Input.MouseButton.Left))
                 _screen = MenuScreen.Main;
             return;
         }
@@ -93,6 +95,37 @@ public class TitleScene : Scene
             _selectedItem = (_selectedItem - 1 + MenuItems.Length) % MenuItems.Length;
         if (kb.WasKeyJustPressed(Keys.Down))
             _selectedItem = (_selectedItem + 1) % MenuItems.Length;
+
+        // Mouse: hover selects, click confirms (geometria identica a DrawMainMenu)
+        {
+            int W      = Core.GraphicsDevice.Viewport.Width;
+            int H      = Core.GraphicsDevice.Viewport.Height;
+            int titleY = H / 4;
+            int startY = titleY + 128 + 20;   // sepY + 20
+            int cx     = W / 2;
+            Point mp   = mouse.Position;
+            for (int i = 0; i < MenuItems.Length; i++)
+            {
+                int btnY    = startY + i * (BtnH + BtnGap);
+                var btnRect = new Rectangle(cx - BtnW / 2, btnY, BtnW, BtnH);
+                if (btnRect.Contains(mp))
+                {
+                    _selectedItem = i;
+                    if (mouse.WasButtonJustPressed(PoopManLibrary.Input.MouseButton.Left))
+                    {
+                        switch (i)
+                        {
+                            case 0:
+                                AudioManager.StopTitleAudio();
+                                Core.ChangeScene(new GameScene());
+                                break;
+                            case 1: _screen = MenuScreen.Istruzioni; break;
+                            case 2: _screen = MenuScreen.Audio; break;
+                        }
+                    }
+                }
+            }
+        }
 
         if (kb.WasKeyJustPressed(Keys.Enter))
         {

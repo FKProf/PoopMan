@@ -188,7 +188,8 @@ public class GameScene : Scene
         if (_showUpgradeMenu)
         {
             _upgradePulse += (float)gameTime.ElapsedGameTime.TotalSeconds * 4f;
-            var kb = Core.Input.Keyboard;
+            var kb    = Core.Input.Keyboard;
+            var mouse = Core.Input.Mouse;
 
             if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Left) ||
                 kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.A))
@@ -197,6 +198,32 @@ public class GameScene : Scene
             if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Right) ||
                 kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.D))
                 _upgradeSelected = (_upgradeSelected + 1) % _upgradeOptions.Count;
+
+            // Mouse: hover selects card, click confirms
+            {
+                int vw = Core.GraphicsDevice.Viewport.Width;
+                int vh = Core.GraphicsDevice.Viewport.Height;
+                int cardW  = Math.Min(320, vw / _upgradeOptions.Count - 20);
+                int cardH  = 220;
+                int gap    = 18;
+                int totalW = _upgradeOptions.Count * cardW + (_upgradeOptions.Count - 1) * gap;
+                int startX = vw / 2 - totalW / 2;
+                int cardY  = vh / 2 - cardH / 2 + 20;
+                Point mp = mouse.Position;
+                for (int i = 0; i < _upgradeOptions.Count; i++)
+                {
+                    var cardRect = new Rectangle(startX + i * (cardW + gap), cardY, cardW, cardH);
+                    if (cardRect.Contains(mp))
+                    {
+                        _upgradeSelected = i;
+                        if (mouse.WasButtonJustPressed(PoopManLibrary.Input.MouseButton.Left))
+                        {
+                            _miner.ApplyUpgrade(_upgradeOptions[_upgradeSelected].Type);
+                            _showUpgradeMenu = false;
+                        }
+                    }
+                }
+            }
 
             if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Enter))
             {
@@ -231,11 +258,48 @@ public class GameScene : Scene
             }
             else
             {
-                var kb = Core.Input.Keyboard;
+                var kb    = Core.Input.Keyboard;
+                var mouse = Core.Input.Mouse;
+
                 if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Up))
                     _pauseMenuItem = (_pauseMenuItem - 1 + PauseMenuItems.Length) % PauseMenuItems.Length;
                 if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Down))
                     _pauseMenuItem = (_pauseMenuItem + 1) % PauseMenuItems.Length;
+
+                // Mouse: hover + click sui pulsanti del menu pausa
+                {
+                    int vw = Core.GraphicsDevice.Viewport.Width;
+                    int vh = Core.GraphicsDevice.Viewport.Height;
+                    int cx = vw / 2;
+                    int totalMenuH = PauseMenuItems.Length * (PauseBtnH + PauseBtnGap) - PauseBtnGap;
+                    int boxW = PauseBtnW + 60;
+                    int boxH = 52 + totalMenuH + 28;
+                    int boxY = vh / 2 - boxH / 2;
+                    int menuStartY = boxY + 54;
+                    Point mp = mouse.Position;
+                    for (int i = 0; i < PauseMenuItems.Length; i++)
+                    {
+                        int btnY = menuStartY + i * (PauseBtnH + PauseBtnGap);
+                        var btnRect = new Rectangle(cx - PauseBtnW / 2, btnY, PauseBtnW, PauseBtnH);
+                        if (btnRect.Contains(mp))
+                        {
+                            _pauseMenuItem = i;
+                            if (mouse.WasButtonJustPressed(PoopManLibrary.Input.MouseButton.Left))
+                            {
+                                switch (i)
+                                {
+                                    case 0: _isPaused = false; break;
+                                    case 1: _pauseScreen = PauseScreen.Audio; break;
+                                    case 2:
+                                        AudioManager.StopGameAudio();
+                                        Core.ChangeScene(new TitleScene());
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Enter))
                 {
                     switch (_pauseMenuItem)
@@ -484,13 +548,6 @@ public class GameScene : Scene
         // ── Sfondo schermo (colore dipende dal tema) ─────────────────────
         Core.GraphicsDevice.Clear(_map.BackgroundColor);
 
-        // ── HUD (sopra la mappa, scalato alla larghezza viewport) ───────────
-        var hudMatrix = GameHud.GetHudMatrix(Core.GraphicsDevice);
-        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: hudMatrix);
-        _hud.Draw(_spriteBatch, _score, _miner.Lives, _miner.BigBombCount,
-                  _currentLevel, _hasKey, _currentLevel >= 5, _map.Theme);
-        _spriteBatch.End();
-
         // ── Mappa + entità (scalata per adattarsi allo schermo) ──────────
         int hudScreenH = GameHud.ScreenHeight(Core.GraphicsDevice);
         var transform  = Game1.GetMapScaleMatrix(hudScreenH);
@@ -546,6 +603,13 @@ public class GameScene : Scene
         else if (_isPaused)           DrawPauseWithAudio();
         else if (_showExtraLifeFlash) _overlay.DrawExtraLife(_spriteBatch, _extraLifeFlashTimer, ExtraLifeFlashDuration);
         else if (_showLevelFlash)     _overlay.DrawLevelFlash(_spriteBatch, _currentLevel, _levelFlashTimer, _map.Theme);
+        _spriteBatch.End();
+
+        // ── HUD ridisegnato sopra gli overlay così è sempre visibile ─────
+        var hudMatrix2 = GameHud.GetHudMatrix(Core.GraphicsDevice);
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: hudMatrix2);
+        _hud.Draw(_spriteBatch, _score, _miner.Lives, _miner.MaxLives, _miner.BigBombCount,
+                  _currentLevel, _hasKey, _currentLevel >= 5, _map.Theme);
         _spriteBatch.End();
     }
 
@@ -702,7 +766,7 @@ public class GameScene : Scene
             {
                 if (b.TakeDamage()) _score += b.KillPoints;
             }
-}
+        }
 
         // Danno al miner
         if (!_miner.IsDead && !_miner.IsInvincible && hitTiles.Contains(_miner.VisualTilePosition))
@@ -797,6 +861,10 @@ public class GameScene : Scene
         var rand = new Random();
         int attempts = 0;
 
+        // Quanti bat speciali spawnare: 0 ai primi livelli, cresce lentamente
+        // Probabilità speciale per bat: 5% al lv1, +3% ogni livello, max 35%
+        float specialChance = Math.Clamp(0.02f + level * 0.03f, 0f, 0.35f);
+
         while (_bats.Count < count && attempts < 1000)
         {
             attempts++;
@@ -810,8 +878,14 @@ public class GameScene : Scene
             if (!_map.IsWalkable(tile)) continue;
 
             var bat = new Bat(tile, batXml, Content, _map);
-            bat.SetAggressionLevel(level);
-            bat.OnSplit         += SpawnMiniBats;
+
+            // Solo una piccola percentuale diventa speciale
+            if ((float)rand.NextDouble() < specialChance)
+                bat.SetAggressionLevel(level);   // livello pieno → speciale
+            else
+                bat.SetAggressionLevel(Math.Min(level, 4)); // cap lv4 → niente poteri
+
+            bat.OnSplit          += SpawnMiniBats;
             bat.OnDeathExplosion += TriggerBatExplosion;
             _bats.Add(bat);
         }

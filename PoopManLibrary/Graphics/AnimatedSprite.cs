@@ -37,7 +37,7 @@ public class AnimatedSprite : Sprite
 
             if (_currentFrame >= _animation.Frames.Count) _currentFrame = 0;
 
-            Region = _animation.Frames[0];
+            Region = _animation.Frames[_currentFrame];
         }
     }
 }
