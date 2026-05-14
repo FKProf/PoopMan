@@ -12,11 +12,11 @@ public class TitleScene : Scene
 {
     // ── Grafica ────────────────────────────────────────────────────────
     private SpriteBatch _sb;
-    private SpriteFont  _font;
-    private Texture2D   _pixel;
-    private Texture2D   _bgFixed;
-    private Texture2D   _cloud1;
-    private Texture2D   _cloud2;
+    private SpriteFont _font;
+    private Texture2D _pixel;
+    private Texture2D _bgFixed;
+    private Texture2D _cloud1;
+    private Texture2D _cloud2;
 
     // ── Nuvole ────────────────────────────────────────────────────────
     private float _c1X = 0f;
@@ -26,8 +26,8 @@ public class TitleScene : Scene
 
     // ── Menu ──────────────────────────────────────────────────────────
     private enum MenuScreen { Main, Audio, Istruzioni }
-    private MenuScreen _screen       = MenuScreen.Main;
-    private int        _selectedItem = 0;
+    private MenuScreen _screen = MenuScreen.Main;
+    private int _selectedItem = 0;
 
     private static readonly string[] MenuItems = { "GIOCA", "ISTRUZIONI", "AUDIO" };
     private const int BtnW = 260;
@@ -43,12 +43,12 @@ public class TitleScene : Scene
     public override void LoadContent()
     {
         base.LoadContent();
-        _sb   = new SpriteBatch(Core.GraphicsDevice);
+        _sb = new SpriteBatch(Core.GraphicsDevice);
         _font = Content.Load<SpriteFont>("font/Score");
 
         _bgFixed = Content.Load<Texture2D>("image/backgound/1");
-        _cloud1  = Content.Load<Texture2D>("image/backgound/2");
-        _cloud2  = Content.Load<Texture2D>("image/backgound/3");
+        _cloud1 = Content.Load<Texture2D>("image/backgound/2");
+        _cloud2 = Content.Load<Texture2D>("image/backgound/3");
 
         _pixel = new Texture2D(Core.GraphicsDevice, 1, 1);
         _pixel.SetData(new[] { Color.White });
@@ -68,7 +68,7 @@ public class TitleScene : Scene
         _c2X -= Cloud2Speed * dt;
         _cursorPulse += dt * 3.5f;
 
-        var kb    = Core.Input.Keyboard;
+        var kb = Core.Input.Keyboard;
         var mouse = Core.Input.Mouse;
 
         // ── Pannello audio ────────────────────────────────────────────
@@ -98,15 +98,15 @@ public class TitleScene : Scene
 
         // Mouse: hover selects, click confirms (geometria identica a DrawMainMenu)
         {
-            int W      = Core.GraphicsDevice.Viewport.Width;
-            int H      = Core.GraphicsDevice.Viewport.Height;
+            int W = Core.GraphicsDevice.Viewport.Width;
+            int H = Core.GraphicsDevice.Viewport.Height;
             int titleY = H / 4;
             int startY = titleY + 128 + 20;   // sepY + 20
-            int cx     = W / 2;
-            Point mp   = mouse.Position;
+            int cx = W / 2;
+            Point mp = mouse.Position;
             for (int i = 0; i < MenuItems.Length; i++)
             {
-                int btnY    = startY + i * (BtnH + BtnGap);
+                int btnY = startY + i * (BtnH + BtnGap);
                 var btnRect = new Rectangle(cx - BtnW / 2, btnY, BtnW, BtnH);
                 if (btnRect.Contains(mp))
                 {
@@ -164,8 +164,8 @@ public class TitleScene : Scene
 
         // Titolo
         int titleY = H / 4;
-        DrawTextCentered("POOPMAN",  W / 2, titleY,      Color.Yellow,            3.0f);
-        DrawTextCentered("MINER",    W / 2, titleY + 78, new Color(255, 160, 40), 2.0f);
+        DrawTextCentered("POOPMAN", W / 2, titleY, Color.Yellow, 3.0f);
+        DrawTextCentered("MINER", W / 2, titleY + 78, new Color(255, 160, 40), 2.0f);
 
         // Linea separatrice
         int sepY = titleY + 128;
@@ -199,15 +199,15 @@ public class TitleScene : Scene
             bool sel = i == _selectedItem;
 
             // Sfondo pulsante
-            Color bgColor  = sel ? new Color(60, 40, 140, 230) : new Color(20, 20, 50, 180);
-            Color border   = sel ? Color.Yellow : new Color(80, 80, 120);
-            float pulse    = sel ? (0.85f + 0.15f * (float)Math.Sin(_cursorPulse)) : 1f;
+            Color bgColor = sel ? new Color(60, 40, 140, 230) : new Color(20, 20, 50, 180);
+            Color border = sel ? Color.Yellow : new Color(80, 80, 120);
+            float pulse = sel ? (0.85f + 0.15f * (float)Math.Sin(_cursorPulse)) : 1f;
 
             DrawRect(new Rectangle(cx - BtnW / 2 - 1, btnY - 1, BtnW + 2, BtnH + 2), border);
-            DrawRect(new Rectangle(cx - BtnW / 2,     btnY,     BtnW,     BtnH),     bgColor);
+            DrawRect(new Rectangle(cx - BtnW / 2, btnY, BtnW, BtnH), bgColor);
 
             Color textColor = sel ? Color.Yellow * pulse : Color.LightGray;
-            float scale     = sel ? 1.05f : 1.0f;
+            float scale = sel ? 1.05f : 1.0f;
             DrawTextCentered(MenuItems[i], cx, btnY + BtnH / 2, textColor, scale);
 
             // Cursore freccia
@@ -215,7 +215,7 @@ public class TitleScene : Scene
             {
                 string arrow = ">";
                 Vector2 arSz = _font.MeasureString(arrow);
-                float arX    = cx - BtnW / 2 - arSz.X - 10;
+                float arX = cx - BtnW / 2 - arSz.X - 10;
                 _sb.DrawString(_font, arrow,
                     new Vector2(arX, btnY + BtnH / 2 - arSz.Y / 2),
                     Color.Yellow * pulse);
@@ -254,7 +254,7 @@ public class TitleScene : Scene
         int boxH = 260;
         int boxX = W / 2 - boxW / 2;
         int boxY = H / 2 - boxH / 2;
-        int cx   = W / 2;
+        int cx = W / 2;
 
         _sb.Draw(_pixel, new Rectangle(0, 0, W, H), Color.Black * 0.55f);
         _sb.Draw(_pixel, new Rectangle(boxX, boxY, boxW, boxH), new Color(18, 18, 38, 240));
@@ -270,13 +270,13 @@ public class TitleScene : Scene
             ly += lineH;
         }
 
-        Line("WASD / FRECCE  :  muovi il minatore",     Color.LightGray);
-        Line("SPAZIO         :  piazza bomba piccola",   Color.LightGray);
-        Line("X              :  piazza bomba grande",    Color.LightGray);
-        Line("ESC            :  pausa / menu",           Color.LightGray);
-        Line("F11            :  schermo intero",         Color.LightGray);
-        Line("Raccogli chiave, apri porta, avanza!",     new Color(180, 255, 160), 0.85f);
-        Line("Guadagna vite extra ogni 500 punti.",      new Color(255, 220, 80),  0.80f);
+        Line("WASD / FRECCE  :  muovi il minatore", Color.LightGray);
+        Line("SPAZIO         :  piazza bomba piccola", Color.LightGray);
+        Line("X              :  piazza bomba grande", Color.LightGray);
+        Line("ESC            :  pausa / menu", Color.LightGray);
+        Line("F11            :  schermo intero", Color.LightGray);
+        Line("Raccogli chiave, apri porta, avanza!", new Color(180, 255, 160), 0.85f);
+        Line("Guadagna vite extra ogni 500 punti.", new Color(255, 220, 80), 0.80f);
 
         DrawTextCentered("ESC / ENTER: chiudi", cx, boxY + boxH - 18, Color.DarkGray, 0.75f);
     }
@@ -286,7 +286,7 @@ public class TitleScene : Scene
     {
         float x = offsetX % W;
         if (x > 0) x -= W;
-        _sb.Draw(tex, new Rectangle((int)x,     0, W, H), Color.White * alpha);
+        _sb.Draw(tex, new Rectangle((int)x, 0, W, H), Color.White * alpha);
         _sb.Draw(tex, new Rectangle((int)x + W, 0, W, H), Color.White * alpha);
     }
 
@@ -295,17 +295,23 @@ public class TitleScene : Scene
 
     private void DrawBorder(int x, int y, int w, int h, Color c)
     {
-        _sb.Draw(_pixel, new Rectangle(x, y, w, 2),     c);
+        _sb.Draw(_pixel, new Rectangle(x, y, w, 2), c);
         _sb.Draw(_pixel, new Rectangle(x, y + h - 2, w, 2), c);
-        _sb.Draw(_pixel, new Rectangle(x, y, 2, h),     c);
+        _sb.Draw(_pixel, new Rectangle(x, y, 2, h), c);
         _sb.Draw(_pixel, new Rectangle(x + w - 2, y, 2, h), c);
     }
 
     private void DrawTextCentered(string text, int cx, int cy, Color color, float scale)
     {
         Vector2 origin = _font.MeasureString(text) * 0.5f;
-        Vector2 pos    = new Vector2(cx, cy);
-        _sb.DrawString(_font, text, pos + new Vector2(2, 2) * scale, Color.Black * 0.55f, 0f, origin, scale, SpriteEffects.None, 0f);
+        Vector2 pos = new Vector2(cx, cy);
+        Color outline = Color.Black * 0.92f;
+        float d = Math.Max(1f, scale * 1.5f);
+        _sb.DrawString(_font, text, pos + new Vector2(-d, -d), outline, 0f, origin, scale, SpriteEffects.None, 0f);
+        _sb.DrawString(_font, text, pos + new Vector2(d, -d), outline, 0f, origin, scale, SpriteEffects.None, 0f);
+        _sb.DrawString(_font, text, pos + new Vector2(-d, d), outline, 0f, origin, scale, SpriteEffects.None, 0f);
+        _sb.DrawString(_font, text, pos + new Vector2(d, d), outline, 0f, origin, scale, SpriteEffects.None, 0f);
+        _sb.DrawString(_font, text, pos + new Vector2(d + 1f, d + 1f), Color.Black * 0.5f, 0f, origin, scale, SpriteEffects.None, 0f);
         _sb.DrawString(_font, text, pos, color, 0f, origin, scale, SpriteEffects.None, 0f);
     }
 }

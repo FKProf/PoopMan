@@ -17,10 +17,10 @@ public readonly struct Collision : IEquatable<Collision>
 
     public readonly bool IsEmpty => X == 0 && Y == 0 && Radius == 0;
 
-    public readonly int Top    => Y - Radius;
+    public readonly int Top => Y - Radius;
     public readonly int Bottom => Y + Radius;
-    public readonly int Left   => X - Radius;
-    public readonly int Right  => X + Radius;
+    public readonly int Left => X - Radius;
+    public readonly int Right => X + Radius;
 
     public Collision(int x, int y, int radius)
     {

@@ -22,10 +22,10 @@ public class GameController
     public static bool HoldRight() => p_keyboard.IsKeyDown(Keys.Right) || p_keyboard.IsKeyDown(Keys.D);
 
     public static bool MiniBomb() => p_keyboard.WasKeyJustPressed(Keys.Space);
-    public static bool BigBomb()  => p_keyboard.WasKeyJustPressed(Keys.X);
+    public static bool BigBomb() => p_keyboard.WasKeyJustPressed(Keys.X);
 
-    public static bool Pause()          => p_keyboard.WasKeyJustPressed(Keys.Escape);
-    public static bool Action()          => p_keyboard.WasKeyJustPressed(Keys.Enter);
-    public static bool ToggleFullScreen()=> p_keyboard.WasKeyJustPressed(Keys.F11);
-    public static bool Restart()         => p_keyboard.WasKeyJustPressed(Keys.R);
+    public static bool Pause() => p_keyboard.WasKeyJustPressed(Keys.Escape);
+    public static bool Action() => p_keyboard.WasKeyJustPressed(Keys.Enter);
+    public static bool ToggleFullScreen() => p_keyboard.WasKeyJustPressed(Keys.F11);
+    public static bool Restart() => p_keyboard.WasKeyJustPressed(Keys.R);
 }

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace PoopManLibrary.World;
+
 public class TileMap
 {
     private TileAtlas atlas;
@@ -16,28 +17,29 @@ public class TileMap
     public const int Rows = 23;
     public const int Cols = 39;
     private int currentLevel;
+    private Point _playerSpawn;
 
     public enum MapTheme { Forest, Cave, Lava, Ice, Swamp, Ruins }
     public MapTheme Theme { get; private set; }
 
     private static readonly Dictionary<MapTheme, (string wall, string[] breakable, string[] empty, string border)> ThemeTiles = new()
     {
-        [MapTheme.Forest] = ("wall2",  new[]{"log0","log1","plank0","plank1"}, new[]{"glass0","glass1","glass2"}, "wall1"),
-        [MapTheme.Cave]   = ("wall2",  new[]{"stone0","stone1","stone2"},      new[]{"ground2"},                  "wall2"),
-        [MapTheme.Lava]   = ("wall2",  new[]{"stone0","stone1"},               new[]{"ground2","ground1"},        "wall2"),
-        [MapTheme.Ice]    = ("wall1",  new[]{"plank0","plank1","log0"},        new[]{"glass0","glass1","glass2"}, "wall0"),
-        [MapTheme.Swamp]  = ("wall2",  new[]{"log0","log1","plank0","plank1"}, new[]{"ground2","ground0"},        "wall2"),
-        [MapTheme.Ruins]  = ("wall0",  new[]{"stone0","stone1","stone2","plank0"}, new[]{"ground0","ground1","sand0"}, "wall0"),
+        [MapTheme.Forest] = ("wall2", new[] { "log0", "log1", "plank0", "plank1" }, new[] { "glass0", "glass1", "glass2" }, "wall1"),
+        [MapTheme.Cave] = ("wall2", new[] { "stone0", "stone1", "stone2" }, new[] { "ground2" }, "wall2"),
+        [MapTheme.Lava] = ("wall2", new[] { "stone0", "stone1" }, new[] { "ground2", "ground1" }, "wall2"),
+        [MapTheme.Ice] = ("wall1", new[] { "plank0", "plank1", "log0" }, new[] { "glass0", "glass1", "glass2" }, "wall0"),
+        [MapTheme.Swamp] = ("wall2", new[] { "log0", "log1", "plank0", "plank1" }, new[] { "ground2", "ground0" }, "wall2"),
+        [MapTheme.Ruins] = ("wall0", new[] { "stone0", "stone1", "stone2", "plank0" }, new[] { "ground0", "ground1", "sand0" }, "wall0"),
     };
 
     private static readonly Dictionary<MapTheme, Color> ThemeBackground = new()
     {
-        [MapTheme.Forest] = new Color(  8, 22,  8),
-        [MapTheme.Cave]   = new Color(  8,  6, 14),
-        [MapTheme.Lava]   = new Color( 28,  6,  4),
-        [MapTheme.Ice]    = new Color( 10, 18, 32),
-        [MapTheme.Swamp]  = new Color(  6, 14,  8),
-        [MapTheme.Ruins]  = new Color( 18, 14, 10),
+        [MapTheme.Forest] = new Color(8, 22, 8),
+        [MapTheme.Cave] = new Color(8, 6, 14),
+        [MapTheme.Lava] = new Color(28, 6, 4),
+        [MapTheme.Ice] = new Color(10, 18, 32),
+        [MapTheme.Swamp] = new Color(6, 14, 8),
+        [MapTheme.Ruins] = new Color(18, 14, 10),
     };
 
     public Color BackgroundColor => ThemeBackground[Theme];
@@ -77,8 +79,8 @@ public class TileMap
         var rand = new Random();
         var t = ThemeTiles[Theme];
 
-        // Densita breakable: 70% base, cresce con il livello fino a 85%
-        int breakableChance = Math.Clamp(70 + level * 2, 70, 85);
+        // Densita breakable: 35% base, cresce con il livello fino a 75
+        int breakableChance = Math.Clamp(35 + level * 2, 35, 75);
 
         // 1) Riempimento completo uniforme con pavimento decorato
         // Genera una "mappa di zona" 2D con Perlin-like noise per variare i floor tile
@@ -118,8 +120,9 @@ public class TileMap
         }
 
         Point chosenSpawn = playerSpawn ?? SpawnCorners[rand.Next(SpawnCorners.Length)];
+        _playerSpawn = chosenSpawn;
 
-        // 2) Zona 3x3 libera solo attorno allo spawn del miner
+        // 2) Zona 7x7 libera solo attorno allo spawn del miner
         ClearSpawnZone(chosenSpawn, rows, cols, rand);
 
         // 3) Elementi ambientali bioma
@@ -134,36 +137,37 @@ public class TileMap
     }
 
     // -------------------------------------------------------------------------
-    // Svuota una zona 3x3 attorno al solo spawn del miner.
+    // Svuota una zona 5x5 (raggio 2) attorno allo spawn del miner.
     // -------------------------------------------------------------------------
     private void ClearSpawnZone(Point spawn, int rows, int cols, Random rand)
     {
         var theme = ThemeTiles[Theme];
-        // Libera solo il tile di spawn e i 4 vicini cardinali (croce), non i diagonali
-        Span<(int dy, int dx)> cross = [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)];
-        foreach (var (dy, dx) in cross)
+        for (int dy = -3; dy <= 3; dy++)
         {
-            int cy = spawn.Y + dy;
-            int cx = spawn.X + dx;
-            if (cy <= 0 || cy >= rows - 1 || cx <= 0 || cx >= cols - 1) continue;
-            if (cy % 2 == 0 && cx % 2 == 0) continue;
-            if (map[cy, cx] != TileType.Empty)
+            for (int dx = -3; dx <= 3; dx++)
             {
-                map[cy, cx] = TileType.Empty;
-                tileVariant[cy, cx] = theme.empty[rand.Next(theme.empty.Length)];
+                int cy = spawn.Y + dy;
+                int cx = spawn.X + dx;
+                if (cy <= 0 || cy >= rows - 1 || cx <= 0 || cx >= cols - 1) continue;
+                if (cy % 2 == 0 && cx % 2 == 0) continue; // pilastri fissi: indistruttibili
+                if (map[cy, cx] != TileType.Empty)
+                {
+                    map[cy, cx] = TileType.Empty;
+                    tileVariant[cy, cx] = theme.empty[rand.Next(theme.empty.Length)];
+                }
             }
         }
     }
 
     // -------------------------------------------------------------------------
-    // Rimuove pericoli (acqua/lava) in un raggio di 2 attorno allo spawn attivo.
+    // Rimuove pericoli (acqua/lava) in un raggio 5x5 attorno allo spawn attivo.
     // -------------------------------------------------------------------------
     private void ProtectSpawnFromHazards(int rows, int cols, Point spawn)
     {
         var t = ThemeTiles[Theme];
-        for (int dy = -1; dy <= 1; dy++)
+        for (int dy = -3; dy <= 3; dy++)
         {
-            for (int dx = -1; dx <= 1; dx++)
+            for (int dx = -3; dx <= 3; dx++)
             {
                 int y = spawn.Y + dy;
                 int x = spawn.X + dx;
@@ -211,7 +215,7 @@ public class TileMap
             case MapTheme.Lava:
                 for (int i = 0; i < rand.Next(2, 4 + intensity); i++)
                     GenerateLiquidBlob(rand.Next(2, rows - 2), rand.Next(2, cols - 2),
-                        rand.Next(6, 12 + intensity * 2), "water", rows, cols, rand);
+                        rand.Next(6, 12 + intensity * 2), "lava", rows, cols, rand);
                 for (int i = 0; i < rand.Next(2, 4 + intensity); i++)
                     AddRockCluster(rand.Next(1, rows - 1), rand.Next(1, cols - 1),
                         rand.Next(2, 5), rows, cols, rand);
@@ -278,9 +282,9 @@ public class TileMap
                 int y1 = Math.Min(y0 + 1, gRows - 1);
                 float tx = gx - x0; float ty = gy - y0;
                 float v = coarse[y0, x0] * (1 - tx) * (1 - ty)
-                        + coarse[y0, x1] * tx       * (1 - ty)
+                        + coarse[y0, x1] * tx * (1 - ty)
                         + coarse[y1, x0] * (1 - tx) * ty
-                        + coarse[y1, x1] * tx       * ty;
+                        + coarse[y1, x1] * tx * ty;
                 result[y, x] = v;
             }
         }
@@ -292,8 +296,11 @@ public class TileMap
     // -------------------------------------------------------------------------
     private void GenerateLiquidBlob(int startY, int startX, int size, string variant, int rows, int cols, Random rand)
     {
+        // Non generare liquido entro 7 tile dallo spawn del miner
+        if (Math.Abs(startY - _playerSpawn.Y) <= 3 && Math.Abs(startX - _playerSpawn.X) <= 3) return;
+
         var visited = new HashSet<(int, int)>();
-        var queue   = new Queue<(int, int)>();
+        var queue = new Queue<(int, int)>();
         queue.Enqueue((startY, startX));
         visited.Add((startY, startX));
 
@@ -316,6 +323,7 @@ public class TileMap
                 if (ny <= 0 || ny >= rows - 1 || nx <= 0 || nx >= cols - 1) continue;
                 if (visited.Contains((ny, nx))) continue;
                 if (ny % 2 == 0 && nx % 2 == 0) continue;
+                if (Math.Abs(ny - _playerSpawn.Y) <= 3 && Math.Abs(nx - _playerSpawn.X) <= 3) continue;
                 if (rand.Next(100) < 65)
                 {
                     visited.Add((ny, nx));
@@ -326,7 +334,7 @@ public class TileMap
 
         foreach (var (y, x) in visited)
         {
-            map[y, x]         = TileType.Wall;
+            map[y, x] = TileType.Wall;
             tileVariant[y, x] = variant + rand.Next(2);
         }
     }
@@ -419,7 +427,7 @@ public class TileMap
     private HashSet<Point> FloodFill(Point start, int rows, int cols)
     {
         var visited = new HashSet<Point>();
-        var queue   = new Queue<Point>();
+        var queue = new Queue<Point>();
 
         if (!IsWalkable(start)) return visited;
 
@@ -472,7 +480,7 @@ public class TileMap
             for (int x = 0; x < map.GetLength(1); x++)
             {
                 Rectangle sourceRect = atlas.GetTile(tileVariant[y, x]);
-                Rectangle destRect   = new Rectangle(x * TileSize, y * TileSize, TileSize, TileSize);
+                Rectangle destRect = new Rectangle(x * TileSize, y * TileSize, TileSize, TileSize);
                 spriteBatch.Draw(atlas.Texture, destRect, sourceRect, Color.White);
             }
     }

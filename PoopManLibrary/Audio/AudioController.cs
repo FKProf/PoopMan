@@ -17,11 +17,11 @@ public class AudioController : IDisposable
 
     // ── BGM ───────────────────────────────────────────────────────────────
     private readonly List<Song> _bgmTracks = new();
-    private int   _currentBgmIndex = -1;
-    private float _bgmVolume       = 0.6f;
+    private int _currentBgmIndex = -1;
+    private float _bgmVolume = 0.6f;
 
     // ── Suoni UI ──────────────────────────────────────────────────────────
-    private SoundEffect?         _uiSound;
+    private SoundEffect? _uiSound;
     private SoundEffectInstance? _uiSoundInst;
 
     // ── Suoni piazza-bomba (fart) ──────────────────────────────────────────
@@ -75,7 +75,7 @@ public class AudioController : IDisposable
     public void LoadExplosionSounds(ContentManager content, string smallPath, string bigPath)
     {
         try { _explosionSmall = content.Load<SoundEffect>(smallPath); } catch { }
-        try { _explosionBig   = content.Load<SoundEffect>(bigPath);   } catch { }
+        try { _explosionBig = content.Load<SoundEffect>(bigPath); } catch { }
     }
 
     /// <summary>Riproduce il suono di esplosione corrispondente al tipo di bomba.</summary>
@@ -126,7 +126,7 @@ public class AudioController : IDisposable
 
         _currentBgmIndex = index;
         MediaPlayer.IsRepeating = true;
-        MediaPlayer.Volume      = _bgmVolume;
+        MediaPlayer.Volume = _bgmVolume;
         MediaPlayer.Play(_bgmTracks[_currentBgmIndex]);
     }
 
@@ -162,7 +162,7 @@ public class AudioController : IDisposable
         _uiSoundInst?.Stop();
         _uiSoundInst = _uiSound.CreateInstance();
         _uiSoundInst.IsLooped = loop;
-        _uiSoundInst.Volume   = _bgmVolume * 0.7f;
+        _uiSoundInst.Volume = _bgmVolume * 0.7f;
         _uiSoundInst.Play();
     }
 

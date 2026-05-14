@@ -17,7 +17,7 @@ public class TextureRegion
 
     public TextureRegion() { }
 
-    public TextureRegion (Texture2D texture, int x, int y, int width, int height)
+    public TextureRegion(Texture2D texture, int x, int y, int width, int height)
     {
         Texture = texture;
         Bounds = new Rectangle(x, y, width, height);
@@ -32,18 +32,18 @@ public class TextureRegion
         float rotation, Vector2 origin, float scale, SpriteEffects effects, float layerDepth)
     {
         Draw(
-            spritBatch, 
+            spritBatch,
             position,
-            color, 
-            rotation, 
-            origin, 
-            new Vector2(scale, scale), 
-            effects, 
+            color,
+            rotation,
+            origin,
+            new Vector2(scale, scale),
+            effects,
             layerDepth);
     }
 
-    
-    public void Draw (SpriteBatch spriteBatch, Vector2 position, Color color,
+
+    public void Draw(SpriteBatch spriteBatch, Vector2 position, Color color,
         float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layerDepth)
     {
         spriteBatch.Draw(
@@ -56,7 +56,7 @@ public class TextureRegion
             scale,
             effects,
             layerDepth
-            );
+        );
     }
 
     public float TopTextureCoordinate => Bounds.Top / (float)Texture.Height;

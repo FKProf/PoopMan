@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PoopManLibrary")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c39a1945710c1b6f92d4ccc22948f7f9162a5595")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8a5d6ff7c9ca21576eab87827e70641ac9d8e0d2")]
 [assembly: System.Reflection.AssemblyProductAttribute("PoopManLibrary")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PoopManLibrary")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -4,7 +4,7 @@ namespace PoopManLibrary.Input;
 
 public class KeyboardInfo
 {
-    public  KeyboardState PreviousState { get; private set; }
+    public KeyboardState PreviousState { get; private set; }
     public KeyboardState CurrentState { get; private set; }
 
     public KeyboardInfo()

@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace PoopManLibrary.Graphics;
@@ -26,7 +25,7 @@ public class Sprite
 
     public Sprite() { }
 
-    public Sprite ( TextureRegion region )
+    public Sprite(TextureRegion region)
     {
         Region = region;
     }

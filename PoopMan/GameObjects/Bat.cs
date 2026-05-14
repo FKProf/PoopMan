@@ -47,16 +47,16 @@ namespace PoopMan.GameObjects
         private AiState _aiState = AiState.Wander;
 
         // ── Parametri AI ──────────────────────────────────────────────────────
-        private float _chaseChance        = 0.60f;
-        private int   _sightRange         = 8;    // tile di visibilità (line of sight)
+        private float _chaseChance = 0.60f;
+        private int _sightRange = 8;    // tile di visibilità (line of sight)
         private float _wanderChangeChance = 0.30f;// probabilità di cambiare direzione in wander
 
         // ── Cache percorso A* ─────────────────────────────────────────────────
-        private List<Point> _path       = new();
-        private Point       _pathTarget = new(-1, -1);
-        private int         _pathStep   = 0;
-        private float       _pathCacheTime = 0f;
-        private const float PathCacheMax   = 0.5f; // ricalcola il percorso ogni 0.5s
+        private List<Point> _path = new();
+        private Point _pathTarget = new(-1, -1);
+        private int _pathStep = 0;
+        private float _pathCacheTime = 0f;
+        private const float PathCacheMax = 0.5f; // ricalcola il percorso ogni 0.5s
 
         // ── Separazione tra bat ───────────────────────────────────────────────
         private static readonly List<Point> _allBatPositions = new();
@@ -74,7 +74,7 @@ namespace PoopMan.GameObjects
         public void SetDangerTiles(IEnumerable<Point> bombTiles, IEnumerable<Point> explosionTiles)
         {
             _dangerTiles.Clear();
-            foreach (var t in bombTiles)      _dangerTiles.Add(t);
+            foreach (var t in bombTiles) _dangerTiles.Add(t);
             foreach (var t in explosionTiles) _dangerTiles.Add(t);
         }
 
@@ -101,20 +101,12 @@ namespace PoopMan.GameObjects
             // Livelli 0-9: bat molto più lenti e passivi; dal 10 in poi crescono normalmente
             float easyFactor = level < 10 ? 0.35f + level * 0.035f : 1f; // 0.35 → 0.665 fino al 9, poi 1.0
 
-            _chaseChance  = Math.Min((0.25f + level * 0.05f) * easyFactor, 0.95f);
-            moveSpeed     = Math.Min((75f   + level * 8f)    * easyFactor, 240f);
-            waitDuration  = Math.Max((0.75f - level * 0.02f) * (level < 10 ? 1.4f : 1f), 0.08f);
-            _sightRange   = Math.Min(3 + level, 16);
+            _chaseChance = Math.Min((0.25f + level * 0.05f) * easyFactor, 0.95f);
+            moveSpeed = Math.Min((75f + level * 8f) * easyFactor, 240f);
+            waitDuration = Math.Max((0.75f - level * 0.02f) * (level < 10 ? 1.4f : 1f), 0.08f);
+            _sightRange = Math.Min(3 + level, 16);
 
-            // ── Poteri speciali per livello ───────────────────────────────────
-            _canDash    = level >= 5;
-            _canGhost   = level >= 10;
-            _canSplit   = level >= 15;
-            _canBerserk = level >= 20;
-            // ── Abilità esplosive (indipendenti) ─────────────────────────────
-            _canWalid  = level >= 8;
-            _canNuke    = level >= 16;
-            _level      = level;
+            _level = level;
 
             // ── Punti vita scalati sul livello ───────────────────────────────
             // I mini-bat rimangono sempre a 1 HP.
@@ -128,31 +120,31 @@ namespace PoopMan.GameObjects
             {
                 int hp = level >= 20 ? 2 + (level - 20) / 5 : 1;
                 _maxHitPoints = Math.Min(hp, 6);
-                _hitPoints    = _maxHitPoints;
+                _hitPoints = _maxHitPoints;
             }
         }
 
         // ── Poteri speciali ───────────────────────────────────────────────────
-        private int   _level         = 0;
-        private bool  _canDash       = false;
-        private bool  _canGhost      = false;
-        private bool  _canSplit      = false;
-        private bool  _canBerserk    = false;
-        private bool  _canWalid = false;  // Walid: esplode alla morte con bomba piccola
-        private bool  _canNuke   = false;  // Nuke:   esplode alla morte con bomba grande
+        private int _level = 0;
+        private bool _canDash = false;
+        private bool _canGhost = false;
+        private bool _canSplit = false;
+        private bool _canBerserk = false;
+        private bool _canWalid = false;  // Walid: esplode alla morte con bomba piccola
+        private bool _canNuke = false;  // Nuke:   esplode alla morte con bomba grande
 
         // Dash
-        private float _dashCooldown    = 0f;
+        private float _dashCooldown = 0f;
         private const float DashCooldownMax = 3f;
-        private const float DashChance     = 0.25f; // 25% chance per step quando disponibile
+        private const float DashChance = 0.25f; // 25% chance per step quando disponibile
 
         // Ghost (attraversa bombe solide)
-        private bool  _isGhosting      = false;
-        private float _ghostTimer      = 0f;
-        private float _ghostCooldown   = 0f;
-        private const float GhostDuration    = 2f;
+        private bool _isGhosting = false;
+        private float _ghostTimer = 0f;
+        private float _ghostCooldown = 0f;
+        private const float GhostDuration = 2f;
         private const float GhostCooldownMax = 8f;
-        private const float GhostChance      = 0.10f;
+        private const float GhostChance = 0.10f;
 
         // Split (spawn mini-bat alla morte)
         public bool CanSplit => _canSplit && !_isMini;
@@ -160,11 +152,70 @@ namespace PoopMan.GameObjects
         public void SetMini() { _isMini = true; moveSpeed *= 0.8f; }
 
         // Berserk
-        private bool  _isBerserk    = false;
+        private bool _isBerserk = false;
         private float _berserkTimer = 0f;
-        private const float BerserkRange    = 3f;
+        private const float BerserkRange = 3f;
         private const float BerserkDuration = 2f;
         private const float BerserkSpeedMul = 2.2f;
+
+        // ── Variante bat ──────────────────────────────────────────────────────
+        /// <summary>
+        /// Ogni bat ha esattamente un'abilità speciale (o nessuna).
+        /// Fino al livello 20 tutti i bat di un'ondata condividono la stessa variante.
+        /// Dal livello 20 in poi le varianti possono mescolarsi.
+        /// </summary>
+        public enum BatVariant
+        {
+            Normal,   // nessun potere speciale
+            Dasher,   // scatto rapido               (sblocca lv 5)
+            Walid,    // esplode alla morte (piccola) (sblocca lv 8)
+            Ghost,    // attraversa bombe solide      (sblocca lv 10)
+            Splitter, // si divide alla morte         (sblocca lv 15)
+            Berserk,  // velocità furiosa a corto raggio (sblocca lv 16)
+            Nuke,     // esplode alla morte (grande)  (sblocca lv 20)
+        }
+
+        /// <summary>
+        /// Restituisce le varianti sbloccate al livello dato.
+        /// Always includes Normal.
+        /// </summary>
+        public static IReadOnlyList<BatVariant> UnlockedVariants(int level)
+        {
+            var list = new List<BatVariant> { BatVariant.Normal };
+            if (level >= 5) list.Add(BatVariant.Dasher);
+            if (level >= 8) list.Add(BatVariant.Walid);
+            if (level >= 10) list.Add(BatVariant.Ghost);
+            if (level >= 15) list.Add(BatVariant.Splitter);
+            if (level >= 16) list.Add(BatVariant.Berserk);
+            if (level >= 20) list.Add(BatVariant.Nuke);
+            return list;
+        }
+
+        /// <summary>
+        /// Applica esattamente una variante speciale a questo bat.
+        /// Chiamare dopo SetAggressionLevel().
+        /// </summary>
+        public void ApplyVariant(BatVariant variant)
+        {
+            // reset tutte le abilità
+            _canDash = false;
+            _canGhost = false;
+            _canSplit = false;
+            _canBerserk = false;
+            _canWalid = false;
+            _canNuke = false;
+
+            switch (variant)
+            {
+                case BatVariant.Dasher: _canDash = true; break;
+                case BatVariant.Walid: _canWalid = true; break;
+                case BatVariant.Ghost: _canGhost = true; break;
+                case BatVariant.Splitter: _canSplit = true; break;
+                case BatVariant.Nuke: _canNuke = true; break;
+                case BatVariant.Berserk: _canBerserk = true; break;
+                    // Normal: nessun flag
+            }
+        }
 
         // Evento split (GameScene ascolta e spawna i mini-bat)
         public event Action<Point>? OnSplit;
@@ -176,9 +227,9 @@ namespace PoopMan.GameObjects
         public event Action<Point, bool>? OnDeathExplosion;
 
         /// <summary>Walid: il bat esplode alla morte con bomba piccola (livello 8+).</summary>
-        public bool ExplodesOnDeath => _canWalid;
+        public bool ExplodesOnDeath => _canWalid || _canNuke;
         /// <summary>Nuke: il bat esplode alla morte con bomba grande (livello 16+).</summary>
-        public bool BigExplosion    => _canNuke;
+        public bool BigExplosion => _canNuke;
 
         /// <summary>Punti base per uccidere questo bat (aumenta con i poteri).</summary>
         public int KillPoints
@@ -186,18 +237,18 @@ namespace PoopMan.GameObjects
             get
             {
                 int pts = 100;
-                if (_canDash)    pts += 50;   // Livello  5+
-                if (_canGhost)   pts += 100;  // Livello 10+
-                if (_canWalid)  pts += 125;  // Livello  8+ (Walid)
-                if (_canSplit)   pts += 150;  // Livello 15+
-                if (_canNuke)    pts += 200;  // Livello 16+ (Nuke)
+                if (_canDash) pts += 50;   // Livello  5+
+                if (_canGhost) pts += 100;  // Livello 10+
+                if (_canWalid) pts += 125;  // Livello  8+ (Walid)
+                if (_canSplit) pts += 150;  // Livello 15+
+                if (_canNuke) pts += 200;  // Livello 16+ (Nuke)
                 if (_canBerserk) pts += 250;  // Livello 20+
-                if (_isMini)        pts = 50;    // mini-bat vale meno
+                if (_isMini) pts = 50;    // mini-bat vale meno
                 return pts;
             }
         }
 
-        private float waitTimer    = -1f;
+        private float waitTimer = -1f;
         private float waitDuration = 0.35f;
 
         private bool isDead = false;
@@ -212,11 +263,11 @@ namespace PoopMan.GameObjects
         public bool IsInvincible => isInvincible;
 
         // ── Stordimento e rallentamento (da upgrade miner) ───────────────────
-        private bool  _isStunned    = false;
-        private float _stunTimer    = 0f;
-        private float _slowFactor   = 1f;   // 1 = normale, < 1 = più lento
-        private float _slowTimer    = 0f;
-        public  bool  IsStunned     => _isStunned;
+        private bool _isStunned = false;
+        private float _stunTimer = 0f;
+        private float _slowFactor = 1f;   // 1 = normale, < 1 = più lento
+        private float _slowTimer = 0f;
+        public bool IsStunned => _isStunned;
 
         public void ApplyStun(float duration)
         {
@@ -229,11 +280,27 @@ namespace PoopMan.GameObjects
         {
             if (isDead) return;
             _slowFactor = 1f - factor;   // es. 0.4 → _slowFactor = 0.6
-            _slowTimer  = duration;
+            _slowTimer = duration;
+        }
+
+        // ── Knockback da esplosione ────────────────────────────────────────────
+        private Vector2 _knockbackVelocity = Vector2.Zero;
+        private float _knockbackTimer = 0f;
+        private const float KnockbackDuration = 0.22f;
+
+        /// <summary>
+        /// Applica un impulso di knockback in direzione <paramref name="direction"/> (normalizzato).
+        /// Il bat si sposta in pixel-space per la breve durata del knockback.
+        /// </summary>
+        public void ApplyKnockback(Vector2 direction, float speed = 180f)
+        {
+            if (isDead) return;
+            _knockbackVelocity = direction * speed;
+            _knockbackTimer = KnockbackDuration;
         }
 
         // ── Punti vita (bat normali diventano resistenti dal livello 20) ──────
-        private int _hitPoints    = 1;
+        private int _hitPoints = 1;
         private int _maxHitPoints = 1;
 
         /// <summary>
@@ -259,13 +326,13 @@ namespace PoopMan.GameObjects
         {
             get
             {
-                if (_isMini)     return new Color(180, 220, 255);   // azzurro chiaro
-                if (_canNuke)    return new Color(255,  60,  60);   // rosso fuoco
-                if (_canWalid)   return new Color(255, 140,  30);   // arancio
-                if (_canBerserk) return new Color(200,   0, 255);   // viola berserk
-                if (_canSplit)   return new Color(255, 220,  50);   // giallo split
-                if (_canGhost)   return new Color(160, 255, 230);   // ciano ghost
-                if (_canDash)    return new Color(255, 200, 100);   // ambra dash
+                if (_isMini) return new Color(180, 220, 255);   // azzurro chiaro
+                if (_canNuke) return new Color(255, 60, 60);   // rosso fuoco
+                if (_canWalid) return new Color(255, 140, 30);   // arancio
+                if (_canBerserk) return new Color(200, 0, 255);   // viola berserk
+                if (_canSplit) return new Color(100, 220, 100);   // verde split
+                if (_canGhost) return new Color(160, 255, 230);   // ciano ghost
+                if (_canDash) return new Color(255, 200, 100);   // ambra dash
                 if (_level >= 20 && _maxHitPoints > 1)
                     return new Color(255, 100, 100);                // rosso resistente
                 return Color.White;
@@ -277,23 +344,31 @@ namespace PoopMan.GameObjects
         {
             get
             {
-                if (_canNuke)    return 1.35f;
+                if (_canNuke) return 1.35f;
                 if (_canBerserk) return 1.25f;
-                if (_canSplit)   return 1.15f;
-                if (_canWalid)   return 1.10f;
-                if (_canGhost)   return 1.05f;
-                if (_isMini)     return 0.75f;
+                if (_canSplit) return 1.15f;
+                if (_canWalid) return 1.10f;
+                if (_canGhost) return 1.05f;
+                if (_isMini) return 0.75f;
                 if (_level >= 20 && _maxHitPoints > 1) return 1.10f;
                 return 1.0f;
             }
         }
 
-        /// <summary>True se il bat ha l'aura pulsante (berserk attivo o ghost).</summary>
-        public bool HasAura => _isBerserk || _isGhosting;
-        public Color AuraColor =>
-            _isBerserk  ? new Color(255, 80, 255, 120) :
-            _isGhosting ? new Color(120, 255, 255,  80) :
-            Color.Transparent;
+        /// <summary>True se il bat ha l'aura pulsante.</summary>
+        public bool HasAura => _isBerserk || _isGhosting || _canWalid || _canNuke;
+        public Color AuraColor
+        {
+            get
+            {
+                float pulse = 0.55f + 0.45f * (float)Math.Sin(Environment.TickCount64 * 0.007);
+                if (_isBerserk) return new Color(255, 80, 255, (int)(140 * pulse));
+                if (_isGhosting) return new Color(120, 255, 255, (int)(80 * pulse));
+                if (_canNuke) return new Color(255, 30, 30, (int)(160 * pulse));   // rosso vivace
+                if (_canWalid) return new Color(255, 120, 0, (int)(120 * pulse));   // arancione
+                return Color.Transparent;
+            }
+        }
 
         internal Bat(Point startTile, string xmlPath, ContentManager content, TileMap map)
         {
@@ -434,6 +509,15 @@ namespace PoopMan.GameObjects
                 if (_slowTimer <= 0f) { _slowTimer = 0f; _slowFactor = 1f; }
             }
 
+            // ── Knockback ─────────────────────────────────────────────────────
+            if (_knockbackTimer > 0f)
+            {
+                _knockbackTimer -= dt;
+                Position += _knockbackVelocity * dt;
+                _knockbackVelocity *= 0.80f; // attrito rapido
+                if (_knockbackTimer <= 0f) _knockbackVelocity = Vector2.Zero;
+            }
+
             if (isDead)
             {
                 // Deregistra dalla lista separazione
@@ -467,7 +551,7 @@ namespace PoopMan.GameObjects
                                    + Math.Abs(TilePosition.Y - _playerTile.Y);
                 if (!_isBerserk && distToPlayer <= BerserkRange)
                 {
-                    _isBerserk    = true;
+                    _isBerserk = true;
                     _berserkTimer = BerserkDuration;
                 }
                 if (_isBerserk)
@@ -489,24 +573,24 @@ namespace PoopMan.GameObjects
                     {
                         int ddx = nextMove.X - TilePosition.X;
                         int ddy = nextMove.Y - TilePosition.Y;
-                        if      (ddy < 0) facing = Facing.Back;
+                        if (ddy < 0) facing = Facing.Back;
                         else if (ddy > 0) facing = Facing.Front;
                         else if (ddx < 0) facing = Facing.Left;
-                        else              facing = Facing.Right;
+                        else facing = Facing.Right;
 
-                        TilePosition    = nextMove;
-                        targetPosition  = new Vector2(nextMove.X * TileMap.TileSize,
+                        TilePosition = nextMove;
+                        targetPosition = new Vector2(nextMove.X * TileMap.TileSize,
                                                       nextMove.Y * TileMap.TileSize);
-                        isMoving        = true;
-                        state           = BatState.Fly;
-                        animationTimer  = 0f;
-                        currentFrame    = 0;
+                        isMoving = true;
+                        state = BatState.Fly;
+                        animationTimer = 0f;
+                        currentFrame = 0;
                     }
 
                     waitTimer = waitDuration * (float)(0.8 + _rand.NextDouble() * 0.4);
                 }
             }
-            skip_movement:
+        skip_movement:
 
             if (isMoving)
             {
@@ -514,16 +598,16 @@ namespace PoopMan.GameObjects
                 if (_solidBombTiles.Contains(TilePosition))
                 {
                     // Torna al tile precedente
-                    TilePosition    = VisualTilePosition; // il tile più vicino alla posizione attuale
-                    targetPosition  = new Vector2(TilePosition.X * TileMap.TileSize,
+                    TilePosition = VisualTilePosition; // il tile più vicino alla posizione attuale
+                    targetPosition = new Vector2(TilePosition.X * TileMap.TileSize,
                                                   TilePosition.Y * TileMap.TileSize);
                     // Forza riallineamento: torna indietro scegliendo una tile libera adiacente
-                    var rollback = new[] { new Point(0,-1), new Point(0,1), new Point(-1,0), new Point(1,0) }
+                    var rollback = new[] { new Point(0, -1), new Point(0, 1), new Point(-1, 0), new Point(1, 0) }
                         .Select(d => new Point(TilePosition.X + d.X, TilePosition.Y + d.Y))
                         .FirstOrDefault(t => map.IsWalkable(t) && !_solidBombTiles.Contains(t));
                     if (rollback != Point.Zero)
                     {
-                        TilePosition   = rollback;
+                        TilePosition = rollback;
                         targetPosition = new Vector2(rollback.X * TileMap.TileSize,
                                                      rollback.Y * TileMap.TileSize);
                     }
@@ -531,16 +615,16 @@ namespace PoopMan.GameObjects
                 }
 
                 Vector2 direction = targetPosition - Position;
-                float distance    = direction.Length();
+                float distance = direction.Length();
                 float currentSpeed = moveSpeed * (_isBerserk ? BerserkSpeedMul : 1f) * _slowFactor;
 
                 if (distance <= currentSpeed * dt)
                 {
-                    Position       = targetPosition;
-                    isMoving       = false;
-                    state          = BatState.Idle;
-                    waitTimer      = (float)(_rand.NextDouble() * waitDuration * 0.5f + waitDuration * 0.2f);
-                    currentFrame   = 0;
+                    Position = targetPosition;
+                    isMoving = false;
+                    state = BatState.Idle;
+                    waitTimer = (float)(_rand.NextDouble() * waitDuration * 0.5f + waitDuration * 0.2f);
+                    currentFrame = 0;
                     animationTimer = 0f;
                 }
                 else
@@ -560,9 +644,11 @@ namespace PoopMan.GameObjects
             // ── GHOST: attiva se una bomba solida blocca tutti i percorsi ─────
             if (_canGhost && !_isGhosting && _ghostCooldown <= 0f)
             {
-                bool surrounded = new[] { new Point(0,-1), new Point(0,1), new Point(-1,0), new Point(1,0) }
-                    .All(d => { var t = new Point(TilePosition.X+d.X, TilePosition.Y+d.Y);
-                                return !map.IsWalkable(t) || _solidBombTiles.Contains(t); });
+                bool surrounded = new[] { new Point(0, -1), new Point(0, 1), new Point(-1, 0), new Point(1, 0) }
+                    .All(d => {
+                        var t = new Point(TilePosition.X + d.X, TilePosition.Y + d.Y);
+                        return !map.IsWalkable(t) || _solidBombTiles.Contains(t);
+                    });
                 if (surrounded || (_solidBombTiles.Count > 0 && _rand.NextDouble() < GhostChance))
                 {
                     _isGhosting = true;
@@ -595,16 +681,16 @@ namespace PoopMan.GameObjects
             else if (_aiState == AiState.Patrol && TilePosition == _lastKnownPlayerTile)
             {
                 // Ha raggiunto l'ultima posizione nota → wander
-                _aiState    = AiState.Wander;
+                _aiState = AiState.Wander;
                 _playerSeen = false;
             }
 
             return _aiState switch
             {
-                AiState.Chase   => ApplyDash(map, ChaseStep(map)),
-                AiState.Patrol  => ApplyDash(map, PatrolStep(map)),
-                AiState.Flee    => BfsToSafeTile(map),
-                _               => WanderStep(map),
+                AiState.Chase => ApplyDash(map, ChaseStep(map)),
+                AiState.Patrol => ApplyDash(map, PatrolStep(map)),
+                AiState.Flee => BfsToSafeTile(map),
+                _ => WanderStep(map),
             };
         }
 
@@ -642,8 +728,8 @@ namespace PoopMan.GameObjects
 
             if (needRepath)
             {
-                _path       = AStarPath(map, TilePosition, _playerTile);
-                _pathStep   = 0;
+                _path = AStarPath(map, TilePosition, _playerTile);
+                _pathStep = 0;
                 _pathCacheTime = 0f;
             }
 
@@ -681,8 +767,8 @@ namespace PoopMan.GameObjects
 
             if (needRepath)
             {
-                _path      = AStarPath(map, TilePosition, _lastKnownPlayerTile);
-                _pathStep  = 0;
+                _path = AStarPath(map, TilePosition, _lastKnownPlayerTile);
+                _pathStep = 0;
                 _pathCacheTime = 0f;
             }
 
@@ -709,7 +795,7 @@ namespace PoopMan.GameObjects
             }
 
             // Scegli nuova direzione
-            var dirs = new[] { new Point(0,-1), new Point(0,1), new Point(-1,0), new Point(1,0) }
+            var dirs = new[] { new Point(0, -1), new Point(0, 1), new Point(-1, 0), new Point(1, 0) }
                        .OrderBy(_ => _rand.Next()).ToArray();
 
             foreach (var d in dirs)
@@ -753,7 +839,7 @@ namespace PoopMan.GameObjects
                 if (!map.IsWalkable(new Point(x, y))) return false;
                 int e2 = 2 * err;
                 if (e2 > -dy) { err -= dy; x += sx; }
-                if (e2 <  dx) { err += dx; y += sy; }
+                if (e2 < dx) { err += dx; y += sy; }
             }
             return true;
         }
@@ -763,17 +849,17 @@ namespace PoopMan.GameObjects
         {
             if (from == to) return new List<Point>();
 
-            var open   = new SortedSet<(float f, int id, Point p)>(
+            var open = new SortedSet<(float f, int id, Point p)>(
                 Comparer<(float f, int id, Point p)>.Create((a, b) =>
                     a.f != b.f ? a.f.CompareTo(b.f) : a.id.CompareTo(b.id)));
             var gScore = new Dictionary<Point, float>();
             var parent = new Dictionary<Point, Point>();
-            int idSeq  = 0;
+            int idSeq = 0;
 
             gScore[from] = 0f;
             open.Add((Heuristic(from, to), idSeq++, from));
 
-            Point[] dirs = { new(0,-1), new(0,1), new(-1,0), new(1,0) };
+            Point[] dirs = { new(0, -1), new(0, 1), new(-1, 0), new(1, 0) };
 
             while (open.Count > 0)
             {
@@ -816,12 +902,12 @@ namespace PoopMan.GameObjects
         {
             if (!_dangerTiles.Contains(TilePosition)) return Point.Zero;
 
-            var queue  = new Queue<Point>();
+            var queue = new Queue<Point>();
             var parent = new Dictionary<Point, Point>();
             queue.Enqueue(TilePosition);
             parent[TilePosition] = TilePosition;
 
-            Point[] dirs = { new(0,-1), new(0,1), new(-1,0), new(1,0) };
+            Point[] dirs = { new(0, -1), new(0, 1), new(-1, 0), new(1, 0) };
 
             while (queue.Count > 0)
             {
@@ -931,7 +1017,7 @@ namespace PoopMan.GameObjects
 
             var srcRect = frames[currentFrame];
             float scale = DrawScale;
-            Color tint  = DrawColor;
+            Color tint = DrawColor;
 
             // Blink se danneggiato (HP < max e invincibile inter-hit)
             if (_hitPoints < _maxHitPoints && isInvincible)
@@ -960,8 +1046,11 @@ namespace PoopMan.GameObjects
             if (_level >= 5 && !_isMini && !isDead)
             {
                 Color eyeColor = _canBerserk ? Color.Red :
-                                 _canNuke    ? new Color(255, 200, 50) :
-                                 _canGhost   ? Color.Cyan :
+                                 _canNuke ? new Color(255, 60, 60) :
+                                 _canWalid ? new Color(255, 160, 0) :
+                                 _canGhost ? Color.Cyan :
+                                 _canSplit ? new Color(255, 230, 0) :
+                                 _canDash ? new Color(255, 190, 80) :
                                  Color.White;
                 int eyeSize = (int)(2 * scale);
                 int offsetY = (int)(-srcRect.Height * 0.18f * scale);
@@ -975,11 +1064,71 @@ namespace PoopMan.GameObjects
                     eyeColor);
             }
 
+            // ── Badge tipo speciale (sopra la testa) ─────────────────────────
+            if (!_isMini && !isDead && (_canWalid || _canNuke || _canGhost || _canSplit || _canDash || _canBerserk))
+            {
+                // posizione base: sopra la testa del bat
+                float pulse = 0.6f + 0.4f * (float)Math.Sin(Environment.TickCount64 * 0.008);
+                int p = Math.Max(2, (int)(2 * scale));                          // dimensione pixel badge
+                int bx = (int)center.X;
+                int by = (int)(center.Y - srcRect.Height * 0.5f * scale) - p * 4 - 2;
+
+                void Dot(int ox, int oy, Color c) =>
+                    spriteBatch.Draw(_pixel, new Rectangle(bx + ox * p - p / 2, by + oy * p, p, p), c);
+
+                if (_canNuke)
+                {
+                    // X lampeggiante rossa: 4 angoli
+                    Color rc = new Color(255, (int)(40 * pulse), (int)(40 * pulse));
+                    Dot(-1, -1, rc); Dot(1, -1, rc);
+                    Dot(0, 0, rc);
+                    Dot(-1, 1, rc); Dot(1, 1, rc);
+                }
+                else if (_canWalid)
+                {
+                    // Croce arancione: bomba stilizzata
+                    Color oc = new Color(255, (int)(120 + 80 * pulse), 0);
+                    Dot(0, -1, oc);
+                    Dot(-1, 0, oc); Dot(0, 0, oc); Dot(1, 0, oc);
+                    Dot(0, 1, oc);
+                }
+                else if (_canBerserk)
+                {
+                    // Rombo viola pieno pulsante
+                    Color vc = new Color((int)(180 * pulse), 0, (int)(255 * pulse));
+                    Dot(0, -1, vc);
+                    Dot(-1, 0, vc); Dot(0, 0, vc); Dot(1, 0, vc);
+                    Dot(0, 1, vc);
+                }
+                else if (_canSplit)
+                {
+                    // Y gialla: gambo + due rami
+                    Color yc = new Color(255, 230, 0);
+                    Dot(0, -1, yc);
+                    Dot(0, 0, yc);
+                    Dot(-1, 1, yc); Dot(1, 1, yc);
+                }
+                else if (_canGhost)
+                {
+                    // Diamante ciano: 3 punti verticali
+                    Color gc = new Color((int)(100 * pulse), 255, (int)(230 * pulse));
+                    Dot(0, -1, gc); Dot(0, 0, gc); Dot(0, 1, gc);
+                }
+                else if (_canDash)
+                {
+                    // Doppia freccia orizzontale ambra: >> 
+                    Color ac = new Color(255, 180, (int)(60 * pulse));
+                    Dot(-1, 0, ac); Dot(0, 0, ac);
+                    Dot(0, -1, ac); Dot(1, -1, ac);
+                    Dot(0, 1, ac); Dot(1, 1, ac);
+                }
+            }
+
             // ── Barra HP (visibile solo se maxHP > 1 e bat vivo) ─────────────
             if (_maxHitPoints > 1 && !isDead)
             {
-                int barW = (int)(srcRect.Width  * scale);
-                int barH = Math.Max(2, (int)(3  * scale));
+                int barW = (int)(srcRect.Width * scale);
+                int barH = Math.Max(2, (int)(3 * scale));
                 int barX = (int)(center.X - barW * 0.5f);
                 int barY = (int)(center.Y - srcRect.Height * 0.5f * scale) - barH - 2;
                 // sfondo rosso scuro

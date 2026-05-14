@@ -3,56 +3,55 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 
-namespace PoopMan.UI;
+namespace PoopMan.GameObjects;
 
 /// <summary>Tutti i potenziamenti selezionabili dal giocatore.</summary>
 public enum UpgradeType
 {
     // ── Vita ─────────────────────────────────────────────────────────────
-    ExtraLife,          // +1 vita immediata
+    ExtraLife,          // +1 vita immediata (sempre disponibile se vite < max)
     MaxLifeUp,          // aumenta il cap max delle vite
     SlowRegen,          // recupera 1 vita ogni 10 livelli
 
     // ── Offensivi ─────────────────────────────────────────────────────────
-    IncreasedDamage,    // raggio esplosione +1 tile   (max 4)
-    BiggerBlast,        // alias visivo di IncreasedDamage
-    FasterBomb,         // timer bomba -0.4 s           (max 1.6 s)
-    ExtraBomb,          // +1 bomba simultanea          (max 6)
-    ChainExplosion,     // esplosioni a catena tra nemici uccisi
+    IncreasedDamage,    // raggio esplosione +1 tile (max 4)
+    FasterBomb,         // timer bomba -0.4 s (max 4 livelli)
+    ExtraBomb,          // +1 bomba simultanea (max 3 livelli)
+    ChainExplosion,     // esplosioni a catena tra nemici uccisi (max 4)
 
     // ── Movimento ────────────────────────────────────────────────────────
-    FasterMovement,     // velocità +20 px/s            (max 280)
-    DashAfterHit,       // velocità +40% per 3 s dopo danni subiti
+    FasterMovement,     // velocità +20 px/s (max 6 livelli)
+    DashAfterHit,       // velocità +40% per 3 s dopo danni subiti (1 livello)
 
     // ── Difensivi ────────────────────────────────────────────────────────
-    ExplosionResistance,// invincibilità dopo respawn +1 s
-    DamageReduction,    // +0.5 s invincibilità
-    Shield,             // assorbe 1 colpo ogni N livelli
+    ExplosionResistance,// invincibilità dopo respawn +1 s (max cumulativo)
+    DamageReduction,    // +0.5 s invincibilità (max cumulativo)
+    Shield,             // assorbe 1 colpo ogni N livelli (1 livello)
 
     // ── Speciali ─────────────────────────────────────────────────────────
-    MultiHit,           // esplosioni ignorano i breakable (pass-through)
-    CriticalChance,     // 20% critico al contatto
-    Magnet,             // raccoglie item entro 3 tile automaticamente
-    StunOnHit,          // bat adiacenti all'esplosione vengono storditi 1.5 s
-    SlowOnHit,          // bat adiacenti all'esplosione rallentano del 40% per 3 s
-    BonusLoot,          // +15% probabilità di trovare bonus nelle casse
-    DoubleDrop,         // i bat uccisi lasciano sempre un item (invece che a caso)
+    MultiHit,           // esplosioni ignorano i breakable (1 livello)
+    CriticalChance,     // 20% critico al contatto (1 livello)
+    Magnet,             // raccoglie item entro 3 tile (1 livello)
+    StunOnHit,          // bat storditi vicino all'esplosione (1 livello)
+    SlowOnHit,          // bat rallentati vicino all'esplosione (1 livello)
+    BonusLoot,          // +15% probabilità bonus casse (max 4)
+    DoubleDrop,         // bat uccisi lasciano sempre item (max 4)
 }
 
 /// <summary>Dati di presentazione di un upgrade.</summary>
 public sealed class UpgradeDef
 {
     public UpgradeType Type;
-    public string      Name;
-    public string      Description;
-    public Color       Color;
+    public string Name;
+    public string Description;
+    public Color Color;
 
     public UpgradeDef(UpgradeType type, string name, string description, Color color)
     {
-        Type        = type;
-        Name        = name;
+        Type = type;
+        Name = name;
         Description = description;
-        Color       = color;
+        Color = color;
     }
 }
 
@@ -63,14 +62,43 @@ public static class UpgradeRegistry
     public const int EveryNLevels = 3;
 
     // ── Limiti massimi per upgrade cumulativi ─────────────────────────────
-    public const int MaxExplosionRange  = 4;   // bonus tile raggio (base 1 piccola / 2 grande)
-    public const int MaxExtraBombs      = 3;   // bombe extra oltre le 3 base → max 6
-    public const int MaxFasterBombSteps = 4;   // 4 × 0.4 s = 1.6 s di riduzione max
-    public const int MaxMoveSteps       = 6;   // 6 × 20 px/s = +120 → cap 280
-    public const int MaxInvincibility   = 7;   // secondi totali invincibilità
-    public const int MaxLifeSteps       = 3;   // max 3 aumenti vita max (default 5 → max 8)
-    public const int MaxChainSteps      = 4;   // 4 × 15% → 60% max probabilità catena
-    public const int MaxDoubleDropSteps = 4;   // 4 × 15% → 60% max probabilità doppio loot
+    public const int MaxExplosionRange = 4;
+    public const int MaxExtraBombs = 3;
+    public const int MaxFasterBombSteps = 4;
+    public const int MaxMoveSteps = 6;
+    public const int MaxInvincibility = 7;
+    public const int MaxLifeSteps = 3;
+    public const int MaxChainSteps = 4;
+    public const int MaxDoubleDropSteps = 4;
+    public const int MaxBonusLootSteps = 4;
+
+    /// <summary>
+    /// Restituisce il numero massimo di livelli per un dato upgrade.
+    /// Gli upgrade a livello 1 sono "unici": una volta presi non ricompaiono.
+    /// </summary>
+    public static int MaxLevel(UpgradeType type) => type switch
+    {
+        UpgradeType.ExtraLife => int.MaxValue,   // sempre disponibile se vite < max
+        UpgradeType.MaxLifeUp => MaxLifeSteps,
+        UpgradeType.SlowRegen => 1,
+        UpgradeType.IncreasedDamage => MaxExplosionRange,
+        UpgradeType.FasterBomb => MaxFasterBombSteps,
+        UpgradeType.ExtraBomb => MaxExtraBombs,
+        UpgradeType.ChainExplosion => MaxChainSteps,
+        UpgradeType.FasterMovement => MaxMoveSteps,
+        UpgradeType.DashAfterHit => 1,
+        UpgradeType.ExplosionResistance => MaxInvincibility,
+        UpgradeType.DamageReduction => MaxInvincibility,
+        UpgradeType.Shield => 1,
+        UpgradeType.MultiHit => 1,
+        UpgradeType.CriticalChance => 1,
+        UpgradeType.Magnet => 1,
+        UpgradeType.StunOnHit => 1,
+        UpgradeType.SlowOnHit => 1,
+        UpgradeType.BonusLoot => MaxBonusLootSteps,
+        UpgradeType.DoubleDrop => MaxDoubleDropSteps,
+        _ => 1,
+    };
 
     private static readonly UpgradeDef[] All =
     {
@@ -82,7 +110,7 @@ public static class UpgradeRegistry
 
         new(UpgradeType.MaxLifeUp,
             "VITA MAX+",
-            $"Il limite max di vite sale di 1\ne guadagni 1 vita. Max {MaxLifeSteps}x.",
+            $"Il limite max di vite sale di 1\ne guadagni 1 vita. Max {MaxLifeSteps} lv.",
             Color.MediumSpringGreen),
 
         new(UpgradeType.SlowRegen,
@@ -93,33 +121,28 @@ public static class UpgradeRegistry
         // ── Offensivi ─────────────────────────────────────────────────────
         new(UpgradeType.IncreasedDamage,
             "DANNO +",
-            $"Raggio esplosione +1 tile.\nMax {MaxExplosionRange} volte.",
+            $"Raggio esplosione +1 tile.\nMax {MaxExplosionRange} lv.",
             Color.OrangeRed),
-
-        new(UpgradeType.BiggerBlast,
-            "DEFLAGRAZIONE",
-            $"Tutte le esplosioni +1 raggio.\nMax {MaxExplosionRange} volte.",
-            Color.Tomato),
 
         new(UpgradeType.FasterBomb,
             "MICCIA CORTA",
-            $"Bombe esplodono prima (-0.4 s).\nMax {MaxFasterBombSteps} volte.",
+            $"Bombe esplodono prima (-0.4 s).\nMax {MaxFasterBombSteps} lv.",
             Color.Gold),
 
         new(UpgradeType.ExtraBomb,
             "BOMBA +",
-            $"+1 bomba simultanea.\nMax {MaxExtraBombs} volte (tot. 6).",
+            $"+1 bomba simultanea.\nMax {MaxExtraBombs} lv.",
             Color.Orange),
 
         new(UpgradeType.ChainExplosion,
             "CATENA",
-            $"+15% probabilita' che un bat ucciso\ngeneri una mini-esplosione. Max {MaxChainSteps}x.",
+            $"+15% probabilita' che un bat ucciso\ngeneri una mini-esplosione. Max {MaxChainSteps} lv.",
             Color.Coral),
 
         // ── Movimento ─────────────────────────────────────────────────────
         new(UpgradeType.FasterMovement,
             "VELOCITA'",
-            $"Miner piu' veloce (+20 px/s).\nMax {MaxMoveSteps} volte.",
+            $"Miner piu' veloce (+20 px/s).\nMax {MaxMoveSteps} lv.",
             Color.DeepSkyBlue),
 
         new(UpgradeType.DashAfterHit,
@@ -161,29 +184,49 @@ public static class UpgradeRegistry
 
         new(UpgradeType.StunOnHit,
             "SHOCKWAVE",
-            "Bat vicini all'esplosione\nsono storditi per 1.5 s.",
+            "Pipistrelli vicini all'esplosione\nsono storditi per 1.5 s.",
             Color.Goldenrod),
 
         new(UpgradeType.SlowOnHit,
             "RALLENTA",
-            "Bat vicini all'esplosione\nrallentano del 40% per 3 s.",
+            "Pipistrelli vicini all'esplosione\nrallentano del 40% per 3 s.",
             Color.MediumPurple),
 
         new(UpgradeType.BonusLoot,
             "FORTUNA",
-            "+15% probabilita' di trovare\nbonus nelle casse.",
+            $"+15% probabilita' di trovare\nbonus nelle casse. Max {MaxBonusLootSteps} lv.",
             Color.Gold),
 
         new(UpgradeType.DoubleDrop,
             "BOTTINO",
-            $"+15% probabilita' che un bat ucciso\nlasci un item. Max {MaxDoubleDropSteps}x.",
+            $"+15% probabilita' che un bat ucciso\nlasci un item. Max {MaxDoubleDropSteps} lv.",
             Color.LightYellow),
     };
 
-    /// <summary>Restituisce <paramref name="count"/> upgrade casuali distinti.</summary>
-    public static List<UpgradeDef> PickRandom(int count = 3)
+    /// <summary>
+    /// Restituisce <paramref name="count"/> upgrade casuali distinti,
+    /// escludendo quelli già al livello massimo.
+    /// currentLevels: dizionario livello attuale per tipo (0 = mai preso).
+    /// </summary>
+    public static List<UpgradeDef> PickRandom(
+        int count,
+        IReadOnlyDictionary<UpgradeType, int> currentLevels)
     {
         var rng = new Random();
-        return All.OrderBy(_ => rng.Next()).Take(Math.Min(count, All.Length)).ToList();
+        var available = All
+            .Where(def =>
+            {
+                int cur = currentLevels.TryGetValue(def.Type, out int v) ? v : 0;
+                int max = MaxLevel(def.Type);
+                return cur < max;
+            })
+            .OrderBy(_ => rng.Next())
+            .Take(Math.Min(count, All.Length))
+            .ToList();
+        return available;
     }
+
+    /// <summary>Overload senza livelli (retrocompatibilità): considera tutti disponibili.</summary>
+    public static List<UpgradeDef> PickRandom(int count = 3)
+        => PickRandom(count, new Dictionary<UpgradeType, int>());
 }

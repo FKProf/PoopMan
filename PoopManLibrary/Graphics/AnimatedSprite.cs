@@ -19,7 +19,7 @@ public class AnimatedSprite : Sprite
         }
     }
 
-    public AnimatedSprite() {}
+    public AnimatedSprite() { }
 
     public AnimatedSprite(Animation animation)
     {

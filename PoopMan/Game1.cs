@@ -10,9 +10,9 @@ namespace PoopMan;
 public class Game1 : Core
 {
     // Dimensioni base della mappa (pixel naturali)
-    private const int MapWidth   = TileMap.Cols * TileMap.TileSize;  // 39×32 = 1248
-    private const int MapHeight  = TileMap.Rows * TileMap.TileSize;  // 23×32 = 736
-    private const int DefaultWidth  = MapWidth;
+    private const int MapWidth = TileMap.Cols * TileMap.TileSize;  // 39×32 = 1248
+    private const int MapHeight = TileMap.Rows * TileMap.TileSize;  // 23×32 = 736
+    private const int DefaultWidth = MapWidth;
     private const int DefaultHeight = MapHeight + GameHud.Height;  // 736+20 = 756
 
     public Game1() : base("PoopMan Miner", DefaultWidth, DefaultHeight, false)
@@ -36,12 +36,12 @@ public class Game1 : Core
             Graphics.IsFullScreen = !Graphics.IsFullScreen;
             if (!Graphics.IsFullScreen)
             {
-                Graphics.PreferredBackBufferWidth  = DefaultWidth;
+                Graphics.PreferredBackBufferWidth = DefaultWidth;
                 Graphics.PreferredBackBufferHeight = DefaultHeight;
             }
             else
             {
-                Graphics.PreferredBackBufferWidth  = GraphicsDevice.Adapter.CurrentDisplayMode.Width;
+                Graphics.PreferredBackBufferWidth = GraphicsDevice.Adapter.CurrentDisplayMode.Width;
                 Graphics.PreferredBackBufferHeight = GraphicsDevice.Adapter.CurrentDisplayMode.Height;
             }
             Graphics.ApplyChanges();
@@ -62,10 +62,10 @@ public class Game1 : Core
 
         float scaleX = (float)vw / MapWidth;
         float scaleY = (float)availH / MapHeight;
-        float scale  = scaleX < scaleY ? scaleX : scaleY;
+        float scale = scaleX < scaleY ? scaleX : scaleY;
 
         // Centra la mappa nell'area disponibile
-        float offsetX = (vw - MapWidth  * scale) / 2f;
+        float offsetX = (vw - MapWidth * scale) / 2f;
         float offsetY = hudHeight + (availH - MapHeight * scale) / 2f;
 
         return Matrix.CreateScale(scale, scale, 1f)

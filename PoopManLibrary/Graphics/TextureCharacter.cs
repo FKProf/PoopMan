@@ -43,7 +43,7 @@ public class TextureCharacter
     /// <param name="y"></param>
     /// <param name="width"></param>
     /// <param name="height"></param>
-    public void AddRegion(string name, int x , int y, int width, int height)
+    public void AddRegion(string name, int x, int y, int width, int height)
     {
         TextureRegion region = new TextureRegion(Texture, x, y, width, height);
         _regions.Add(name, region);
@@ -135,7 +135,8 @@ public class TextureCharacter
                     return character;
                 }
             }
-        } catch (Exception ex)
+        }
+        catch (Exception ex)
         {
             Console.WriteLine($"Error loading TextureCharacter from file: {ex.Message}");
             return null;

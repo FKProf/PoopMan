@@ -19,20 +19,21 @@ internal class Bomb
     private readonly Dictionary<string, List<Rectangle>> _explosionAnimations;
     private string _currentAnimation;
     private List<Rectangle> _currentFrames;
-    private int   _currentFrame   = 0;
-    private float _animTimer      = 0f;
+    private int _currentFrame = 0;
+    private float _animTimer = 0f;
     private const float AnimSpeed = 0.15f;
 
     // ═══════════════════════════════════════════════════════════════════
     // CAMPI – STATO
     // ═══════════════════════════════════════════════════════════════════
 
-    private bool  _isExploding  = false;
-    private bool  _isFinished   = false;
-    private float _fuseTimer    = 0f;
+    private bool _isExploding = false;
+    private bool _isFinished = false;
+    private float _fuseTimer = 0f;
     private float _fuseDuration = 2f;
     private readonly bool _bigBomb;
-    private readonly int  _extraRange;
+    private readonly int _extraRange;
+    private readonly bool _multiHit;
 
     // ═══════════════════════════════════════════════════════════════════
     // PROPRIETÀ E EVENTI
@@ -41,10 +42,12 @@ internal class Bomb
     /// <summary>Tile colpiti dall'esplosione (usato per collisioni e drop).</summary>
     public List<Point> ExplosionTiles { get; private set; } = new();
 
-    public bool    IsFinished  => _isFinished;
-    public bool    IsExploding => _isExploding;
-    public Vector2 Position    => _position;
-    public bool    BigBomb     => _bigBomb;
+    public bool IsFinished => _isFinished;
+    public bool IsExploding => _isExploding;
+    /// <summary>True dopo che il danno ai bat/miner è stato già applicato per questa esplosione.</summary>
+    public bool DamageApplied { get; set; } = false;
+    public Vector2 Position => _position;
+    public bool BigBomb => _bigBomb;
 
     /// <summary>Scattato nel momento in cui la bomba esplode. Arg: true = bomba grande.</summary>
     public event EventHandler<bool>? Exploded;
@@ -59,20 +62,22 @@ internal class Bomb
                 Texture2D explTex,
                 Dictionary<string, List<Rectangle>> explAnim,
                 bool big,
-                int   extraRange  = 0,
-                float fuseReduce  = 0f)
+                int extraRange = 0,
+                float fuseReduce = 0f,
+                bool multiHit = false)
     {
-        _position            = pos;
-        _bombTexture         = bombTex;
-        _bombAnimations      = bombAnim;
-        _explosionTexture    = explTex;
+        _position = pos;
+        _bombTexture = bombTex;
+        _bombAnimations = bombAnim;
+        _explosionTexture = explTex;
         _explosionAnimations = explAnim;
-        _bigBomb             = big;
-        _extraRange          = extraRange;
-        _fuseDuration        = Math.Max(0.5f, _fuseDuration - fuseReduce);
+        _bigBomb = big;
+        _extraRange = extraRange;
+        _multiHit = multiHit;
+        _fuseDuration = Math.Max(0.5f, _fuseDuration - fuseReduce);
 
         _currentAnimation = _bigBomb ? "big_tnt" : "small_tnt";
-        _currentFrames    = _bombAnimations[_currentAnimation];
+        _currentFrames = _bombAnimations[_currentAnimation];
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -91,7 +96,7 @@ internal class Bomb
 
             if (_animTimer >= AnimSpeed)
             {
-                _animTimer    = 0f;
+                _animTimer = 0f;
                 _currentFrame = (_currentFrame + 1) % _currentFrames.Count;
             }
 
@@ -122,11 +127,11 @@ internal class Bomb
     /// </summary>
     private void Explode(TileMap map)
     {
-        _isExploding      = true;
+        _isExploding = true;
         _currentAnimation = "explosion";
-        _currentFrames    = _explosionAnimations[_currentAnimation];
-        _currentFrame     = 0;
-        _animTimer        = 0f;
+        _currentFrames = _explosionAnimations[_currentAnimation];
+        _currentFrame = 0;
+        _animTimer = 0f;
         ExplosionTiles.Clear();
         Exploded?.Invoke(this, _bigBomb);
 
@@ -140,9 +145,9 @@ internal class Bomb
                 map.BreakTile(center);
         }
 
-        int   range = (_bigBomb ? 2 : 1) + _extraRange;
-        int[] dx    = { 0, 0, -1, 1 };
-        int[] dy    = { -1, 1,  0,  0 };
+        int range = (_bigBomb ? 2 : 1) + _extraRange;
+        int[] dx = { 0, 0, -1, 1 };
+        int[] dy = { -1, 1, 0, 0 };
 
         for (int dir = 0; dir < 4; dir++)
         {
@@ -157,7 +162,8 @@ internal class Bomb
                 if (map.GetTile(t) == TileType.Breakable)
                 {
                     map.BreakTile(t);
-                    break;
+                    if (!_multiHit) break;  // MultiHit: continua oltre i breakable
+                    continue;
                 }
 
                 ExplosionTiles.Add(t);

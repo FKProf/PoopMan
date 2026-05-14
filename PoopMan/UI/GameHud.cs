@@ -12,41 +12,41 @@ namespace PoopMan.UI;
 /// </summary>
 public class GameHud
 {
-    public const int Height       = 36;          // altezza logica HUD (px di gioco)
+    public const int Height = 36;          // altezza logica HUD (px di gioco)
     private const int LogicalWidth = 1248;        // larghezza logica = mappa
 
     private readonly SpriteFont _font;
-    private readonly Texture2D  _minerIcon;
-    private readonly Texture2D  _itemIcon;
-    private readonly Texture2D  _pixel;
+    private readonly Texture2D _minerIcon;
+    private readonly Texture2D _itemIcon;
+    private readonly Texture2D _pixel;
 
     // Rettangoli sorgente dagli spritesheet
     private static readonly Rectangle SrcMinerIcon = new(128, 32, 32, 32);
-    private static readonly Rectangle SrcBigBomb   = new(96,   0, 32, 32);
-    private static readonly Rectangle SrcKey       = new(96,  96, 32, 32);
+    private static readonly Rectangle SrcBigBomb = new(96, 0, 32, 32);
+    private static readonly Rectangle SrcKey = new(96, 96, 32, 32);
 
     // Colori fissi HUD
-    private static readonly Color BgTop      = new(12, 10, 28);
-    private static readonly Color BgBottom   = new(22, 18, 48);
-    private static readonly Color BorderColor= new(80, 55, 160);
+    private static readonly Color BgTop = new(12, 10, 28);
+    private static readonly Color BgBottom = new(22, 18, 48);
+    private static readonly Color BorderColor = new(80, 55, 160);
 
     // Colori per bioma
     private static readonly Dictionary<TileMap.MapTheme, (Color accent, string label)> ThemeStyle = new()
     {
-        [TileMap.MapTheme.Forest] = (new Color( 60, 180,  60), "FOREST"),
-        [TileMap.MapTheme.Cave]   = (new Color(160, 100, 220), "CAVE"),
-        [TileMap.MapTheme.Lava]   = (new Color(255,  80,  20), "LAVA"),
-        [TileMap.MapTheme.Ice]    = (new Color(140, 210, 255), "ICE"),
-        [TileMap.MapTheme.Swamp]  = (new Color( 80, 160,  60), "SWAMP"),
-        [TileMap.MapTheme.Ruins]  = (new Color(200, 170, 100), "RUINS"),
+        [TileMap.MapTheme.Forest] = (new Color(60, 180, 60), "FOREST"),
+        [TileMap.MapTheme.Cave] = (new Color(160, 100, 220), "CAVE"),
+        [TileMap.MapTheme.Lava] = (new Color(255, 80, 20), "LAVA"),
+        [TileMap.MapTheme.Ice] = (new Color(140, 210, 255), "ICE"),
+        [TileMap.MapTheme.Swamp] = (new Color(80, 160, 60), "SWAMP"),
+        [TileMap.MapTheme.Ruins] = (new Color(200, 170, 100), "RUINS"),
     };
 
     public GameHud(SpriteFont font, Texture2D minerIcon, Texture2D itemIcon, Texture2D pixel)
     {
-        _font      = font;
+        _font = font;
         _minerIcon = minerIcon;
-        _itemIcon  = itemIcon;
-        _pixel     = pixel;
+        _itemIcon = itemIcon;
+        _pixel = pixel;
     }
 
     public static Matrix GetHudMatrix(GraphicsDevice gd)
@@ -68,14 +68,14 @@ public class GameHud
         float iconH = Height / 32f;   // scala icone all'altezza HUD
 
         // ── Sfondo sfumato (due rettangoli) ──────────────────────────────
-        sb.Draw(_pixel, new Rectangle(0, 0, LogicalWidth, Height / 2),             BgTop);
-        sb.Draw(_pixel, new Rectangle(0, Height / 2, LogicalWidth, Height / 2),    BgBottom);
-        sb.Draw(_pixel, new Rectangle(0, Height - 2, LogicalWidth, 2),             BorderColor);
+        sb.Draw(_pixel, new Rectangle(0, 0, LogicalWidth, Height / 2), BgTop);
+        sb.Draw(_pixel, new Rectangle(0, Height / 2, LogicalWidth, Height / 2), BgBottom);
+        sb.Draw(_pixel, new Rectangle(0, Height - 2, LogicalWidth, 2), BorderColor);
 
         // ── SINISTRA: Score ───────────────────────────────────────────────
         int lx = 10;
         string scoreStr = $"SCORE: {score,6}";
-        sb.DrawString(_font, scoreStr, new Vector2(lx, cy), Color.Yellow);
+        DrawS(sb, scoreStr, new Vector2(lx, cy), Color.Yellow);
         lx += (int)_font.MeasureString(scoreStr).X + 16;
 
         // Separatore verticale
@@ -83,9 +83,8 @@ public class GameHud
         lx += 10;
 
         // ── SINISTRA: Vite (slot dinamici basati su maxLives) ────────────
-        sb.DrawString(_font, "HP:", new Vector2(lx, cy), new Color(200, 200, 200));
+        DrawS(sb, "HP:", new Vector2(lx, cy), new Color(220, 220, 220));
         lx += (int)_font.MeasureString("HP:").X + 6;
-        // Scala le icone vita per mantenerle ordinate anche con molte vite
         float lifeIconScale = maxLives <= 5 ? iconH * 0.85f : iconH * (4.25f / maxLives);
         int iconStep = Math.Max(2, (int)(32 * lifeIconScale) + 2);
         for (int i = 0; i < maxLives; i++)
@@ -104,7 +103,7 @@ public class GameHud
         sb.Draw(_itemIcon, new Vector2(lx, 2),
             SrcBigBomb, Color.White, 0f, Vector2.Zero, iconH * 0.88f, SpriteEffects.None, 0f);
         lx += (int)(32 * iconH * 0.88f) + 4;
-        sb.DrawString(_font, $"x{bigBombs}", new Vector2(lx, cy),
+        DrawS(sb, $"x{bigBombs}", new Vector2(lx, cy),
             bigBombs > 0 ? Color.Orange : Color.Gray * 0.5f);
 
         // ── CENTRO: Tema + Livello ────────────────────────────────────────
@@ -128,14 +127,14 @@ public class GameHud
 
         // Testo tema (colorato) + separatore + livello (cyan)
         Vector2 themeSize = _font.MeasureString(themeLabel);
-        sb.DrawString(_font, themeLabel, new Vector2(centerX, cy), themeAccent);
+        DrawS(sb, themeLabel, new Vector2(centerX, cy), themeAccent);
 
         string separator = "  |  ";
         float sepX = centerX + themeSize.X;
-        sb.DrawString(_font, separator, new Vector2(sepX, cy), BorderColor);
+        DrawS(sb, separator, new Vector2(sepX, cy), BorderColor);
 
         float lvlX = sepX + _font.MeasureString(separator).X;
-        sb.DrawString(_font, $"LVL {level}", new Vector2(lvlX, cy), Color.Cyan);
+        DrawS(sb, $"LVL {level}", new Vector2(lvlX, cy), Color.Cyan);
 
         // ── DESTRA: Chiave ────────────────────────────────────────────────
         int rx = LogicalWidth - 10;
@@ -143,12 +142,20 @@ public class GameHud
         if (keyActive)
         {
             Color keyColor = hasKey ? Color.Gold : new Color(80, 80, 80);
-            string keyStr  = hasKey ? "KEY" : "NO KEY";
+            string keyStr = hasKey ? "KEY" : "NO KEY";
             rx -= (int)_font.MeasureString(keyStr).X;
-            sb.DrawString(_font, keyStr, new Vector2(rx, cy), keyColor);
+            DrawS(sb, keyStr, new Vector2(rx, cy), keyColor);
             rx -= (int)(32 * iconH * 0.9f) + 4;
             sb.Draw(_itemIcon, new Vector2(rx, 2),
                 SrcKey, keyColor, 0f, Vector2.Zero, iconH * 0.9f, SpriteEffects.None, 0f);
         }
+    }
+
+    /// <summary>DrawString con ombra 1-pixel per garantire leggibilità sull'HUD.</summary>
+    private void DrawS(SpriteBatch sb, string text, Vector2 pos, Color color)
+    {
+        sb.DrawString(_font, text, pos + new Vector2(1, 1), Color.Black * 0.90f);
+        sb.DrawString(_font, text, pos + new Vector2(-1, 1), Color.Black * 0.60f);
+        sb.DrawString(_font, text, pos, color);
     }
 }

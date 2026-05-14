@@ -1,7 +1,7 @@
 {
-  "version": 3,
+  "version": 4,
   "targets": {
-    "net9.0-windows7.0": {
+    "net9.0-windows": {
       "Microsoft.NETCore.App/2.1.30": {
         "type": "package",
         "dependencies": {
@@ -4168,7 +4168,7 @@
     }
   },
   "projectFileDependencyGroups": {
-    "net9.0-windows7.0": [
+    "net9.0-windows": [
       "MonoGame.Content.Builder.Task >= 3.8.*",
       "MonoGame.Framework.WindowsDX >= 3.8.*",
       "PoopManLibrary >= 1.0.0"
@@ -4198,7 +4198,7 @@
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
-        "net9.0-windows7.0": {
+        "net9.0-windows": {
           "framework": "net9.0-windows7.0",
           "targetAlias": "net9.0-windows",
           "projectReferences": {
@@ -4218,10 +4218,10 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "10.0.200"
+      "SdkAnalysisLevel": "10.0.300"
     },
     "frameworks": {
-      "net9.0-windows7.0": {
+      "net9.0-windows": {
         "framework": "net9.0-windows7.0",
         "targetAlias": "net9.0-windows",
         "dependencies": {
@@ -4253,7 +4253,7 @@
             "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.203/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

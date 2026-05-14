@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PoopManLibrary")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dd9a9999b131d8e8e47bf300b403bc56ba2d15fc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8a5d6ff7c9ca21576eab87827e70641ac9d8e0d2")]
 [assembly: System.Reflection.AssemblyProductAttribute("PoopManLibrary")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PoopManLibrary")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

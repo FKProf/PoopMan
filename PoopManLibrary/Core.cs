@@ -92,7 +92,7 @@ public class Core : Game
 
     private static void TransitionScene()
     {
-        if (p_activeScene != null) 
+        if (p_activeScene != null)
             p_activeScene.Dispose();
 
         GC.Collect();

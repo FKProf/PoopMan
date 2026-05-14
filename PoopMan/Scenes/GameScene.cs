@@ -1,4 +1,4 @@
-﻿    using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,10 +18,10 @@ public class GameScene : Scene
 {
     // ── Rendering ────────────────────────────────────────────────────────
     private SpriteBatch _spriteBatch;
-    private SpriteFont  _scoreFont;
-    private Texture2D   _minerHudTexture;
-    private Texture2D   _pixel;
-    private GameHud     _hud;
+    private SpriteFont _scoreFont;
+    private Texture2D _minerHudTexture;
+    private Texture2D _pixel;
+    private GameHud _hud;
     private GameOverlay _overlay;
 
     // ── Mappa e personaggi ───────────────────────────────────────────────
@@ -32,11 +32,10 @@ public class GameScene : Scene
     private Point _spawnPoint;
 
     // ── Stato di gioco ───────────────────────────────────────────────────
-    private bool _showGameOver  = false;
-    private int  _score         = 0;
-    private int  _killStreak    = 0;
-    private bool _isPaused      = false;
-    private AudioSettingsPanel _audioPanel;
+    private bool _showGameOver = false;
+    private int _score = 0;
+    private int _killStreak = 0;
+    private bool _isPaused = false;
     private bool _showLevelFlash = false;
     private float _levelFlashTimer = 0f;
     private bool _showExtraLifeFlash = false;
@@ -44,14 +43,7 @@ public class GameScene : Scene
     private const float ExtraLifeFlashDuration = 1.5f;
 
     // ── Menu pausa ────────────────────────────────────────────────────────
-    private enum PauseScreen { Menu, Audio }
-    private PauseScreen _pauseScreen    = PauseScreen.Menu;
-    private int         _pauseMenuItem  = 0;
-    private float       _pausePulse     = 0f;
-    private static readonly string[] PauseMenuItems = { "RIPRENDI", "AUDIO", "MENU PRINCIPALE" };
-    private const int PauseBtnW = 280;
-    private const int PauseBtnH = 34;
-    private const int PauseBtnGap = 10;
+    private PauseMenu _pauseMenu;
 
     // ── Sistema casse e item droppati ────────────────────────────────────
     private Texture2D _itemTexture;
@@ -85,12 +77,23 @@ public class GameScene : Scene
     // ── Menu Upgrade ──────────────────────────────────────────────────────
     private bool _showUpgradeMenu = false;
     private List<UpgradeDef> _upgradeOptions = new();
-    private int   _upgradeSelected = 0;
-    private float _upgradePulse    = 0f;
+    private int _upgradeSelected = 0;
+    private float _upgradePulse = 0f;
 
     // ── Chiave (livello 5+) ───────────────────────────────────────────────
-    private HashSet<Point> _keyTiles = new();
     private bool _hasKey = false;
+
+    // ── Effetti esplosione bat ────────────────────────────────────────────
+    private struct BatExplosionParticle
+    {
+        public Vector2 Position;   // pixel nel world-space
+        public Vector2 Velocity;   // pixel/s
+        public float Life;         // secondi rimasti
+        public float MaxLife;      // secondi totali
+        public Color Color;
+        public float Size;         // lato quadrato in pixel world
+    }
+    private readonly List<BatExplosionParticle> _batExplosionParticles = new();
 
     // ── Costanti angoli spawn ─────────────────────────────────────────────
     private static readonly Point[] Corners =
@@ -111,7 +114,7 @@ public class GameScene : Scene
     public override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(Core.GraphicsDevice);
-        _scoreFont   = Content.Load<SpriteFont>("font/Score");
+        _scoreFont = Content.Load<SpriteFont>("font/Score");
 
         // ── TileAtlas ─────────────────────────────────────────────────────
         Texture2D tilesetTexture = Content.Load<Texture2D>("image/Tile/terrain");
@@ -141,8 +144,8 @@ public class GameScene : Scene
         _miner.NeedsRespawn += (s, e) => _miner.Respawn(_miner.TilePosition);
         _miner.DeathAnimationFinished += (s, e) => _showGameOver = true;
         _miner.ExtraLifeEarned += (s, e) => { _showExtraLifeFlash = true; _extraLifeFlashTimer = 0f; };
-        _miner.BombPlaced   += (s, e)      => AudioManager.PlayBombPlaced();
-        _miner.BombExploded += (s, isBig)  => AudioManager.PlayExplosion(isBig);
+        _miner.BombPlaced += (s, e) => AudioManager.PlayBombPlaced();
+        _miner.BombExploded += (s, isBig) => AudioManager.PlayExplosion(isBig);
 
         // ── Pixel 1x1 per rettangoli HUD ─────────────────────────────────────
         _pixel = new Texture2D(Core.GraphicsDevice, 1, 1);
@@ -153,9 +156,9 @@ public class GameScene : Scene
         _bats = new List<Bat>();
 
         // ── UI (dopo LoadItemAnimations che popola _itemTexture) ───────────
-        _hud     = new GameHud(_scoreFont, _minerHudTexture, _itemTexture, _pixel);
+        _hud = new GameHud(_scoreFont, _minerHudTexture, _itemTexture, _pixel);
         _overlay = new GameOverlay(_scoreFont, _pixel);
-        _audioPanel = new AudioSettingsPanel(_scoreFont, _pixel);
+        _pauseMenu = new PauseMenu(_scoreFont, _pixel, Content);
 
         SpawnBats(_currentLevel);
         InitChests();
@@ -188,7 +191,7 @@ public class GameScene : Scene
         if (_showUpgradeMenu)
         {
             _upgradePulse += (float)gameTime.ElapsedGameTime.TotalSeconds * 4f;
-            var kb    = Core.Input.Keyboard;
+            var kb = Core.Input.Keyboard;
             var mouse = Core.Input.Mouse;
 
             if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Left) ||
@@ -203,12 +206,12 @@ public class GameScene : Scene
             {
                 int vw = Core.GraphicsDevice.Viewport.Width;
                 int vh = Core.GraphicsDevice.Viewport.Height;
-                int cardW  = Math.Min(320, vw / _upgradeOptions.Count - 20);
-                int cardH  = 220;
-                int gap    = 18;
+                int cardW = Math.Min(320, vw / _upgradeOptions.Count - 20);
+                int cardH = 220;
+                int gap = 18;
                 int totalW = _upgradeOptions.Count * cardW + (_upgradeOptions.Count - 1) * gap;
                 int startX = vw / 2 - totalW / 2;
-                int cardY  = vh / 2 - cardH / 2 + 20;
+                int cardY = vh / 2 - cardH / 2 + 20;
                 Point mp = mouse.Position;
                 for (int i = 0; i < _upgradeOptions.Count; i++)
                 {
@@ -235,121 +238,41 @@ public class GameScene : Scene
 
         if (pausePressed)
         {
-            if (_isPaused && _pauseScreen == PauseScreen.Audio)
+            if (!_isPaused)
             {
-                // ESC dal pannello audio → torna al menu pausa
-                _pauseScreen = PauseScreen.Menu;
+                _isPaused = true;
+                _pauseMenu.Open();
             }
             else
             {
-                _isPaused = !_isPaused;
-                _pauseScreen   = PauseScreen.Menu;
-                _pauseMenuItem = 0;
+                // ESC mentre pausa è aperta: PauseMenu gestisce il back interno,
+                // qui lo trattiamo come "riprendi" se è già nel menu principale
+                _isPaused = false;
             }
         }
 
         if (_isPaused)
         {
-            _pausePulse += (float)gameTime.ElapsedGameTime.TotalSeconds * 3.5f;
+            var action = _pauseMenu.Update(gameTime,
+                Core.Input.Keyboard, Core.Input.Mouse,
+                Core.GraphicsDevice, pausePressed && _isPaused);
 
-            if (_pauseScreen == PauseScreen.Audio)
+            switch (action)
             {
-                _audioPanel.Update(gameTime);
-            }
-            else
-            {
-                var kb    = Core.Input.Keyboard;
-                var mouse = Core.Input.Mouse;
-
-                if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Up))
-                    _pauseMenuItem = (_pauseMenuItem - 1 + PauseMenuItems.Length) % PauseMenuItems.Length;
-                if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Down))
-                    _pauseMenuItem = (_pauseMenuItem + 1) % PauseMenuItems.Length;
-
-                // Mouse: hover + click sui pulsanti del menu pausa
-                {
-                    int vw = Core.GraphicsDevice.Viewport.Width;
-                    int vh = Core.GraphicsDevice.Viewport.Height;
-                    int cx = vw / 2;
-                    int totalMenuH = PauseMenuItems.Length * (PauseBtnH + PauseBtnGap) - PauseBtnGap;
-                    int boxW = PauseBtnW + 60;
-                    int boxH = 52 + totalMenuH + 28;
-                    int boxY = vh / 2 - boxH / 2;
-                    int menuStartY = boxY + 54;
-                    Point mp = mouse.Position;
-                    for (int i = 0; i < PauseMenuItems.Length; i++)
-                    {
-                        int btnY = menuStartY + i * (PauseBtnH + PauseBtnGap);
-                        var btnRect = new Rectangle(cx - PauseBtnW / 2, btnY, PauseBtnW, PauseBtnH);
-                        if (btnRect.Contains(mp))
-                        {
-                            _pauseMenuItem = i;
-                            if (mouse.WasButtonJustPressed(PoopManLibrary.Input.MouseButton.Left))
-                            {
-                                switch (i)
-                                {
-                                    case 0: _isPaused = false; break;
-                                    case 1: _pauseScreen = PauseScreen.Audio; break;
-                                    case 2:
-                                        AudioManager.StopGameAudio();
-                                        Core.ChangeScene(new TitleScene());
-                                        break;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Enter))
-                {
-                    switch (_pauseMenuItem)
-                    {
-                        case 0: // RIPRENDI
-                            _isPaused = false;
-                            break;
-                        case 1: // AUDIO
-                            _pauseScreen = PauseScreen.Audio;
-                            break;
-                        case 2: // MENU PRINCIPALE
-                            AudioManager.StopGameAudio();
-                            Core.ChangeScene(new TitleScene());
-                            break;
-                    }
-                }
+                case PauseAction.Resume:
+                    _isPaused = false;
+                    break;
+                case PauseAction.GoToTitle:
+                    AudioManager.StopGameAudio();
+                    Core.ChangeScene(new TitleScene());
+                    break;
             }
             return;
         }
 
         // ── Collisione miner ↔ bat ────────────────────────────────────────
-        if (!_miner.IsDead && !_miner.IsInvincible)
-        {
-            var rand = new Random();
-            foreach (var b in _bats)
-            {
-                if (b.IsDead) continue;
-                var bc = b.GetBounds();
-                var mc = _miner.GetBounds();
-                if (bc != Collision.Empty && mc != Collision.Empty && bc.Intersects(mc))
-                {
-                    // Critico: 20% probabilità di uccidere il bat invece del miner
-                    if (_miner.UpgradeCritical && rand.Next(100) < 20)
-                    {
-                        _score += b.KillPoints * 2; // doppio punteggio sul critico
-                        b.Kill();
-                    }
-                    else if (_miner.TryAbsorbWithShield())
-                    {
-                        // scudo assorbe il colpo
-                    }
-                    else
-                    {
-                        _miner.TriggerDashAfterHit();
-                        _miner.Kill();
-                    }
-                    break;
-                }
-            }
-        }
+        // I pipistrelli attraversano il giocatore senza bloccarsi né causare danni diretti.
+        // Il danno al miner avviene solo tramite esplosioni.
 
         // ── Collisione esplosione ↔ miner ─────────────────────────────────
         if (!_miner.IsDead && !_miner.IsInvincible)
@@ -386,7 +309,7 @@ public class GameScene : Scene
                 {
                     var it = _droppedItems[t];
                     if (it.Type == "chest_tnt") { _miner.AddBigBomb(); _droppedItems.Remove(t); }
-                    else if (it.Type == "key")  { _hasKey = true;      _droppedItems.Remove(t); }
+                    else if (it.Type == "key") { _hasKey = true; _droppedItems.Remove(t); }
                 }
             }
 
@@ -448,49 +371,111 @@ public class GameScene : Scene
         if (!_miner.IsDead)
         {
             _killStreak = 0;
+            var rngExplosion = new Random();
 
-            // Tile adiacenti alle esplosioni (per shockwave stun/slow)
-            var explosionSet = _miner.ActiveExplosionTiles.ToHashSet();
-            var adjacentTiles = explosionSet
-                .SelectMany(t => new[]
-                {
-                    new Point(t.X + 1, t.Y), new Point(t.X - 1, t.Y),
-                    new Point(t.X, t.Y + 1), new Point(t.X, t.Y - 1)
-                })
-                .Where(t => !explosionSet.Contains(t))
-                .ToHashSet();
-
-            foreach (var tile in explosionSet)
+            foreach (var bomb in _miner.FreshExplosions.ToList())
             {
+                bomb.DamageApplied = true; // marca subito: il danno viene inflitto una sola volta
+
+                // ── Particelle esplosione bomba (visivamente distinte per big bomb) ───
+                SpawnBombParticles(bomb);
+
+                var explosionSet = bomb.ExplosionTiles.ToHashSet();
+
+                // Centro dell'esplosione in pixel (tile centrale della bomba)
+                Vector2 explosionCenter = new Vector2(
+                    bomb.Position.X + TileMap.TileSize * 0.5f,
+                    bomb.Position.Y + TileMap.TileSize * 0.5f);
+
+                // Raggio di hitbox in pixel per tipo bomba:
+                //   normale → 0.6 tile,  grande → 0.9 tile (cattura i bordi meglio)
+                float hitPixelRadius = bomb.BigBomb
+                    ? TileMap.TileSize * 0.9f
+                    : TileMap.TileSize * 0.6f;
+
+                // Tile adiacenti all'esplosione (per shockwave)
+                var adjacentTiles = explosionSet
+                    .SelectMany(t => new[]
+                    {
+                        new Point(t.X + 1, t.Y), new Point(t.X - 1, t.Y),
+                        new Point(t.X, t.Y + 1), new Point(t.X, t.Y - 1)
+                    })
+                    .Where(t => !explosionSet.Contains(t))
+                    .ToHashSet();
+
+                // Costruisce l'elenco dei bat colpiti (una sola volta per bat)
+                var hitBats = new HashSet<Bat>();
                 foreach (var b in _bats)
                 {
-                    if (!b.IsDead && !b.IsInvincible && b.VisualTilePosition == tile)
-                    {
-                        bool killed = b.TakeDamage();
-                        if (killed)
-                        {
-                            _score += b.KillPoints;
-                            _killStreak++;
+                    if (b.IsDead || b.IsInvincible) continue;
 
-                            if (_miner.ChainExplosionChance > 0f &&
-                                new Random().NextDouble() < _miner.ChainExplosionChance)
-                                TriggerChainAt(tile);
+                    // 1) Controllo tile esatto (principale)
+                    if (explosionSet.Contains(b.VisualTilePosition))
+                    {
+                        hitBats.Add(b);
+                        continue;
+                    }
+
+                    // 2) Controllo pixel per bat sui bordi dell'esplosione
+                    //    (controlla se la posizione pixel è vicina ad almeno una tile dell'esplosione)
+                    Vector2 batCenter = b.Position + new Vector2(TileMap.TileSize * 0.5f);
+                    foreach (var tile in explosionSet)
+                    {
+                        Vector2 tileCenter = new Vector2(
+                            tile.X * TileMap.TileSize + TileMap.TileSize * 0.5f,
+                            tile.Y * TileMap.TileSize + TileMap.TileSize * 0.5f);
+                        if (Vector2.DistanceSquared(batCenter, tileCenter) <= hitPixelRadius * hitPixelRadius)
+                        {
+                            hitBats.Add(b);
+                            break;
                         }
                     }
                 }
-            }
 
-            // Shockwave: stordimento/rallentamento sui bat adiacenti che sopravvivono
-            if (_miner.UpgradeStunOnHit || _miner.UpgradeSlowOnHit)
-            {
-                foreach (var b in _bats)
+                foreach (var b in hitBats)
                 {
-                    if (b.IsDead) continue;
-                    if (!adjacentTiles.Contains(b.VisualTilePosition)) continue;
-                    if (_miner.UpgradeStunOnHit)  b.ApplyStun(1.5f);
-                    if (_miner.UpgradeSlowOnHit)  b.ApplySlow(0.4f, 3.0f);
+                    // Knockback: spingi il bat lontano dal centro dell'esplosione
+                    Vector2 batCenter = b.Position + new Vector2(TileMap.TileSize * 0.5f);
+                    Vector2 knockDir = batCenter - explosionCenter;
+                    if (knockDir != Vector2.Zero) knockDir = Vector2.Normalize(knockDir);
+                    else knockDir = new Vector2(1, 0);
+                    float knockSpeed = bomb.BigBomb ? 260f : 160f;
+                    b.ApplyKnockback(knockDir, knockSpeed);
+
+                    bool killed;
+                    if (bomb.BigBomb)
+                    {
+                        killed = true;
+                        _score += b.KillPoints;
+                        b.Kill();
+                    }
+                    else
+                    {
+                        killed = b.TakeDamage();
+                        if (killed) _score += b.KillPoints;
+                    }
+
+                    if (killed)
+                    {
+                        _killStreak++;
+                        if (_miner.ChainExplosionChance > 0f &&
+                            rngExplosion.NextDouble() < _miner.ChainExplosionChance)
+                            TriggerChainAt(b.VisualTilePosition);
+                    }
                 }
-            }
+
+                // Shockwave: stordimento/rallentamento sui bat adiacenti che sopravvivono
+                if (_miner.UpgradeStunOnHit || _miner.UpgradeSlowOnHit)
+                {
+                    foreach (var b in _bats)
+                    {
+                        if (b.IsDead) continue;
+                        if (!adjacentTiles.Contains(b.VisualTilePosition)) continue;
+                        if (_miner.UpgradeStunOnHit) b.ApplyStun(1.5f);
+                        if (_miner.UpgradeSlowOnHit) b.ApplySlow(0.4f, 3.0f);
+                    }
+                }
+            } // fine foreach bomb
 
             // Bonus streak (2+ bat uccisi nella stessa esplosione)
             if (_killStreak >= 2) _score += (_killStreak - 1) * 75;
@@ -509,9 +494,9 @@ public class GameScene : Scene
         if (_miner.IsDead) return;
 
         // Raccoglie tile pericolose e bombe solide per i bat
-        var bombTiles      = _miner.ActiveBombTiles.ToList();
+        var bombTiles = _miner.ActiveBombTiles.ToList();
         var explosionTiles = _miner.ActiveExplosionTiles.ToList();
-        var solidBombs     = _miner.SolidBombTiles.ToList();
+        var solidBombs = _miner.SolidBombTiles.ToList();
 
         for (int i = _bats.Count - 1; i >= 0; i--)
         {
@@ -540,6 +525,18 @@ public class GameScene : Scene
         // ── Timer animazione item ─────────────────────────────────────────
         _itemAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         if (_itemAnimTimer >= _itemAnimSpeed) { _itemAnimTimer = 0f; _itemAnimFrame++; }
+
+        // ── Aggiorna particelle esplosione bat ────────────────────────────
+        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        for (int i = _batExplosionParticles.Count - 1; i >= 0; i--)
+        {
+            var p = _batExplosionParticles[i];
+            p.Life -= dt;
+            if (p.Life <= 0f) { _batExplosionParticles.RemoveAt(i); continue; }
+            p.Position += p.Velocity * dt;
+            p.Velocity *= 0.88f; // attrito
+            _batExplosionParticles[i] = p;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -550,7 +547,7 @@ public class GameScene : Scene
 
         // ── Mappa + entità (scalata per adattarsi allo schermo) ──────────
         int hudScreenH = GameHud.ScreenHeight(Core.GraphicsDevice);
-        var transform  = Game1.GetMapScaleMatrix(hudScreenH);
+        var transform = Game1.GetMapScaleMatrix(hudScreenH);
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: transform);
 
         _map.Draw(_spriteBatch);
@@ -594,15 +591,28 @@ public class GameScene : Scene
 
         foreach (var b in _bats) b.Draw(_spriteBatch);
 
+        // ── Particelle esplosione bat ─────────────────────────────────────
+        foreach (var p in _batExplosionParticles)
+        {
+            float alpha = p.Life / p.MaxLife;              // fade out
+            Color c = p.Color * alpha;
+            int s = Math.Max(1, (int)(p.Size * alpha + 0.5f));
+            _spriteBatch.Draw(_pixel,
+                new Rectangle((int)(p.Position.X - s / 2f),
+                               (int)(p.Position.Y - s / 2f), s, s),
+                c);
+        }
+
         _spriteBatch.End();
 
         // ── Overlay (pausa / game over / flash livello / upgrade) ────────
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-        if      (_showGameOver)       _overlay.DrawGameOver(_spriteBatch, _score);
-        else if (_showUpgradeMenu)    _overlay.DrawUpgradeMenu(_spriteBatch, _upgradeOptions, _upgradeSelected, (float)Math.Sin(_upgradePulse));
-        else if (_isPaused)           DrawPauseWithAudio();
+        if (_showGameOver) _overlay.DrawGameOver(_spriteBatch, _score);
+        else if (_showUpgradeMenu) _overlay.DrawUpgradeMenu(_spriteBatch, _upgradeOptions, _upgradeSelected, (float)Math.Sin(_upgradePulse),
+            t => (_miner.GetUpgradeLevel(t), UpgradeRegistry.MaxLevel(t)));
+        else if (_isPaused) _pauseMenu.Draw(_spriteBatch);
         else if (_showExtraLifeFlash) _overlay.DrawExtraLife(_spriteBatch, _extraLifeFlashTimer, ExtraLifeFlashDuration);
-        else if (_showLevelFlash)     _overlay.DrawLevelFlash(_spriteBatch, _currentLevel, _levelFlashTimer, _map.Theme);
+        else if (_showLevelFlash) _overlay.DrawLevelFlash(_spriteBatch, _currentLevel, _levelFlashTimer, _map.Theme);
         _spriteBatch.End();
 
         // ── HUD ridisegnato sopra gli overlay così è sempre visibile ─────
@@ -613,113 +623,6 @@ public class GameScene : Scene
         _spriteBatch.End();
     }
 
-    private void DrawPauseWithAudio()
-    {
-        int vw = _spriteBatch.GraphicsDevice.Viewport.Width;
-        int vh = _spriteBatch.GraphicsDevice.Viewport.Height;
-        int cx = vw / 2;
-
-        // Sfondo scuro
-        _spriteBatch.Draw(_pixel, new Rectangle(0, 0, vw, vh), Color.Black * 0.60f);
-
-        if (_pauseScreen == PauseScreen.Audio)
-        {
-            DrawPauseAudioPanel(cx, vh / 2);
-            return;
-        }
-
-        // ── Menu pausa ────────────────────────────────────────────────────
-        int totalMenuH = PauseMenuItems.Length * (PauseBtnH + PauseBtnGap) - PauseBtnGap;
-        int boxW  = PauseBtnW + 60;
-        int boxH  = 52 + totalMenuH + 28;
-        int boxX  = cx - boxW / 2;
-        int boxY  = vh / 2 - boxH / 2;
-
-        // Riquadro
-        DrawRect(new Rectangle(boxX, boxY, boxW, boxH), new Color(15, 15, 35, 240));
-        DrawBorderRect(boxX, boxY, boxW, boxH, Color.Yellow);
-
-        DrawTextCentered("PAUSA", cx, boxY + 22, Color.Yellow, 1.8f);
-
-        // Linea separatrice
-        DrawRect(new Rectangle(boxX + 16, boxY + 44, boxW - 32, 2), new Color(80, 60, 160));
-
-        int menuStartY = boxY + 54;
-        for (int i = 0; i < PauseMenuItems.Length; i++)
-        {
-            int btnY = menuStartY + i * (PauseBtnH + PauseBtnGap);
-            bool sel = i == _pauseMenuItem;
-
-            Color bg     = sel ? new Color(60, 40, 140, 230) : new Color(25, 25, 55, 180);
-            Color border = sel ? Color.Yellow : new Color(70, 70, 110);
-            float pulse  = sel ? (0.85f + 0.15f * (float)Math.Sin(_pausePulse)) : 1f;
-
-            DrawRect(new Rectangle(cx - PauseBtnW / 2 - 1, btnY - 1, PauseBtnW + 2, PauseBtnH + 2), border);
-            DrawRect(new Rectangle(cx - PauseBtnW / 2,     btnY,     PauseBtnW,     PauseBtnH),     bg);
-
-            // Icona colorata per Home
-            Color textColor = i == 2
-                ? (sel ? new Color(255, 120, 120) * pulse : new Color(200, 100, 100))
-                : (sel ? Color.Yellow * pulse : Color.LightGray);
-
-            DrawTextCentered(PauseMenuItems[i], cx, btnY + PauseBtnH / 2, textColor, sel ? 1.05f : 1.0f);
-
-            if (sel)
-            {
-                string arrow = ">";
-                Vector2 arSz = _scoreFont.MeasureString(arrow);
-                float arX = cx - PauseBtnW / 2 - arSz.X - 8;
-                _spriteBatch.DrawString(_scoreFont, arrow,
-                    new Vector2(arX, btnY + PauseBtnH / 2 - arSz.Y / 2),
-                    Color.Yellow * pulse);
-            }
-        }
-
-        DrawTextCentered("^v: seleziona   ENTER: conferma   ESC: riprendi",
-            cx, boxY + boxH - 14, Color.DarkGray, 0.72f);
-    }
-
-    private void DrawPauseAudioPanel(int cx, int midY)
-    {
-        int boxW = 460;
-        int boxH = 190;
-        int boxX = cx - boxW / 2;
-        int boxY = midY - boxH / 2;
-
-        DrawRect(new Rectangle(boxX, boxY, boxW, boxH), new Color(15, 15, 35, 245));
-        DrawBorderRect(boxX, boxY, boxW, boxH, Color.CornflowerBlue);
-
-        DrawTextCentered("IMPOSTAZIONI AUDIO", cx, boxY + 22, Color.CornflowerBlue, 1.0f);
-        DrawRect(new Rectangle(boxX + 16, boxY + 40, boxW - 32, 2), new Color(40, 80, 160));
-
-        _audioPanel.Draw(_spriteBatch, cx, boxY + 85, showHint: false);
-
-        DrawTextCentered("< > volume    ^ v seleziona", cx, boxY + 138, new Color(100, 100, 130), 0.78f);
-        DrawTextCentered("ESC: indietro", cx, boxY + boxH - 16, Color.DarkGray, 0.75f);
-    }
-
-    private void DrawBorderRect(int x, int y, int w, int h, Color c)
-    {
-        DrawRect(new Rectangle(x,         y,         w, 2), c);
-        DrawRect(new Rectangle(x,         y + h - 2, w, 2), c);
-        DrawRect(new Rectangle(x,         y,         2, h), c);
-        DrawRect(new Rectangle(x + w - 2, y,         2, h), c);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────
-    // Draw helpers (mantenuti per compatibilità interna)
-    // ─────────────────────────────────────────────────────────────────────
-    private void DrawRect(Rectangle r, Color c)
-        => _spriteBatch.Draw(_pixel, r, c);
-
-    private void DrawTextCentered(string text, int cx, int cy, Color color, float scale)
-    {
-        Vector2 origin = _scoreFont.MeasureString(text) * 0.5f;
-        Vector2 pos    = new Vector2(cx, cy);
-        _spriteBatch.DrawString(_scoreFont, text, pos + new Vector2(2, 2) * scale, Color.Black * 0.6f, 0f, origin, scale, SpriteEffects.None, 0f);
-        _spriteBatch.DrawString(_scoreFont, text, pos, color, 0f, origin, scale, SpriteEffects.None, 0f);
-    }
-
     // ─────────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────────
@@ -727,53 +630,285 @@ public class GameScene : Scene
         => Corners[new Random().Next(Corners.Length)];
 
     /// <summary>
+    /// Spawna particelle colorate per l'esplosione di una bomba del Miner.
+    /// Big bomb: molte particelle bianche/arancioni, più grandi e veloci.
+    /// Bomba normale: poche particelle gialle/arancioni.
+    /// </summary>
+    private void SpawnBombParticles(Bomb bomb)
+    {
+        bool big = bomb.BigBomb;
+        int particleCount = big ? 30 : 10;
+        float maxSpeed = big ? 160f : 100f;
+        float lifetime = big ? 0.65f : 0.45f;
+        float size = big ? 6f : 3f;
+        Color[] palette = big
+            ? new[] { Color.White, Color.Yellow, Color.OrangeRed, new Color(255, 140, 0) }
+            : new[] { Color.Yellow, Color.Orange, Color.Gold };
+
+        var rng = new Random();
+        foreach (var tile in bomb.ExplosionTiles)
+        {
+            // Spawn a few particles per tile for big bombs, 1 per tile for small
+            int perTile = big ? 2 : 1;
+            Vector2 tileCenter = new Vector2(
+                tile.X * TileMap.TileSize + TileMap.TileSize / 2f,
+                tile.Y * TileMap.TileSize + TileMap.TileSize / 2f);
+            for (int i = 0; i < perTile && _batExplosionParticles.Count < particleCount + _batExplosionParticles.Count; i++)
+            {
+                double angle = rng.NextDouble() * Math.PI * 2;
+                float speed = (float)(rng.NextDouble() * 0.5 + 0.5) * maxSpeed;
+                _batExplosionParticles.Add(new BatExplosionParticle
+                {
+                    Position = tileCenter,
+                    Velocity = new Vector2((float)Math.Cos(angle) * speed,
+                                           (float)Math.Sin(angle) * speed),
+                    Life = lifetime * (float)(rng.NextDouble() * 0.4 + 0.6),
+                    MaxLife = lifetime,
+                    Color = palette[rng.Next(palette.Length)],
+                    Size = size * (float)(rng.NextDouble() * 0.5 + 0.75),
+                });
+            }
+        }
+    }
+
+    /// <summary>
     /// Gestisce l'esplosione di un bat esplosivo alla sua morte.
-    /// Danneggia tutti i bat e il miner nei tile circostanti (raggio 1 o 2),
-    /// rompe i breakable e riproduce il suono di esplosione.
+    /// Walid: area 3×3 tile (raggio 1).
+    /// Nuke:  area 5×5 tile (raggio 2), distrugge tutto tranne i muri indistruttibili.
     /// </summary>
     private void TriggerBatExplosion(Point origin, bool big)
     {
-        int range = big ? 2 : 1;
-
-        // Calcola tutti i tile colpiti (identico alla logica di Bomb.Explode)
+        // ── Area quadrata ─────────────────────────────────────────────────
+        // Walid: raggio 1 → 3×3 = 9 tile
+        // Nuke:  raggio 2 → 5×5 = 25 tile
+        int radius = big ? 2 : 1;
         var hitTiles = new HashSet<Point>();
-        if (_map.GetTile(origin) != PoopManLibrary.World.TileType.Wall)
-            hitTiles.Add(origin);
 
-        int[] dx = { 0, 0, -1, 1 };
-        int[] dy = { -1, 1, 0, 0 };
-        for (int dir = 0; dir < 4; dir++)
+        for (int dy = -radius; dy <= radius; dy++)
         {
-            for (int step = 1; step <= range; step++)
+            for (int dx = -radius; dx <= radius; dx++)
             {
-                Point t = new(origin.X + dx[dir] * step, origin.Y + dy[dir] * step);
-                if (!_map.IsInside(t)) break;
-                var tileType = _map.GetTile(t);
-                if (tileType == PoopManLibrary.World.TileType.Wall) break;
-                if (tileType == PoopManLibrary.World.TileType.Breakable)
-                {
-                    _map.BreakTile(t);
-                    break;
-                }
+                Point t = new(origin.X + dx, origin.Y + dy);
+                if (!_map.IsInside(t)) continue;
+                var tt = _map.GetTile(t);
+                if (tt == TileType.Wall) continue;          // muri indistruttibili: immuni
+
+                if (tt == TileType.Breakable)
+                    _map.BreakTile(t);                      // rompe il breakable
+
                 hitTiles.Add(t);
             }
         }
 
-        // Danno ai bat nei tile colpiti (le esplosioni dei bat ignorano la resistenza)
-        foreach (var b in _bats)
+        // ── Nuke: rimuove item droppati nell'area ─────────────────────────
+        if (big)
         {
-            if (!b.IsDead && !b.IsInvincible && hitTiles.Contains(b.VisualTilePosition))
+            foreach (var t in hitTiles)
+                _droppedItems.Remove(t);
+        }
+
+        // ── Danno ai bat (Nuke: instant kill; Walid: TakeDamage normale) ──
+        Vector2 explosionPx = new Vector2(
+            origin.X * TileMap.TileSize + TileMap.TileSize * 0.5f,
+            origin.Y * TileMap.TileSize + TileMap.TileSize * 0.5f);
+        float batKnockSpeed = big ? 300f : 180f;
+
+        foreach (var b in _bats.ToList())
+        {
+            if (b.IsDead || b.IsInvincible) continue;
+            if (!hitTiles.Contains(b.VisualTilePosition)) continue;
+
+            // Knockback dalla posizione di esplosione
+            Vector2 batPx = b.Position + new Vector2(TileMap.TileSize * 0.5f);
+            Vector2 kDir = batPx - explosionPx;
+            if (kDir != Vector2.Zero) kDir = Vector2.Normalize(kDir); else kDir = new Vector2(1, 0);
+            b.ApplyKnockback(kDir, batKnockSpeed);
+
+            if (big)
+            {
+                _score += b.KillPoints;
+                b.Kill();                                   // Nuke: kill istantaneo
+            }
+            else
             {
                 if (b.TakeDamage()) _score += b.KillPoints;
             }
         }
 
-        // Danno al miner
+        // ── Danno al miner ────────────────────────────────────────────────
         if (!_miner.IsDead && !_miner.IsInvincible && hitTiles.Contains(_miner.VisualTilePosition))
+        {
             _miner.Kill();
+        }
 
-        // Audio esplosione
+        // ── Audio ─────────────────────────────────────────────────────────
         AudioManager.PlayExplosion(big);
+
+        // ── Effetto visivo particelle ─────────────────────────────────────
+        var rng = new Random();
+        Vector2 worldCenter = new Vector2(
+            origin.X * TileMap.TileSize + TileMap.TileSize / 2f,
+            origin.Y * TileMap.TileSize + TileMap.TileSize / 2f);
+
+        if (big)
+        {
+            // ── NUKE: fungo atomico ───────────────────────────────────────
+            float nukeR = radius * TileMap.TileSize;
+
+            // Layer 1: flash bianco iniziale (burst radiale densissimo)
+            int flashCount = 80;
+            for (int i = 0; i < flashCount; i++)
+            {
+                double angle = (Math.PI * 2 / flashCount) * i;
+                float speed = (float)(rng.NextDouble() * 0.5 + 0.8) * 320f;
+                _batExplosionParticles.Add(new BatExplosionParticle
+                {
+                    Position = worldCenter,
+                    Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
+                    Life = (float)(rng.NextDouble() * 0.15 + 0.15),
+                    MaxLife = 0.3f,
+                    Color = Color.White,
+                    Size = (float)(rng.NextDouble() * 10 + 8),
+                });
+            }
+
+            // Layer 2: shockwave ring (anello espanso a media altezza)
+            int ringCount = 64;
+            for (int i = 0; i < ringCount; i++)
+            {
+                double angle = (Math.PI * 2 / ringCount) * i + rng.NextDouble() * 0.05;
+                float speed = (float)(rng.NextDouble() * 0.2 + 0.9) * 300f;
+                Color ringCol = (i % 4 == 0) ? Color.White
+                              : (i % 4 == 1) ? new Color(255, 220, 80)
+                              : (i % 4 == 2) ? new Color(255, 100, 20)
+                              : new Color(255, 60, 0);
+                _batExplosionParticles.Add(new BatExplosionParticle
+                {
+                    Position = worldCenter + new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle))
+                               * (float)(rng.NextDouble() * 0.3) * nukeR,
+                    Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
+                    Life = (float)(rng.NextDouble() * 0.3 + 0.5),
+                    MaxLife = 0.8f,
+                    Color = ringCol,
+                    Size = (float)(rng.NextDouble() * 7 + 5),
+                });
+            }
+
+            // Layer 3: colonna di fuoco verso l'alto (fungo vero)
+            for (int i = 0; i < 60; i++)
+            {
+                float xOff = (float)(rng.NextDouble() * 2 - 1) * nukeR * 0.35f;
+                float yOff = (float)(rng.NextDouble() * 2 - 1) * nukeR * 0.2f;
+                float riseSpeed = (float)(rng.NextDouble() * 0.6 + 0.5) * 260f;
+                float lateralSpeed = (float)(rng.NextDouble() * 2 - 1) * 60f;
+                Color[] stemPalette = { Color.White, new Color(255, 220, 60),
+                                        new Color(255, 130, 0), new Color(255, 60, 0) };
+                _batExplosionParticles.Add(new BatExplosionParticle
+                {
+                    Position = worldCenter + new Vector2(xOff, yOff),
+                    Velocity = new Vector2(lateralSpeed, -riseSpeed),
+                    Life = (float)(rng.NextDouble() * 0.5 + 0.7),
+                    MaxLife = 1.2f,
+                    Color = stemPalette[rng.Next(stemPalette.Length)],
+                    Size = (float)(rng.NextDouble() * 9 + 5),
+                });
+            }
+
+            // Layer 4: cappello del fungo (particelle che si espandono in arco verso l'alto)
+            for (int i = 0; i < 50; i++)
+            {
+                double angle = rng.NextDouble() * Math.PI - Math.PI; // -PI..0 (arco superiore)
+                float speed = (float)(rng.NextDouble() * 0.5 + 0.6) * 200f;
+                float startR = (float)(rng.NextDouble() * 0.5 + 0.3) * nukeR;
+                Color[] capPalette = { new Color(255, 80, 0), new Color(200, 0, 0),
+                                       new Color(255, 160, 0), new Color(120, 0, 0) };
+                _batExplosionParticles.Add(new BatExplosionParticle
+                {
+                    Position = worldCenter + new Vector2((float)Math.Cos(angle) * startR, (float)Math.Sin(angle) * startR * 0.4f - nukeR * 0.3f),
+                    Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed * 0.3f - 40f),
+                    Life = (float)(rng.NextDouble() * 0.4 + 0.6),
+                    MaxLife = 1.0f,
+                    Color = capPalette[rng.Next(capPalette.Length)],
+                    Size = (float)(rng.NextDouble() * 10 + 6),
+                });
+            }
+
+            // Layer 5: detriti radioattivi (lenti, verdi, lunga durata)
+            for (int i = 0; i < 35; i++)
+            {
+                double angle = rng.NextDouble() * Math.PI * 2;
+                float speed = (float)(rng.NextDouble() * 0.3 + 0.05) * 90f;
+                Vector2 spawnOff = new Vector2(
+                    (float)(rng.NextDouble() * 2 - 1) * nukeR,
+                    (float)(rng.NextDouble() * 2 - 1) * nukeR);
+                Color radColor = (rng.Next(3) == 0)
+                    ? new Color(100, 255, 60)
+                    : (rng.Next(2) == 0) ? new Color(180, 255, 80) : new Color(60, 200, 30);
+                _batExplosionParticles.Add(new BatExplosionParticle
+                {
+                    Position = worldCenter + spawnOff,
+                    Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
+                    Life = (float)(rng.NextDouble() * 0.8 + 1.0),
+                    MaxLife = 1.8f,
+                    Color = radColor,
+                    Size = (float)(rng.NextDouble() * 5 + 2),
+                });
+            }
+        }
+        else
+        {
+            // ── WALID: fire burst caldo e compatto ────────────────────────
+            // Layer 1: fiammate principali (esplosione rapida)
+            Color[] walidCore = { new Color(255, 220, 60), new Color(255, 140, 0),
+                                  new Color(255, 60, 0), Color.White };
+            for (int i = 0; i < 36; i++)
+            {
+                double angle = rng.NextDouble() * Math.PI * 2;
+                float speed = (float)(rng.NextDouble() * 0.6 + 0.4) * 160f;
+                _batExplosionParticles.Add(new BatExplosionParticle
+                {
+                    Position = worldCenter,
+                    Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
+                    Life = (float)(rng.NextDouble() * 0.25 + 0.35),
+                    MaxLife = 0.6f,
+                    Color = walidCore[rng.Next(walidCore.Length)],
+                    Size = (float)(rng.NextDouble() * 7 + 4),
+                });
+            }
+            // Layer 2: scintille veloci che si allontanano
+            for (int i = 0; i < 20; i++)
+            {
+                double angle = rng.NextDouble() * Math.PI * 2;
+                float speed = (float)(rng.NextDouble() * 0.5 + 0.5) * 220f;
+                _batExplosionParticles.Add(new BatExplosionParticle
+                {
+                    Position = worldCenter,
+                    Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
+                    Life = (float)(rng.NextDouble() * 0.2 + 0.2),
+                    MaxLife = 0.4f,
+                    Color = rng.Next(2) == 0 ? Color.Yellow : Color.White,
+                    Size = (float)(rng.NextDouble() * 3 + 1),
+                });
+            }
+            // Layer 3: brace lenta ad alta durata
+            for (int i = 0; i < 10; i++)
+            {
+                double angle = rng.NextDouble() * Math.PI * 2;
+                float speed = (float)(rng.NextDouble() * 0.3 + 0.05) * 60f;
+                Vector2 spawnOff = new Vector2(
+                    (float)(rng.NextDouble() * 2 - 1) * TileMap.TileSize * 0.5f,
+                    (float)(rng.NextDouble() * 2 - 1) * TileMap.TileSize * 0.5f);
+                _batExplosionParticles.Add(new BatExplosionParticle
+                {
+                    Position = worldCenter + spawnOff,
+                    Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
+                    Life = (float)(rng.NextDouble() * 0.4 + 0.5),
+                    MaxLife = 0.9f,
+                    Color = new Color(255, (int)(rng.NextDouble() * 60 + 40), 0),
+                    Size = (float)(rng.NextDouble() * 3 + 2),
+                });
+            }
+        }
     }
 
     /// <summary>
@@ -830,8 +965,8 @@ public class GameScene : Scene
     private void SpawnMiniBats(Point origin)
     {
         string batXml = Path.Combine(Content.RootDirectory, "image", "enemies", "bat.xml");
-        Point[] dirs  = { new(1,0), new(-1,0), new(0,1), new(0,-1) };
-        int spawned   = 0;
+        Point[] dirs = { new(1, 0), new(-1, 0), new(0, 1), new(0, -1) };
+        int spawned = 0;
 
         foreach (var d in dirs.OrderBy(_ => new Random().Next()))
         {
@@ -844,7 +979,7 @@ public class GameScene : Scene
                 mini.SetAggressionLevel(_currentLevel);
                 mini.SetMini();          // mini-bat non può splittarsi ulteriormente
                 mini.SetInvincible(1f);
-                mini.OnSplit         += SpawnMiniBats; // non farà nulla (SetMini blocca CanSplit)
+                mini.OnSplit += SpawnMiniBats; // non farà nulla (SetMini blocca CanSplit)
                 mini.OnDeathExplosion += TriggerBatExplosion;
                 _bats.Add(mini);
                 spawned++;
@@ -861,9 +996,16 @@ public class GameScene : Scene
         var rand = new Random();
         int attempts = 0;
 
-        // Quanti bat speciali spawnare: 0 ai primi livelli, cresce lentamente
-        // Probabilità speciale per bat: 5% al lv1, +3% ogni livello, max 35%
-        float specialChance = Math.Clamp(0.02f + level * 0.03f, 0f, 0.35f);
+        // Probabilità che un bat sia speciale (non Normal): cresce gradualmente, cap 40%
+        float specialChance = Math.Clamp(0.02f + level * 0.03f, 0f, 0.40f);
+
+        // Tutte le varianti sbloccate fino al livello corrente sono disponibili.
+        // I pipistrelli normali restano la maggioranza: solo specialChance% sarà speciale.
+        var unlocked = Bat.UnlockedVariants(level);
+        var specialVariants = unlocked.Where(v => v != Bat.BatVariant.Normal).ToList();
+
+        // Garantisce almeno 1 bat speciale per ondata se ci sono varianti sbloccate
+        bool guaranteedSpecialPlaced = specialVariants.Count == 0;
 
         while (_bats.Count < count && attempts < 1000)
         {
@@ -878,14 +1020,23 @@ public class GameScene : Scene
             if (!_map.IsWalkable(tile)) continue;
 
             var bat = new Bat(tile, batXml, Content, _map);
+            bat.SetAggressionLevel(level);
 
-            // Solo una piccola percentuale diventa speciale
-            if ((float)rand.NextDouble() < specialChance)
-                bat.SetAggressionLevel(level);   // livello pieno → speciale
+            // Sceglie la variante: il primo bat garantisce almeno un tipo speciale,
+            // poi la probabilità specialChance decide i successivi.
+            bool isSpecial = !guaranteedSpecialPlaced || (float)rand.NextDouble() < specialChance;
+            if (isSpecial && specialVariants.Count > 0)
+            {
+                // Tutte le varianti sbloccate hanno pari probabilità
+                bat.ApplyVariant(specialVariants[rand.Next(specialVariants.Count)]);
+                guaranteedSpecialPlaced = true;
+            }
             else
-                bat.SetAggressionLevel(Math.Min(level, 4)); // cap lv4 → niente poteri
+            {
+                bat.ApplyVariant(Bat.BatVariant.Normal);
+            }
 
-            bat.OnSplit          += SpawnMiniBats;
+            bat.OnSplit += SpawnMiniBats;
             bat.OnDeathExplosion += TriggerBatExplosion;
             _bats.Add(bat);
         }
@@ -893,13 +1044,6 @@ public class GameScene : Scene
 
     private void HandleChestDrop(Point tile)
     {
-        if (_currentLevel >= 5 && _keyTiles.Contains(tile))
-        {
-            _keyTiles.Remove(tile);
-            _droppedItems[tile] = new DroppedItem { Type = "key", IsOpen = false, JustSpawned = true };
-            return;
-        }
-
         if (!_chestTiles.Contains(tile)) return;
         _chestTiles.Remove(tile);
 
@@ -958,9 +1102,23 @@ public class GameScene : Scene
         if (_currentLevel >= 5)
         {
             _hasKey = false;
-            var nonChest = breakableTiles.Where(t => !_chestTiles.Contains(t)).ToList();
-            if (nonChest.Count > 0)
-                _keyTiles.Add(nonChest[rand.Next(nonChest.Count)]);
+            // Spawn chiave direttamente visibile su un tile calpestabile (lontano dal miner)
+            var candidates = new List<Point>();
+            for (int y = 1; y < 22; y++)
+                for (int x = 1; x < 38; x++)
+                {
+                    Point t = new Point(x, y);
+                    if (!_map.IsWalkable(t)) continue;
+                    if (_droppedItems.ContainsKey(t)) continue;
+                    if (Vector2.Distance(new Vector2(x, y),
+                        new Vector2(_miner.TilePosition.X, _miner.TilePosition.Y)) < 12f) continue;
+                    candidates.Add(t);
+                }
+            if (candidates.Count > 0)
+            {
+                Point keyTile = candidates[rand.Next(candidates.Count)];
+                _droppedItems[keyTile] = new DroppedItem { Type = "key", IsOpen = false, JustSpawned = false };
+            }
         }
 
         SpawnDoor();
@@ -975,7 +1133,7 @@ public class GameScene : Scene
                 Point t = new Point(x, y);
                 if (!_map.IsWalkable(t)) continue;
                 if (Vector2.Distance(new Vector2(t.X, t.Y),
-                    new Vector2(_miner.TilePosition.X, _miner.TilePosition.Y)) >= 10f)
+                    new Vector2(_miner.TilePosition.X, _miner.TilePosition.Y)) >= 12f)
                     candidates.Add(t);
             }
 
@@ -1000,7 +1158,7 @@ public class GameScene : Scene
             string fullName = region.Attribute("Name")?.Value ?? "";
             int x = int.Parse(region.Attribute("X")?.Value ?? "0");
             int y = int.Parse(region.Attribute("Y")?.Value ?? "0");
-            int width  = int.Parse(region.Attribute("Width")?.Value  ?? "32");
+            int width = int.Parse(region.Attribute("Width")?.Value ?? "32");
             int height = int.Parse(region.Attribute("Height")?.Value ?? "32");
 
             int i = fullName.Length;
@@ -1023,7 +1181,6 @@ public class GameScene : Scene
         _doorSpawned = false;
         _droppedItems.Clear();
         _chestTiles.Clear();
-        _keyTiles.Clear();
         _hasKey = false;
         _score += 500;
 
@@ -1043,9 +1200,12 @@ public class GameScene : Scene
         if (_currentLevel >= UpgradeRegistry.EveryNLevels
             && _currentLevel % UpgradeRegistry.EveryNLevels == 0)
         {
-            _upgradeOptions  = UpgradeRegistry.PickRandom(3);
+            // Costruisce il dizionario livelli correnti interrogando il miner
+            var currentLevels = Enum.GetValues<UpgradeType>()
+                .ToDictionary(t => t, t => _miner.GetUpgradeLevel(t));
+            _upgradeOptions = UpgradeRegistry.PickRandom(3, currentLevels);
             _upgradeSelected = 0;
-            _upgradePulse    = 0f;
+            _upgradePulse = 0f;
             _showUpgradeMenu = true;
         }
     }

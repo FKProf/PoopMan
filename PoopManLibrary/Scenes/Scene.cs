@@ -4,7 +4,7 @@ using Microsoft.Xna.Framework.Content;
 
 namespace PoopManLibrary.Scenes;
 
-public class Scene : IDisposable 
+public class Scene : IDisposable
 {
     protected ContentManager Content { get; private set; }
 
@@ -26,9 +26,9 @@ public class Scene : IDisposable
 
     public virtual void LoadContent() { }
 
-    public virtual void UnloadContent() {}
+    public virtual void UnloadContent() { }
 
-    public virtual void Update(GameTime gameTime) {}
+    public virtual void Update(GameTime gameTime) { }
 
     public virtual void Draw(GameTime gameTime) { }
 
