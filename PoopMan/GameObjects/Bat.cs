@@ -714,6 +714,8 @@ namespace PoopMan.GameObjects
                 _dashCooldown = DashCooldownMax;
                 // Aggiorna facing e posizione logica intermedia anche per il tile skippato
                 TilePosition = nextStep; // passa dal tile intermedio
+                // Avanza _pathStep per il tile saltato, così il percorso non torna indietro
+                _pathStep++;
                 return dashTile;
             }
             return nextStep;

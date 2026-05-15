@@ -479,9 +479,14 @@ public class TileMap
         for (int y = 0; y < map.GetLength(0); y++)
             for (int x = 0; x < map.GetLength(1); x++)
             {
-                Rectangle sourceRect = atlas.GetTile(tileVariant[y, x]);
+                string variant = tileVariant[y, x];
+                Rectangle sourceRect = atlas.GetTile(variant);
                 Rectangle destRect = new Rectangle(x * TileSize, y * TileSize, TileSize, TileSize);
-                spriteBatch.Draw(atlas.Texture, destRect, sourceRect, Color.White);
+                // Tile lava: stesso sprite dell'acqua ma tinted rosso-arancio
+                Color tint = (variant == "lava0" || variant == "lava1")
+                    ? new Color(255, 80, 20)
+                    : Color.White;
+                spriteBatch.Draw(atlas.Texture, destRect, sourceRect, tint);
             }
     }
 

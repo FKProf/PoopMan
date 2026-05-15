@@ -271,8 +271,22 @@ public class GameScene : Scene
         }
 
         // ── Collisione miner ↔ bat ────────────────────────────────────────
-        // I pipistrelli attraversano il giocatore senza bloccarsi né causare danni diretti.
-        // Il danno al miner avviene solo tramite esplosioni.
+        if (!_miner.IsDead && !_miner.IsInvincible)
+        {
+            foreach (var bat in _bats)
+            {
+                if (bat.IsDead) continue;
+                if (bat.VisualTilePosition == _miner.TilePosition)
+                {
+                    if (!_miner.TryAbsorbWithShield())
+                    {
+                        _miner.TriggerDashAfterHit();
+                        _miner.Kill();
+                    }
+                    break;
+                }
+            }
+        }
 
         // ── Collisione esplosione ↔ miner ─────────────────────────────────
         if (!_miner.IsDead && !_miner.IsInvincible)
@@ -519,6 +533,21 @@ public class GameScene : Scene
                     new Random().NextDouble() < _miner.DoubleDropChance)
                     TryDropItem(_bats[i].TilePosition, forceChest: true);
                 _bats.RemoveAt(i);
+            }
+        }
+
+        // ── Danno continuo esplosione ↔ bat (bat che entrano nel fuoco attivo) ──
+        {
+            var activeTiles = _miner.ActiveExplosionTiles.ToHashSet();
+            if (activeTiles.Count > 0)
+            {
+                foreach (var bat in _bats)
+                {
+                    if (bat.IsDead || bat.IsInvincible) continue;
+                    if (!activeTiles.Contains(bat.VisualTilePosition)) continue;
+                    bool killed = bat.TakeDamage();
+                    if (killed) _score += bat.KillPoints;
+                }
             }
         }
 
@@ -1004,8 +1033,8 @@ public class GameScene : Scene
         var unlocked = Bat.UnlockedVariants(level);
         var specialVariants = unlocked.Where(v => v != Bat.BatVariant.Normal).ToList();
 
-        // Garantisce almeno 1 bat speciale per ondata se ci sono varianti sbloccate
-        bool guaranteedSpecialPlaced = specialVariants.Count == 0;
+        // Garantisce almeno 1 bat speciale per ondata se ci sono 2+ varianti sbloccate
+        bool guaranteedSpecialPlaced = specialVariants.Count < 2;
 
         while (_bats.Count < count && attempts < 1000)
         {

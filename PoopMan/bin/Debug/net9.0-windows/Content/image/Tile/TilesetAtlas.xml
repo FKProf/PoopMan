@@ -31,6 +31,10 @@
 		<Region Name="water0" X="192" Y="32" Width="32" Height="32"/>
 		<Region Name="water1" X="224" Y="32" Width="32" Height="32"/>
 
+		<!-- lava (same sprite as water, drawn with red tint in TileMap.Draw) -->
+		<Region Name="lava0" X="192" Y="32" Width="32" Height="32"/>
+		<Region Name="lava1" X="224" Y="32" Width="32" Height="32"/>
+
 		<!-- walls -->
 		<Region Name="wall0" X="0" Y="64" Width="32" Height="32"/>
 		<Region Name="wall1" X="32" Y="64" Width="32" Height="32"/>

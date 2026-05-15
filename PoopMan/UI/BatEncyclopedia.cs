@@ -41,9 +41,24 @@ public class BatEncyclopedia
                 "Velocita e HP crescono col livello",
                 "Nessuna abilita speciale",
             },
-            Tip: "Eliminalo con una bomba. Dai livelli alti diventa piu duro!",
+            Tip: "Usaci una bomba. Ai livelli alti diventa piu duro!",
             Tag: "BASE",
             TagColor: new Color(160, 120, 220)
+        ),
+        new BatEntry(
+            Name: "ROBUSTO",
+            UnlockInfo: "Appare dal Livello 20",
+            PrimaryColor: new Color(255, 100, 100),
+            AuraColor: Color.Transparent,
+            Abilities: new[]
+            {
+                "Piu punti vita del normale",
+                "2 HP al lv20, +1 ogni 5 lv (max 6)",
+                "Stesso comportamento AI del normale",
+            },
+            Tip: "Servono piu bombe! Tienilo lontano finche non esplode.",
+            Tag: "RESISTENTE",
+            TagColor: new Color(255, 100, 100)
         ),
         new BatEntry(
             Name: "DASHER",
@@ -53,10 +68,10 @@ public class BatEncyclopedia
             Abilities: new[]
             {
                 "Puo eseguire uno scatto improvviso",
-                "Scatto con cooldown di 3 secondi",
-                "25% di prob. di scattare ad ogni passo",
+                "Cooldown scatto: 3 secondi",
+                "25% chance di scattare ad ogni passo",
             },
-            Tip: "Piazza la bomba e allontanati: lo scatto puo sorprenderti!",
+            Tip: "Allontanati dopo la bomba: lo scatto sorprende!",
             Tag: "VELOCE",
             TagColor: new Color(80, 200, 255)
         ),
@@ -86,7 +101,7 @@ public class BatEncyclopedia
                 "Fase fantasma per 2 secondi",
                 "Cooldown 8 secondi tra le fasi",
             },
-            Tip: "Le bombe non lo bloccano in fase. Usa le esplosioni dirette!",
+            Tip: "In fase le bombe non lo bloccano. Usa esplosioni dirette!",
             Tag: "FANTASMA",
             TagColor: new Color(180, 180, 255)
         ),
@@ -101,7 +116,7 @@ public class BatEncyclopedia
                 "I mini-bat sono piu veloci ma fragili",
                 "I mini-bat non si dividono piu",
             },
-            Tip: "Elimina i mini-bat subito! Sono veloci e disorientanti.",
+            Tip: "Elimina subito i mini-bat: sono veloci!",
             Tag: "DIVISORE",
             TagColor: new Color(100, 220, 100)
         ),
@@ -112,9 +127,9 @@ public class BatEncyclopedia
             AuraColor: new Color(160, 0, 255, 130),
             Abilities: new[]
             {
-                "Entra in furia quando il Miner e vicino",
-                "Entro 3 tile: velocita x2.2 per 2 sec",
-                "Aggressione massima a breve distanza",
+                "Furia se il Miner e a 3 tile",
+                "Velocita x2.2 per 2 secondi",
+                "Aggressione massima da vicino",
             },
             Tip: "Non avvicinarti! Da vicino e letale.",
             Tag: "BERSERK",
@@ -128,11 +143,11 @@ public class BatEncyclopedia
             Abilities: new[]
             {
                 "Esplode alla morte con bomba NUKE",
-                "Esplosione area 7x7 tile (raggio 3)",
-                "Fungo atomico: shockwave + detriti radioattivi",
+                "Area 7x7 tile (raggio 3)",
+                "Fungo atomico + detriti radioattivi",
                 "Instant kill e knockback estremo",
             },
-            Tip: "Il piu pericoloso di tutti! Eliminalo a distanza massima.",
+            Tip: "Il piu pericoloso! Eliminalo a distanza massima.",
             Tag: "NUCLEARE",
             TagColor: new Color(255, 80, 60)
         ),
@@ -142,9 +157,9 @@ public class BatEncyclopedia
     private int _selected = 0;
     private float _pulse = 0f;
     private float _scrollOffset = 0f;
-    private const float CardW = 200f;
-    private const float CardH = 310f;
-    private const float CardGap = 16f;
+    private const float CardW = 320f;
+    private const float CardH = 470f;
+    private const float CardGap = 22f;
 
     // ── Dipendenze ────────────────────────────────────────────────────────
     private readonly SpriteFont _font;
@@ -349,33 +364,33 @@ public class BatEncyclopedia
         int iy = y + 10;
 
         // Sprite bat reale (animato, tintato con il colore della variante)
-        int spriteSize = 56;
+        int spriteSize = 80;
         int spriteCX = x + w / 2;
         int spriteCY = iy + spriteSize / 2;
         DrawBatSprite(sb, entry, spriteCX, spriteCY, spriteSize, pulse);
         iy += spriteSize + 4;
 
         // Badge tag variante
-        Vector2 tagSz = _font.MeasureString(entry.Tag) * 0.78f;
-        int tagW = (int)tagSz.X + 10;
+        Vector2 tagSz = _font.MeasureString(entry.Tag) * 0.95f;
+        int tagW = (int)tagSz.X + 12;
         int tagX = x + w / 2 - tagW / 2;
         DrawRect(sb, new Rectangle(tagX - 1, iy - 1, tagW + 2, (int)tagSz.Y + 4), entry.TagColor * 0.6f);
         DrawRect(sb, new Rectangle(tagX, iy, tagW, (int)tagSz.Y + 2), entry.TagColor * 0.25f);
-        sb.DrawString(_font, entry.Tag, new Vector2(tagX + 5 + 1, iy + 1 + 1), Color.Black * 0.85f, 0f, Vector2.Zero, 0.78f, SpriteEffects.None, 0f);
-        sb.DrawString(_font, entry.Tag, new Vector2(tagX + 5, iy + 1), entry.TagColor, 0f, Vector2.Zero, 0.78f, SpriteEffects.None, 0f);
-        iy += (int)tagSz.Y + 8;
+        sb.DrawString(_font, entry.Tag, new Vector2(tagX + 6 + 1, iy + 1 + 1), Color.Black * 0.85f, 0f, Vector2.Zero, 0.95f, SpriteEffects.None, 0f);
+        sb.DrawString(_font, entry.Tag, new Vector2(tagX + 6, iy + 1), entry.TagColor, 0f, Vector2.Zero, 0.95f, SpriteEffects.None, 0f);
+        iy += (int)tagSz.Y + 10;
 
         // Separatore
         DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), entry.PrimaryColor * 0.6f);
         iy += 5;
 
         // Nome
-        DrawTextCentered(sb, entry.Name, x + w / 2, iy + 8, entry.PrimaryColor * pulse, 1.0f);
-        iy += 20;
+        DrawTextCentered(sb, entry.Name, x + w / 2, iy + 10, entry.PrimaryColor * pulse, 1.15f);
+        iy += 26;
 
         // Unlock info
-        DrawTextCentered(sb, entry.UnlockInfo, x + w / 2, iy, new Color(160, 200, 160), 0.9f);
-        iy += 18;
+        DrawTextCentered(sb, entry.UnlockInfo, x + w / 2, iy, new Color(160, 200, 160), 1.05f);
+        iy += 22;
 
         DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
         iy += 6;
@@ -383,14 +398,24 @@ public class BatEncyclopedia
         // Abilità
         foreach (var ab in entry.Abilities)
         {
-            string wrapped = ab.Length > 28 ? ab[..28] + "-" : ab;
-            float sc = 0.85f;
-            Vector2 sz = _font.MeasureString(wrapped) * sc;
-            // Pallino
-            DrawRect(sb, new Rectangle(x + 10, iy + (int)(sz.Y / 2), 4, 4), entry.PrimaryColor * 0.8f);
-            sb.DrawString(_font, wrapped, new Vector2(x + 19, iy + 1), Color.Black * 0.85f, 0f, Vector2.Zero, sc, SpriteEffects.None, 0f);
-            sb.DrawString(_font, wrapped, new Vector2(x + 18, iy), Color.White, 0f, Vector2.Zero, sc, SpriteEffects.None, 0f);
-            iy += (int)sz.Y + 2;
+            float sc = 1.0f;
+            string[] abLines = WrapText(ab, w - 30, sc);
+            bool firstLine = true;
+            foreach (var abLine in abLines)
+            {
+                Vector2 sz = _font.MeasureString(abLine) * sc;
+                if (firstLine)
+                {
+                    // Pallino solo sulla prima riga
+                    DrawRect(sb, new Rectangle(x + 10, iy + (int)(sz.Y / 2), 5, 5), entry.PrimaryColor * 0.8f);
+                    firstLine = false;
+                }
+                int lineX = firstLine ? 20 : 20; // indent uniforme
+                sb.DrawString(_font, abLine, new Vector2(x + 21, iy + 1), Color.Black * 0.85f, 0f, Vector2.Zero, sc, SpriteEffects.None, 0f);
+                sb.DrawString(_font, abLine, new Vector2(x + 20, iy), Color.White, 0f, Vector2.Zero, sc, SpriteEffects.None, 0f);
+                iy += (int)sz.Y + 2;
+            }
+            iy += 1; // piccolo spazio tra le abilità
         }
 
         iy += 4;
@@ -399,12 +424,12 @@ public class BatEncyclopedia
 
         // Tip
         string tip = entry.Tip;
-        string[] tipLines = WrapText(tip, w - 20, 0.82f);
+        string[] tipLines = WrapText(tip, w - 20, 0.97f);
         foreach (var line in tipLines)
         {
-            sb.DrawString(_font, line, new Vector2(x + 11, iy + 1), Color.Black * 0.85f, 0f, Vector2.Zero, 0.82f, SpriteEffects.None, 0f);
-            sb.DrawString(_font, line, new Vector2(x + 10, iy), new Color(255, 235, 120), 0f, Vector2.Zero, 0.82f, SpriteEffects.None, 0f);
-            iy += (int)(_font.MeasureString(line).Y * 0.82f) + 1;
+            sb.DrawString(_font, line, new Vector2(x + 11, iy + 1), Color.Black * 0.85f, 0f, Vector2.Zero, 0.97f, SpriteEffects.None, 0f);
+            sb.DrawString(_font, line, new Vector2(x + 10, iy), new Color(255, 235, 120), 0f, Vector2.Zero, 0.97f, SpriteEffects.None, 0f);
+            iy += (int)(_font.MeasureString(line).Y * 0.97f) + 2;
         }
     }
 
