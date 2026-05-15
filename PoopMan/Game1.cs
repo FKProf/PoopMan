@@ -17,6 +17,7 @@ public class Game1 : Core
 
     public Game1() : base("PoopMan Miner", DefaultWidth, DefaultHeight, false)
     {
+        Graphics.GraphicsProfile = GraphicsProfile.HiDef;
         Window.AllowUserResizing = true;
         Graphics.SynchronizeWithVerticalRetrace = true;
         IsFixedTimeStep = true;

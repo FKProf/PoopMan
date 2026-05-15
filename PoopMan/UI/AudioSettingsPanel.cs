@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using PoopManLibrary;
 using PoopManLibrary.Input;
+using PoopMan.UI;
 
 namespace PoopMan.UI;
 
@@ -14,7 +15,7 @@ namespace PoopMan.UI;
 public class AudioSettingsPanel
 {
     // ── Stato ────────────────────────────────────────────────────────────
-    private int _selectedRow = 0;          // 0 = Music, 1 = SFX
+    private int _selectedRow = 0;          // 0 = Music, 1 = SFX, 2 = Mute
     private float _repeatTimer = 0f;
     private const float RepeatDelay = 0.35f;
     private const float RepeatInterval = 0.09f;
@@ -62,7 +63,7 @@ public class AudioSettingsPanel
         Point mp = mouse.Position;
 
         // ── Mouse: hover seleziona riga ───────────────────────────────────
-        for (int row = 0; row < 2; row++)
+        for (int row = 0; row < 3; row++)
         {
             int rowCy = _lastCy + row * 38;
             if (RowHitRect(_lastCx, rowCy).Contains(mp))
@@ -75,46 +76,70 @@ public class AudioSettingsPanel
 
         if (leftPressed)
         {
-            for (int row = 0; row < 2; row++)
+            for (int row = 0; row < 3; row++)
             {
                 int rowCy = _lastCy + row * 38;
-                if (BarRect(_lastCx, rowCy).Contains(mp))
+                if (row < 2)
                 {
-                    _dragging = true;
-                    _selectedRow = row;
+                    if (BarRect(_lastCx, rowCy).Contains(mp))
+                    {
+                        _dragging = true;
+                        _selectedRow = row;
+                    }
+                }
+                else
+                {
+                    // Riga mute: click su qualsiasi parte della riga
+                    if (RowHitRect(_lastCx, rowCy).Contains(mp))
+                    {
+                        _selectedRow = 2;
+                        AudioManager.IsMuted = !AudioManager.IsMuted;
+                        AudioManager.SavePreferences();
+                    }
                 }
             }
         }
         if (!leftDown) _dragging = false;
 
-        if (_dragging && leftDown)
+        if (_dragging && leftDown && _selectedRow < 2)
         {
             int rowCy = _lastCy + _selectedRow * 38;
             int bx = BarX(_lastCx);
             float vol = Math.Clamp((float)(mp.X - bx) / BarWidth, 0f, 1f);
             if (_selectedRow == 0) AudioManager.BgmVolume = vol;
             else AudioManager.SfxVolume = vol;
+            AudioManager.SavePreferences();
         }
 
         // ── Mouse: scroll wheel regola la riga selezionata ────────────────
         int scroll = mouse.ScrollWheelDelta;
-        if (scroll != 0)
+        if (scroll != 0 && _selectedRow < 2)
         {
             float delta = Math.Sign(scroll) * _step;
             if (_selectedRow == 0) AudioManager.BgmVolume = AudioManager.BgmVolume + delta;
             else AudioManager.SfxVolume = AudioManager.SfxVolume + delta;
+            AudioManager.SavePreferences();
         }
 
         // ── Tastiera: navigazione riga ────────────────────────────────────
-        if (kb.WasKeyJustPressed(Keys.Up)) _selectedRow = (_selectedRow - 1 + 2) % 2;
-        if (kb.WasKeyJustPressed(Keys.Down)) _selectedRow = (_selectedRow + 1) % 2;
+        if (kb.WasKeyJustPressed(Keys.Up)) _selectedRow = (_selectedRow - 1 + 3) % 3;
+        if (kb.WasKeyJustPressed(Keys.Down)) _selectedRow = (_selectedRow + 1) % 3;
+
+        // Toggle mute da tastiera: M ovunque, oppure ENTER/SPACE sulla riga MUTE
+        bool toggleMute = kb.WasKeyJustPressed(Keys.M) ||
+                         (_selectedRow == 2 && (kb.WasKeyJustPressed(Keys.Enter) || kb.WasKeyJustPressed(Keys.Space)));
+        if (toggleMute)
+        {
+            AudioManager.IsMuted = !AudioManager.IsMuted;
+            AudioManager.SavePreferences();
+        }
 
         // ── Tastiera: modifica volume con auto-repeat ─────────────────────
         bool leftHeld = kb.IsKeyDown(Keys.Left);
         bool rightHeld = kb.IsKeyDown(Keys.Right);
 
         bool doStep = false;
-        if (leftHeld || rightHeld)
+        if ((leftHeld || rightHeld) && _selectedRow < 2)
         {
             if (!_repeating)
             {
@@ -144,6 +169,7 @@ public class AudioSettingsPanel
             float delta = rightHeld ? _step : -_step;
             if (_selectedRow == 0) AudioManager.BgmVolume = AudioManager.BgmVolume + delta;
             else AudioManager.SfxVolume = AudioManager.SfxVolume + delta;
+            AudioManager.SavePreferences();
         }
     }
 
@@ -157,9 +183,10 @@ public class AudioSettingsPanel
 
         DrawRow(sb, cx, cy, "MUSICA", AudioManager.BgmVolume, _selectedRow == 0);
         DrawRow(sb, cx, cy + 38, "SFX", AudioManager.SfxVolume, _selectedRow == 1);
+        DrawMuteRow(sb, cx, cy + 76, _selectedRow == 2);
 
         if (showHint)
-            DrawTextCentered(sb, "< > volume    ^ v seleziona    scroll/click barra", cx, cy + 76, Color.DarkGray, 0.75f);
+            DrawTextCentered(sb, "< > volume    ^ v seleziona    M = mute    scroll/click barra", cx, cy + 114, Color.DarkGray, 0.75f);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -196,6 +223,46 @@ public class AudioSettingsPanel
         sb.DrawString(_font, pct,
             new Vector2(barX + BarWidth + 8, cy - (int)(_font.MeasureString(pct).Y * 0.5f)),
             labelColor);
+    }
+
+    private void DrawMuteRow(SpriteBatch sb, int cx, int cy, bool selected)
+    {
+        bool muted = AudioManager.IsMuted;
+        Color labelColor = selected ? Color.Yellow : Color.LightGray;
+        Color toggleBg = muted ? new Color(180, 30, 30) : new Color(30, 120, 30);
+        Color toggleFg = Color.White;
+        Color border = selected ? Color.Yellow : new Color(80, 80, 100);
+
+        int totalW = 90 + 8 + BarWidth + 8 + 40;
+        int startX = cx - totalW / 2;
+
+        // Label
+        string labelText = "MUTE:";
+        Vector2 labelSz = _font.MeasureString(labelText);
+        sb.DrawString(_font, labelText,
+            new Vector2(startX + 90 - (int)labelSz.X, cy - (int)(labelSz.Y * 0.5f)),
+            labelColor);
+
+        // Toggle pill
+        int pillX = startX + 90 + 8;
+        int pillW = 80;
+        int pillH = BarHeight + 4;
+        int pillY = cy - pillH / 2;
+        DrawRect(sb, new Rectangle(pillX - 1, pillY - 1, pillW + 2, pillH + 2), border);
+        DrawRect(sb, new Rectangle(pillX, pillY, pillW, pillH), toggleBg);
+        string status = muted ? "MUTO" : "ON";
+        DrawTextCentered(sb, status, pillX + pillW / 2, cy, toggleFg, 1.0f);
+
+        // Hint
+        if (muted)
+        {
+            string muteHint = "[AUDIO DISATTIVATO]";
+            int hx = pillX + pillW + 10;
+            Vector2 hSz = _font.MeasureString(muteHint) * 0.85f;
+            sb.DrawString(_font, muteHint,
+                new Vector2(hx, cy - (int)(hSz.Y * 0.5f)),
+                new Color(255, 80, 80) * 0.9f, 0f, Vector2.Zero, 0.85f, SpriteEffects.None, 0f);
+        }
     }
 
     private void DrawRect(SpriteBatch sb, Rectangle r, Color c)

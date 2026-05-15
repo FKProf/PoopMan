@@ -172,11 +172,15 @@ namespace PoopMan.GameObjects
         private int _extraBombSteps = 0;
         private int _fasterBombSteps = 0;
         private int _chainSteps = 0;
+        private int _explosionDamageSteps = 0;
 
         public int BonusExplosionRange => _bonusExplosionRange;
         public float ChainExplosionChance { get; private set; } = 0f;
         public bool UpgradeMultiHit { get; private set; } = false;
         public bool UpgradeCritical { get; private set; } = false;
+
+        /// <summary>Danno aggiuntivo inflitto dalle bombe normali (1 extra ogni 2 livelli upgrade).</summary>
+        public int ExplosionDamageBonus => _explosionDamageSteps / 2;
 
         // ═══════════════════════════════════════════════════════════════════
         // UPGRADE – MOVIMENTO
@@ -222,6 +226,7 @@ namespace PoopMan.GameObjects
         public int GetUpgradeLevel(UpgradeType type) => type switch
         {
             UpgradeType.IncreasedDamage => _explosionRangeSteps,
+            UpgradeType.ExplosionDamage => _explosionDamageSteps,
             UpgradeType.FasterBomb => _fasterBombSteps,
             UpgradeType.ExtraBomb => _extraBombSteps,
             UpgradeType.ChainExplosion => _chainSteps,
@@ -614,6 +619,8 @@ namespace PoopMan.GameObjects
             _bombs.Clear();
             _isInvincible = false;
             _blinkVisible = true;
+            // Non resettare _bigBombCount: i pack bomba raccolti persistono tra i livelli.
+            // Resetta solo le bombe attive sul campo.
         }
 
         private void ResetPosition(Point spawnTile)
@@ -677,6 +684,11 @@ namespace PoopMan.GameObjects
                 case UpgradeType.IncreasedDamage:
                     if (_explosionRangeSteps < UpgradeRegistry.MaxExplosionRange)
                     { _explosionRangeSteps++; _bonusExplosionRange++; }
+                    break;
+
+                case UpgradeType.ExplosionDamage:
+                    if (_explosionDamageSteps < UpgradeRegistry.MaxExplosionDamageSteps)
+                        _explosionDamageSteps++;
                     break;
 
                 case UpgradeType.FasterBomb:
@@ -743,7 +755,7 @@ namespace PoopMan.GameObjects
             if (_slowRegenActive)
             {
                 _regenLevelsAccum++;
-                if (_regenLevelsAccum >= 10)
+                if (_regenLevelsAccum >= 5)
                 {
                     _regenLevelsAccum = 0;
                     if (_lives < _maxLives) { _lives++; ExtraLifeEarned?.Invoke(this, EventArgs.Empty); }

@@ -98,13 +98,22 @@ namespace PoopMan.GameObjects
         /// <summary>Aumenta velocità e aggressione in base al livello.</summary>
         public void SetAggressionLevel(int level)
         {
-            // Livelli 0-9: bat molto più lenti e passivi; dal 10 in poi crescono normalmente
-            float easyFactor = level < 10 ? 0.35f + level * 0.035f : 1f; // 0.35 → 0.665 fino al 9, poi 1.0
+            // Curva di difficoltà più graduale:
+            //   lv 0-4  → easyFactor 0.30–0.50  (quasi-passivi, lenti)
+            //   lv 5-14 → easyFactor 0.50–0.90  (crescita lineare)
+            //   lv 15+  → easyFactor 1.0         (piena difficoltà)
+            float easyFactor;
+            if (level < 5)
+                easyFactor = 0.30f + level * 0.04f;          // 0.30 → 0.46
+            else if (level < 15)
+                easyFactor = 0.50f + (level - 5) * 0.04f;   // 0.50 → 0.86
+            else
+                easyFactor = 1.0f;
 
-            _chaseChance = Math.Min((0.25f + level * 0.05f) * easyFactor, 0.95f);
-            moveSpeed = Math.Min((75f + level * 8f) * easyFactor, 240f);
-            waitDuration = Math.Max((0.75f - level * 0.02f) * (level < 10 ? 1.4f : 1f), 0.08f);
-            _sightRange = Math.Min(3 + level, 16);
+            _chaseChance = Math.Min((0.20f + level * 0.04f) * easyFactor, 0.92f);
+            moveSpeed = Math.Min((65f + level * 7f) * easyFactor, 230f);
+            waitDuration = Math.Max((0.85f - level * 0.02f) * (level < 15 ? 1.3f : 1f), 0.08f);
+            _sightRange = Math.Min(2 + level, 16);
 
             _level = level;
 
@@ -304,13 +313,13 @@ namespace PoopMan.GameObjects
         private int _maxHitPoints = 1;
 
         /// <summary>
-        /// Infligge 1 punto danno. Restituisce true se il bat è stato ucciso.
+        /// Infligge <paramref name="damage"/> punti danno. Restituisce true se il bat è stato ucciso.
         /// Da chiamare in luogo di Kill() quando si applica danno da esplosione.
         /// </summary>
-        public bool TakeDamage()
+        public bool TakeDamage(int damage = 1)
         {
             if (isDead) return false;
-            _hitPoints--;
+            _hitPoints -= damage;
             if (_hitPoints > 0)
             {
                 // Breve invincibilità inter-hit per evitare danno multiplo nella stessa frame

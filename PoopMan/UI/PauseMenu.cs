@@ -2,6 +2,7 @@ using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using PoopMan.UI;
 using PoopManLibrary.Input;
 
 namespace PoopMan.UI;
@@ -75,9 +76,15 @@ public class PauseMenu
 
         // ── Navigazione tastiera ──────────────────────────────────────────
         if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Up))
+        {
             _selected = (_selected - 1 + Items.Length) % Items.Length;
+            AudioManager.PlayUIHover();
+        }
         if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Down))
+        {
             _selected = (_selected + 1) % Items.Length;
+            AudioManager.PlayUIHover();
+        }
 
         // ── Hover + click mouse ───────────────────────────────────────────
         int vw = gd.Viewport.Width;
@@ -95,15 +102,25 @@ public class PauseMenu
             var rect = new Rectangle(cx - BtnW / 2, btnY, BtnW, BtnH);
             if (rect.Contains(mp))
             {
-                _selected = i;
+                if (_selected != i)
+                {
+                    _selected = i;
+                    AudioManager.PlayUIHover();
+                }
                 if (mouse.WasButtonJustPressed(MouseButton.Left))
+                {
+                    AudioManager.PlayUIClick();
                     return ExecuteItem(i);
+                }
             }
         }
 
         // ── Conferma tastiera ─────────────────────────────────────────────
         if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Enter))
+        {
+            AudioManager.PlayUIClick();
             return ExecuteItem(_selected);
+        }
 
         return PauseAction.None;
     }

@@ -1206,7 +1206,7 @@ public class GameScene : Scene
 
     private void GoToNextLevel()
     {
-        _currentLevel++;
+        _currentLevel+=3;
         _doorSpawned = false;
         _droppedItems.Clear();
         _chestTiles.Clear();

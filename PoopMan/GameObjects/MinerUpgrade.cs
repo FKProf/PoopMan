@@ -11,10 +11,11 @@ public enum UpgradeType
     // ── Vita ─────────────────────────────────────────────────────────────
     ExtraLife,          // +1 vita immediata (sempre disponibile se vite < max)
     MaxLifeUp,          // aumenta il cap max delle vite
-    SlowRegen,          // recupera 1 vita ogni 10 livelli
+    SlowRegen,          // recupera 1 vita ogni 5 livelli
 
     // ── Offensivi ─────────────────────────────────────────────────────────
     IncreasedDamage,    // raggio esplosione +1 tile (max 4)
+    ExplosionDamage,    // danno esplosioni: 1 colpo extra ogni 2 livelli upgrade (max 6)
     FasterBomb,         // timer bomba -0.4 s (max 4 livelli)
     ExtraBomb,          // +1 bomba simultanea (max 3 livelli)
     ChainExplosion,     // esplosioni a catena tra nemici uccisi (max 4)
@@ -63,6 +64,7 @@ public static class UpgradeRegistry
 
     // ── Limiti massimi per upgrade cumulativi ─────────────────────────────
     public const int MaxExplosionRange = 4;
+    public const int MaxExplosionDamageSteps = 6;
     public const int MaxExtraBombs = 3;
     public const int MaxFasterBombSteps = 4;
     public const int MaxMoveSteps = 6;
@@ -82,6 +84,7 @@ public static class UpgradeRegistry
         UpgradeType.MaxLifeUp => MaxLifeSteps,
         UpgradeType.SlowRegen => 1,
         UpgradeType.IncreasedDamage => MaxExplosionRange,
+        UpgradeType.ExplosionDamage => MaxExplosionDamageSteps,
         UpgradeType.FasterBomb => MaxFasterBombSteps,
         UpgradeType.ExtraBomb => MaxExtraBombs,
         UpgradeType.ChainExplosion => MaxChainSteps,
@@ -115,7 +118,7 @@ public static class UpgradeRegistry
 
         new(UpgradeType.SlowRegen,
             "RIGENERAZIONE",
-            "Recuperi 1 vita ogni 10 livelli.",
+            "Recuperi 1 vita ogni 5 livelli.",
             Color.PaleGreen),
 
         // ── Offensivi ─────────────────────────────────────────────────────
@@ -123,6 +126,11 @@ public static class UpgradeRegistry
             "DANNO +",
             $"Raggio esplosione +1 tile.\nMax {MaxExplosionRange} lv.",
             Color.OrangeRed),
+
+        new(UpgradeType.ExplosionDamage,
+            "POTENZA",
+            $"Le bombe normali fanno piu' danni.\n+1 danno ogni 2 livelli (max {MaxExplosionDamageSteps} lv).",
+            new Color(255, 90, 0)),
 
         new(UpgradeType.FasterBomb,
             "MICCIA CORTA",
