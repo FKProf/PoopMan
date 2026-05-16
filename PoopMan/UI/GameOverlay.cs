@@ -50,12 +50,12 @@ public class GameOverlay
         DrawTextCentered(sb, $"PUNTEGGIO FINALE", cx, boxY + boxH / 5 + 62, Color.White, 1.1f);
         DrawTextCentered(sb, $"{score}", cx, boxY + boxH / 5 + 92, Color.Gold, 2.0f);
         DrawTextCentered(sb, "---------------------", cx, cy + 20, Color.DarkRed * 1.5f, 1f);
-        DrawTextCentered(sb, "R  /  ENTER  per riavviare", cx, cy + 50, Color.LightGray, 1f);
+        DrawTextCentered(sb, "R  /  ENTER  /  Click  per riavviare", cx, cy + 50, Color.LightGray, 1f);
         DrawTextCentered(sb, "ESC  per uscire", cx, cy + 76, Color.Gray * 0.9f, 0.85f);
     }
 
     // ── Flash livello ─────────────────────────────────────────────────────
-    public void DrawLevelFlash(SpriteBatch sb, int level, float elapsed, TileMap.MapTheme theme)
+    public void DrawLevelFlash(SpriteBatch sb, int level, float elapsed, TileMap.MapTheme theme, int doorBonus = 500)
     {
         int vw = sb.GraphicsDevice.Viewport.Width;
         int vh = sb.GraphicsDevice.Viewport.Height;
@@ -88,14 +88,26 @@ public class GameOverlay
         };
 
         DrawRect(sb, new Rectangle(0, 0, vw, vh), Color.Black * (alpha * 0.55f));
-        DrawTextCentered(sb, $"LIVELLO {level}", vw / 2, vh / 2 - (themeChanged ? 28 : 0),
+
+        int baseY = vh / 2 - (themeChanged ? 38 : 14);
+        DrawTextCentered(sb, $"LIVELLO {level}", vw / 2, baseY,
             Color.Cyan * alpha, 2f);
 
         if (themeChanged)
         {
-            DrawTextCentered(sb, $"TEMA: {themeName}", vw / 2, vh / 2 + 30,
+            DrawTextCentered(sb, $"TEMA: {themeName}", vw / 2, baseY + 44,
                 accent * alpha, 1.8f);
         }
+
+        // Bonus porta — più grande ogni 5 livelli
+        bool bigMilestone = level > 0 && level % 5 == 0;
+        string bonusText = bigMilestone
+            ? $"+{doorBonus} PTS  * BONUS PORTA"
+            : $"+{doorBonus} PTS";
+        Color bonusColor = bigMilestone ? Color.Gold : Color.LightGreen;
+        float bonusScale = bigMilestone ? 1.5f : 1.15f;
+        int bonusY = baseY + (themeChanged ? 88 : 44);
+        DrawTextCentered(sb, bonusText, vw / 2, bonusY, bonusColor * alpha, bonusScale);
     }
 
     // ── Flash vita extra ──────────────────────────────────────────────────
@@ -164,21 +176,21 @@ public class GameOverlay
         int cx = vw / 2;
 
         // Sfondo
-        DrawRect(sb, new Rectangle(0, 0, vw, vh), Color.Black * 0.78f);
+        DrawRect(sb, new Rectangle(0, 0, vw, vh), Color.Black * 0.82f);
 
         // Titolo
-        int titleY = (int)(vh * 0.10f);
-        DrawTextCentered(sb, "SCEGLI UN POTENZIAMENTO", cx, titleY, Color.Gold, 2.0f);
-        DrawTextCentered(sb, "< > o frecce  |  ENTER per confermare",
-            cx, titleY + 46, new Color(180, 180, 180), 1.1f);
+        int titleY = (int)(vh * 0.07f);
+        DrawTextCentered(sb, "SCEGLI UN POTENZIAMENTO", cx, titleY, Color.Gold, 2.3f);
+        DrawTextCentered(sb, "< > o frecce  |  ENTER per confermare  |  Click per selezionare",
+            cx, titleY + 52, new Color(180, 180, 180), 1.15f);
 
         // Card per ogni opzione
-        int cardW = Math.Min(320, vw / options.Count - 20);
-        int cardH = 240;   // leggermente più alta per il badge livello
-        int gap = 18;
+        int cardW = Math.Min(380, vw / options.Count - 24);
+        int cardH = 290;
+        int gap = 22;
         int totalW = options.Count * cardW + (options.Count - 1) * gap;
         int startX = cx - totalW / 2;
-        int cardY = vh / 2 - cardH / 2 + 20;
+        int cardY = (int)(vh * 0.20f);
 
         for (int i = 0; i < options.Count; i++)
         {
@@ -191,16 +203,24 @@ public class GameOverlay
             Color border = sel ? opt.Color : new Color(70, 70, 100);
             float pulseMul = sel ? (0.88f + 0.12f * pulse) : 1f;
 
+            // Outer glow per carta selezionata (3px halo)
+            if (sel)
+            {
+                Color glow = opt.Color * (0.35f * pulseMul);
+                DrawRect(sb, new Rectangle(x - 3, cardY - 3, cardW + 6, cardH + 6), glow);
+            }
+
             DrawRect(sb, new Rectangle(x, cardY, cardW, cardH), bg);
-            // Bordo 2px
-            DrawRect(sb, new Rectangle(x, cardY, cardW, 2), border);
-            DrawRect(sb, new Rectangle(x, cardY + cardH - 2, cardW, 2), border);
-            DrawRect(sb, new Rectangle(x, cardY, 2, cardH), border);
-            DrawRect(sb, new Rectangle(x + cardW - 2, cardY, 2, cardH), border);
+            // Bordo: 3px se selezionato, 2px altrimenti
+            int bw = sel ? 3 : 2;
+            DrawRect(sb, new Rectangle(x, cardY, cardW, bw), border);
+            DrawRect(sb, new Rectangle(x, cardY + cardH - bw, cardW, bw), border);
+            DrawRect(sb, new Rectangle(x, cardY, bw, cardH), border);
+            DrawRect(sb, new Rectangle(x + cardW - bw, cardY, bw, cardH), border);
 
             // Indicatore selezione
             if (sel)
-                DrawRect(sb, new Rectangle(x + 4, cardY + 4, cardW - 8, 4), opt.Color * 0.7f);
+                DrawRect(sb, new Rectangle(x + 4, cardY + 4, cardW - 8, 5), opt.Color * 0.7f);
 
             // ── Badge livello (in alto a destra della card) ───────────────
             if (getLevelInfo != null)
@@ -208,50 +228,60 @@ public class GameOverlay
                 var (cur, max) = getLevelInfo(opt.Type);
                 if (max > 1 && max != int.MaxValue)
                 {
-                    // "Lv 2/4" in un rettangolino colorato
                     string lvText = $"Lv {cur}/{max}";
                     Color badgeBg = cur > 0 ? new Color(60, 20, 90) : new Color(30, 30, 30);
                     Color badgeFg = cur > 0 ? opt.Color : new Color(130, 130, 130);
-                    int badgeW = 58, badgeH = 18;
-                    int bx = x + cardW - badgeW - 6;
-                    int by = cardY + 6;
+                    int badgeW = 70, badgeH = 22;
+                    int bx = x + cardW - badgeW - 8;
+                    int by = cardY + 8;
                     DrawRect(sb, new Rectangle(bx, by, badgeW, badgeH), badgeBg);
-                    DrawTextCentered(sb, lvText, bx + badgeW / 2, by + 1, badgeFg, 0.85f);
+                    DrawTextCentered(sb, lvText, bx + badgeW / 2, by + 2, badgeFg, 0.95f);
                 }
                 else if (cur > 0 && max == 1)
                 {
-                    // Upgrade unico già preso: mostra "ATTIVO"
-                    int badgeW = 58, badgeH = 18;
-                    int bx = x + cardW - badgeW - 6;
-                    int by = cardY + 6;
+                    int badgeW = 70, badgeH = 22;
+                    int bx = x + cardW - badgeW - 8;
+                    int by = cardY + 8;
                     DrawRect(sb, new Rectangle(bx, by, badgeW, badgeH), new Color(20, 70, 20));
-                    DrawTextCentered(sb, "ATTIVO", bx + badgeW / 2, by + 1, Color.LightGreen, 0.85f);
+                    DrawTextCentered(sb, "ATTIVO", bx + badgeW / 2, by + 2, Color.LightGreen, 0.95f);
                 }
             }
 
             // Nome upgrade
             int nameCx = x + cardW / 2;
-            DrawTextCentered(sb, opt.Name, nameCx, cardY + 38,
-                sel ? opt.Color * pulseMul : Color.White, sel ? 1.5f : 1.3f);
+            DrawTextCentered(sb, opt.Name, nameCx, cardY + 46,
+                sel ? opt.Color * pulseMul : Color.White, sel ? 1.75f : 1.5f);
 
             // Linea separatrice
-            DrawRect(sb, new Rectangle(x + 12, cardY + 66, cardW - 24, 2),
+            DrawRect(sb, new Rectangle(x + 14, cardY + 82, cardW - 28, 2),
                 new Color(80, 80, 120));
 
             // Descrizione (wrap manuale su \n)
             var lines = opt.Description.Split('\n');
-            int descY = cardY + 82;
+            int descY = cardY + 100;
             foreach (var line in lines)
             {
                 DrawTextCentered(sb, line, nameCx, descY,
-                    sel ? Color.White : new Color(170, 170, 190), 1.05f);
-                descY += 28;
+                    sel ? Color.White : new Color(185, 185, 205), 1.15f);
+                descY += 34;
+            }
+
+            // ── Riga bonus danno dinamica (solo per ExplosionDamage) ──────
+            if (opt.Type == UpgradeType.ExplosionDamage && getLevelInfo != null)
+            {
+                var (cur, max) = getLevelInfo(opt.Type);
+                int bonusDmg = cur / 2;
+                string bonusLine = bonusDmg > 0
+                    ? $"+{bonusDmg} danno attuale  (Lv {cur}/{max})"
+                    : $"Nessun bonus ancora  (Lv {cur}/{max})";
+                Color bonusColor = bonusDmg > 0 ? new Color(255, 160, 60) : new Color(160, 160, 160);
+                DrawTextCentered(sb, bonusLine, nameCx, descY + 4, bonusColor, 1.1f);
             }
 
             // Freccia in basso se selezionato
             if (sel)
-                DrawTextCentered(sb, "[ SELEZIONATO ]", nameCx, cardY + cardH - 26,
-                    opt.Color * pulseMul, 1.0f);
+                DrawTextCentered(sb, "[ SELEZIONATO ]", nameCx, cardY + cardH - 28,
+                    opt.Color * pulseMul, 1.1f);
         }
     }
 }

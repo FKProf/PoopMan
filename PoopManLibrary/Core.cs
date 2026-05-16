@@ -40,7 +40,6 @@ public class Core : Game
         Graphics.PreferredBackBufferHeight = height;
         Graphics.IsFullScreen = fullScreen;
 
-        Graphics.ApplyChanges();
         ContentManager = base.Content;
         IsMouseVisible = true;
         Window.Title = Title;
@@ -76,7 +75,9 @@ public class Core : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(Color.CornflowerBlue);
+        GraphicsDevice.SetRenderTarget(null);
+        if (p_activeScene == null)
+            GraphicsDevice.Clear(Color.CornflowerBlue);
         if (p_activeScene != null)
         {
             p_activeScene.Draw(gameTime);

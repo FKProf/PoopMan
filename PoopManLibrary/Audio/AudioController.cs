@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Media;
 using Microsoft.Xna.Framework.Content;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace PoopManLibrary.Audio;
 
@@ -19,6 +20,12 @@ public class AudioController : IDisposable
     private readonly List<Song> _bgmTracks = new();
     private int _currentBgmIndex = -1;
     private float _bgmVolume = 0.6f;
+    private bool _isMuted = false;
+
+    // ── Cartella preferenze ───────────────────────────────────────────────
+    private static readonly string _prefPath =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                     "PoopMan", "audio.cfg");
 
     // ── Suoni UI ──────────────────────────────────────────────────────────
     private SoundEffect? _uiSound;
@@ -84,7 +91,7 @@ public class AudioController : IDisposable
         var sfx = bigBomb ? _explosionBig : _explosionSmall;
         if (sfx == null) return;
         var inst = sfx.CreateInstance();
-        inst.Volume = _sfxVolume;
+        inst.Volume = _isMuted ? 0f : _sfxVolume;
         inst.Play();
     }
 
@@ -98,17 +105,87 @@ public class AudioController : IDisposable
         set
         {
             _bgmVolume = Math.Clamp(value, 0f, 1f);
-            MediaPlayer.Volume = _bgmVolume;
-            // Aggiorna anche il volume della musica del menu (UISound)
+            ApplyBgmVolume();
             if (_uiSoundInst != null)
-                _uiSoundInst.Volume = _bgmVolume * 0.7f;
+                _uiSoundInst.Volume = _isMuted ? 0f : _bgmVolume * 0.7f;
         }
     }
 
     public float SfxVolume
     {
         get => _sfxVolume;
-        set => _sfxVolume = Math.Clamp(value, 0f, 1f);
+        set
+        {
+            _sfxVolume = Math.Clamp(value, 0f, 1f);
+            // Aggiorna il volume dell'istanza UI loopata (musica titolo)
+            if (_uiSoundInst != null)
+                _uiSoundInst.Volume = _isMuted ? 0f : _bgmVolume * 0.7f;
+        }
+    }
+
+    /// <summary>
+    /// Mute totale: quando true silenzia MediaPlayer e tutte le SoundEffectInstance.
+    /// Usando IsMuted di MediaPlayer il silenzio è garantito anche su WindowsDX.
+    /// </summary>
+    public bool IsMuted
+    {
+        get => _isMuted;
+        set
+        {
+            _isMuted = value;
+            MediaPlayer.IsMuted = _isMuted;
+            if (_uiSoundInst != null)
+                _uiSoundInst.Volume = _isMuted ? 0f : _bgmVolume * 0.7f;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Helpers interni
+    // ─────────────────────────────────────────────────────────────────────
+    private void ApplyBgmVolume()
+    {
+        MediaPlayer.IsMuted = _isMuted || _bgmVolume <= 0f;
+        if (!MediaPlayer.IsMuted)
+            MediaPlayer.Volume = _bgmVolume;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Persistenza preferenze
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>Salva bgmVolume, sfxVolume e isMuted in %APPDATA%\PoopMan\audio.cfg.</summary>
+    public void SavePreferences()
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_prefPath)!);
+            File.WriteAllText(_prefPath,
+                $"{_bgmVolume:F3}\n{_sfxVolume:F3}\n{(_isMuted ? 1 : 0)}");
+        }
+        catch { /* non critico */ }
+    }
+
+    /// <summary>Carica le preferenze salvate; se il file non esiste usa i valori di default.</summary>
+    public void LoadPreferences()
+    {
+        try
+        {
+            if (!File.Exists(_prefPath)) return;
+            var lines = File.ReadAllLines(_prefPath);
+            if (lines.Length >= 1 && float.TryParse(lines[0],
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out float bgm))
+                _bgmVolume = Math.Clamp(bgm, 0f, 1f);
+            if (lines.Length >= 2 && float.TryParse(lines[1],
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out float sfx))
+                _sfxVolume = Math.Clamp(sfx, 0f, 1f);
+            if (lines.Length >= 3 && int.TryParse(lines[2], out int muted))
+                _isMuted = muted != 0;
+            // Applica subito
+            ApplyBgmVolume();
+        }
+        catch { /* file corrotto: usa default */ }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -126,8 +203,8 @@ public class AudioController : IDisposable
 
         _currentBgmIndex = index;
         MediaPlayer.IsRepeating = true;
-        MediaPlayer.Volume = _bgmVolume;
         MediaPlayer.Play(_bgmTracks[_currentBgmIndex]);
+        ApplyBgmVolume();   // imposta Volume e IsMuted dopo Play (richiesto da MonoGame)
     }
 
     /// <summary>
@@ -162,7 +239,7 @@ public class AudioController : IDisposable
         _uiSoundInst?.Stop();
         _uiSoundInst = _uiSound.CreateInstance();
         _uiSoundInst.IsLooped = loop;
-        _uiSoundInst.Volume = _bgmVolume * 0.7f;
+        _uiSoundInst.Volume = _isMuted ? 0f : _bgmVolume * 0.7f;
         _uiSoundInst.Play();
     }
 
@@ -170,6 +247,26 @@ public class AudioController : IDisposable
     {
         _uiSoundInst?.Stop();
         _uiSoundInst = null;
+    }
+
+    /// <summary>Riproduce un breve click UI (suono UI one-shot a pitch alto).</summary>
+    public void PlayClickSound()
+    {
+        if (_uiSound == null) return;
+        var inst = _uiSound.CreateInstance();
+        inst.Volume = _isMuted ? 0f : Math.Clamp(_sfxVolume * 0.65f, 0f, 1f);
+        inst.Pitch = 0.4f;
+        inst.Play();
+    }
+
+    /// <summary>Riproduce un suono di hover UI (suono UI più soft e basso).</summary>
+    public void PlayHoverSound()
+    {
+        if (_uiSound == null) return;
+        var inst = _uiSound.CreateInstance();
+        inst.Volume = _isMuted ? 0f : Math.Clamp(_sfxVolume * 0.25f, 0f, 1f);
+        inst.Pitch = -0.2f;
+        inst.Play();
     }
 
     /// <summary>
@@ -193,7 +290,7 @@ public class AudioController : IDisposable
 
         _lastPlaceBombIndex = idx;
         var inst = _placeBombSounds[idx].CreateInstance();
-        inst.Volume = _sfxVolume;
+        inst.Volume = _isMuted ? 0f : _sfxVolume;
         inst.Play();
     }
 

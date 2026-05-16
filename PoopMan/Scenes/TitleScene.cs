@@ -184,7 +184,7 @@ public class TitleScene : Scene
                 break;
         }
 
-        _sb.DrawString(_font, "v0.2", new Vector2(8, H - 18), Color.DarkGray * 0.7f);
+        _sb.DrawString(_font, "v0.1.2", new Vector2(8, H - 18), Color.DarkGray * 0.7f);
         _sb.End();
     }
 

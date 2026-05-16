@@ -55,6 +55,9 @@ public static class AudioManager
         audio.LoadUiSound(globalContent, "Audio/UISounds/UISound");
         audio.LoadPlaceBombSounds(globalContent, FartPaths);
         audio.LoadExplosionSounds(globalContent, "Audio/FxsSound/fxs", "Audio/FxsSound/fxsBig");
+
+        // Ripristina preferenze salvate (volume + mute)
+        audio.LoadPreferences();
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -116,6 +119,14 @@ public static class AudioManager
     public static void PlayExplosion(bool bigBomb)
         => AudioController.Instance.PlayExplosion(bigBomb);
 
+    /// <summary>Riproduce un click UI breve (conferma selezione nei menu).</summary>
+    public static void PlayUIClick()
+        => AudioController.Instance.PlayClickSound();
+
+    /// <summary>Riproduce un suono hover UI (cambio selezione nei menu).</summary>
+    public static void PlayUIHover()
+        => AudioController.Instance.PlayHoverSound();
+
     // ─────────────────────────────────────────────────────────────────────
     // Volume globale
     // ─────────────────────────────────────────────────────────────────────
@@ -131,4 +142,14 @@ public static class AudioManager
         get => AudioController.Instance.SfxVolume;
         set => AudioController.Instance.SfxVolume = value;
     }
+
+    public static bool IsMuted
+    {
+        get => AudioController.Instance.IsMuted;
+        set => AudioController.Instance.IsMuted = value;
+    }
+
+    /// <summary>Salva le preferenze audio correnti su disco.</summary>
+    public static void SavePreferences()
+        => AudioController.Instance.SavePreferences();
 }
