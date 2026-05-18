@@ -102,7 +102,7 @@ public class GameOverlay
         // Bonus porta — più grande ogni 5 livelli
         bool bigMilestone = level > 0 && level % 5 == 0;
         string bonusText = bigMilestone
-            ? $"+{doorBonus} PTS  ★ BONUS PORTA"
+            ? $"+{doorBonus} PTS  * BONUS PORTA"
             : $"+{doorBonus} PTS";
         Color bonusColor = bigMilestone ? Color.Gold : Color.LightGreen;
         float bonusScale = bigMilestone ? 1.5f : 1.15f;
