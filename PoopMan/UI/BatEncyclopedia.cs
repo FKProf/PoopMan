@@ -155,11 +155,16 @@ public class BatEncyclopedia
 
     // ── Stato UI ──────────────────────────────────────────────────────────
     private int _selected = 0;
+    private int _hoveredCard = -1;   // solo per highlight visivo; non muta _selected
+    private int _hoveredArrow = 0;   // -1 = sinistra, 0 = nessuna, 1 = destra
+    private bool _closeHovered = false;
     private float _pulse = 0f;
     private float _scrollOffset = 0f;
     private const float CardW = 320f;
     private const float CardH = 470f;
     private const float CardGap = 22f;
+    private const float ScrollLerpSpeed = 0.18f;
+    private const float ScrollSettledThreshold = 2f; // px: sotto questo lo scroll è "fermo"
 
     // ── Dipendenze ────────────────────────────────────────────────────────
     private readonly SpriteFont _font;
@@ -217,6 +222,9 @@ public class BatEncyclopedia
     public void Open()
     {
         _selected = 0;
+        _hoveredCard = -1;
+        _hoveredArrow = 0;
+        _closeHovered = false;
         _pulse = 0f;
         _scrollOffset = 0f;
         _animTimer = 0f;
@@ -235,52 +243,82 @@ public class BatEncyclopedia
         if (_animTimer >= AnimSpeed) { _animTimer = 0f; _animFrame++; }
 
         int vw = gd.Viewport.Width;
-
-        if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Left) ||
-            kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.A))
-            _selected = Math.Max(0, _selected - 1);
-
-        if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Right) ||
-            kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.D))
-            _selected = Math.Min(Entries.Length - 1, _selected + 1);
-
-        // Scroll automatico verso la card selezionata
-        float targetScroll = _selected * (CardW + CardGap) - vw / 2f + CardW / 2f;
-        _scrollOffset += (targetScroll - _scrollOffset) * 0.15f;
-
-        // Click mouse su card
         int vh = gd.Viewport.Height;
-        int cardY = vh / 2 - (int)CardH / 2 + 20;
+
+        // ── Navigazione tastiera ──────────────────────────────────────────
+        bool keyLeft = kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Left) ||
+                       kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.A);
+        bool keyRight = kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Right) ||
+                        kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.D);
+        if (keyLeft)  _selected = Math.Max(0, _selected - 1);
+        if (keyRight) _selected = Math.Min(Entries.Length - 1, _selected + 1);
+
+        // ── Scroll fluido verso la card selezionata ───────────────────────
+        float targetScroll = _selected * (CardW + CardGap) - vw / 2f + CardW / 2f;
+        float delta = targetScroll - _scrollOffset;
+        _scrollOffset += delta * ScrollLerpSpeed;
+        // Snap finale per evitare drift infinitesimale
+        if (Math.Abs(delta) < 0.5f) _scrollOffset = targetScroll;
+
+        // Lo scroll è considerato "fermo" quando la differenza è piccola:
+        // solo in questo stato il mouse può cambiare la selezione tramite le card.
+        bool scrollSettled = Math.Abs(delta) < ScrollSettledThreshold;
+
+        // ── Hit-test geometria (uguale a Draw per coerenza) ──────────────
+        float totalW = Entries.Length * (CardW + CardGap) - CardGap;
+        float startX = vw / 2f - totalW / 2f - _scrollOffset;
+        int cardY = vh / 2 - (int)CardH / 2 + 14;
+
         Point mp = mouse.Position;
+
+        // Reset hover state ogni frame prima di ricalcolare
+        _hoveredCard = -1;
+        _hoveredArrow = 0;
+        _closeHovered = false;
+
+        // Hover card (non muta _selected — solo feedback visivo)
         for (int i = 0; i < Entries.Length; i++)
         {
-            float cx = -_scrollOffset + i * (CardW + CardGap) + vw / 2f - (Entries.Length * (CardW + CardGap) - CardGap) / 2f;
+            float cx = startX + i * (CardW + CardGap);
+            if (cx + CardW < 0 || cx > vw) continue;
             var r = new Rectangle((int)cx, cardY, (int)CardW, (int)CardH);
             if (r.Contains(mp))
             {
-                _selected = i;
-                if (mouse.WasButtonJustPressed(MouseButton.Left))
-                    _selected = i;
+                _hoveredCard = i;
+                break; // un solo hover per frame
             }
         }
 
-        // Pulsante Chiudi
-        int closeBtnX = vw / 2 - 80;
-        int closeBtnY = vh - 52;
-        var closeRect = new Rectangle(closeBtnX, closeBtnY, 160, 34);
-        if (closeRect.Contains(mp) && mouse.WasButtonJustPressed(MouseButton.Left))
-            return true;
+        // Hover frecce
+        var leftArrowRect  = new Rectangle(8, vh / 2 - 20, 40, 40);
+        var rightArrowRect = new Rectangle(vw - 48, vh / 2 - 20, 40, 40);
+        if (_selected > 0 && leftArrowRect.Contains(mp))  _hoveredArrow = -1;
+        if (_selected < Entries.Length - 1 && rightArrowRect.Contains(mp)) _hoveredArrow = 1;
 
-        // Frecce navigazione mouse
+        // Hover pulsante chiudi
+        var closeRect = new Rectangle(vw / 2 - 80, vh - 52, 160, 34);
+        _closeHovered = closeRect.Contains(mp);
+
+        // ── Click mouse ───────────────────────────────────────────────────
         if (mouse.WasButtonJustPressed(MouseButton.Left))
         {
-            var leftArrow = new Rectangle(8, vh / 2 - 20, 40, 40);
-            var rightArrow = new Rectangle(vw - 48, vh / 2 - 20, 40, 40);
-            if (leftArrow.Contains(mp))
-                _selected = Math.Max(0, _selected - 1);
-            if (rightArrow.Contains(mp))
-                _selected = Math.Min(Entries.Length - 1, _selected + 1);
+            // Priorità 1: pulsante chiudi
+            if (_closeHovered) return true;
+
+            // Priorità 2: frecce navigazione
+            if (_hoveredArrow == -1) { _selected = Math.Max(0, _selected - 1); }
+            else if (_hoveredArrow == 1) { _selected = Math.Min(Entries.Length - 1, _selected + 1); }
+            // Priorità 3: click su card — solo se lo scroll è fermo (evita click accidentali durante l'animazione)
+            else if (scrollSettled && _hoveredCard >= 0)
+            {
+                _selected = _hoveredCard;
+            }
         }
+
+        // Scroll wheel per cambiare card rapidamente
+        int scroll = mouse.ScrollWheelDelta;
+        if (scroll < 0) _selected = Math.Min(Entries.Length - 1, _selected + 1);
+        else if (scroll > 0) _selected = Math.Max(0, _selected - 1);
 
         if (kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Enter) ||
             kb.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.Escape))
@@ -312,40 +350,53 @@ public class BatEncyclopedia
         for (int i = 0; i < Entries.Length; i++)
         {
             float cardX = startX + i * (CardW + CardGap);
-            if (cardX + CardW < 0 || cardX > vw) continue; // cull fuori schermo
-            DrawCard(sb, Entries[i], (int)cardX, cardY, i == _selected);
+            if (cardX + CardW < 0 || cardX > vw) continue;
+            // Una card è "evidenziata" solo se è sia selezionata sia hoveredCard
+            bool isSelected = i == _selected;
+            bool isHovered  = i == _hoveredCard && !isSelected;
+            DrawCard(sb, Entries[i], (int)cardX, cardY, isSelected, isHovered);
         }
 
         // Frecce navigazione (bordi schermo)
         if (_selected > 0)
         {
-            DrawRect(sb, new Rectangle(8, vh / 2 - 20, 40, 40), new Color(30, 20, 70, 200));
-            DrawRect(sb, new Rectangle(8, vh / 2 - 20, 40, 40), new Color(80, 70, 120, 120));
-            DrawTextCentered(sb, "<", 28, vh / 2, new Color(255, 220, 80), 2.0f);
+            Color arrowBg = _hoveredArrow == -1 ? new Color(80, 60, 160, 230) : new Color(30, 20, 70, 200);
+            Color arrowFg = _hoveredArrow == -1 ? Color.White : new Color(255, 220, 80);
+            DrawRect(sb, new Rectangle(8, vh / 2 - 20, 40, 40), arrowBg);
+            DrawRect(sb, new Rectangle(9, vh / 2 - 19, 38, 38), new Color(80, 70, 120, 100));
+            DrawTextCentered(sb, "<", 28, vh / 2, arrowFg, 2.0f);
         }
         if (_selected < Entries.Length - 1)
         {
-            DrawRect(sb, new Rectangle(vw - 48, vh / 2 - 20, 40, 40), new Color(30, 20, 70, 200));
-            DrawRect(sb, new Rectangle(vw - 48, vh / 2 - 20, 40, 40), new Color(80, 70, 120, 120));
-            DrawTextCentered(sb, ">", vw - 28, vh / 2, new Color(255, 220, 80), 2.0f);
+            Color arrowBg = _hoveredArrow == 1 ? new Color(80, 60, 160, 230) : new Color(30, 20, 70, 200);
+            Color arrowFg = _hoveredArrow == 1 ? Color.White : new Color(255, 220, 80);
+            DrawRect(sb, new Rectangle(vw - 48, vh / 2 - 20, 40, 40), arrowBg);
+            DrawRect(sb, new Rectangle(vw - 47, vh / 2 - 19, 38, 38), new Color(80, 70, 120, 100));
+            DrawTextCentered(sb, ">", vw - 28, vh / 2, arrowFg, 2.0f);
         }
 
         // Hint tastiera
-        DrawTextCentered(sb, "< > / A D : sfoglia    ESC: chiudi", cx, vh - 68, Color.DimGray, 0.95f);
+        DrawTextCentered(sb, "< > / A D : sfoglia    scroll: scorre    ESC: chiudi", cx, vh - 68, Color.DimGray, 0.95f);
 
         // Pulsante Chiudi
         int closeBtnX = cx - 80;
         int closeBtnY = vh - 52;
-        DrawRect(sb, new Rectangle(closeBtnX - 1, closeBtnY - 1, 162, 36), Color.Yellow);
-        DrawRect(sb, new Rectangle(closeBtnX, closeBtnY, 160, 34), new Color(30, 20, 70));
-        DrawTextCentered(sb, "CHIUDI", cx, closeBtnY + 17, Color.Yellow, 1.2f);
+        Color closeBorder = _closeHovered ? Color.White : Color.Yellow;
+        Color closeBg     = _closeHovered ? new Color(60, 40, 120) : new Color(30, 20, 70);
+        DrawRect(sb, new Rectangle(closeBtnX - 1, closeBtnY - 1, 162, 36), closeBorder);
+        DrawRect(sb, new Rectangle(closeBtnX, closeBtnY, 160, 34), closeBg);
+        DrawTextCentered(sb, "CHIUDI", cx, closeBtnY + 17, closeBorder, 1.2f);
     }
 
-    private void DrawCard(SpriteBatch sb, BatEntry entry, int x, int y, bool selected)
+    private void DrawCard(SpriteBatch sb, BatEntry entry, int x, int y, bool selected, bool hovered)
     {
         float pulse = selected ? 0.85f + 0.15f * (float)Math.Sin(_pulse) : 1f;
-        Color borderColor = selected ? Color.Yellow : new Color(70, 60, 100);
-        Color bgColor = selected ? new Color(30, 20, 70, 245) : new Color(15, 12, 35, 220);
+        Color borderColor = selected ? Color.Yellow
+                          : hovered  ? new Color(160, 140, 220)
+                                     : new Color(70, 60, 100);
+        Color bgColor = selected ? new Color(30, 20, 70, 245)
+                      : hovered  ? new Color(22, 16, 52, 235)
+                                 : new Color(15, 12, 35, 220);
         int w = (int)CardW;
         int h = (int)CardH;
 

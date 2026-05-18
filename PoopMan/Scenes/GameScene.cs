@@ -23,6 +23,7 @@ public class GameScene : Scene
     private Texture2D _pixel;
     private GameHud _hud;
     private GameOverlay _overlay;
+    private VisualEffectSystem _vfx;
 
     // ── Mappa e personaggi ───────────────────────────────────────────────
     private TileAtlas _atlas;
@@ -162,6 +163,12 @@ public class GameScene : Scene
 
         SpawnBats(_currentLevel);
         InitChests();
+
+        // ── VFX system ────────────────────────────────────────────────────
+        _vfx = new VisualEffectSystem(Core.GraphicsDevice);
+        _vfx.LoadContent(Content,
+            TileMap.Cols * TileMap.TileSize,
+            TileMap.Rows * TileMap.TileSize);
 
         // ── Audio: avvia BGM per il tema corrente ─────────────────────────
         AudioManager.Load(Content);                      // no-op se già caricato
@@ -566,17 +573,27 @@ public class GameScene : Scene
             p.Velocity *= 0.88f; // attrito
             _batExplosionParticles[i] = p;
         }
+
+        // ── VFX update ───────────────────────────────────────────────────
+        var mapTransform = Game1.GetMapScaleMatrix(GameHud.ScreenHeight(Core.GraphicsDevice));
+        _vfx?.Update(gameTime, _map.Theme,
+            TileMap.Cols * TileMap.TileSize,
+            TileMap.Rows * TileMap.TileSize,
+            () => System.Linq.Enumerable.Empty<(Vector2, Color, float)>());
     }
 
     // ─────────────────────────────────────────────────────────────────────
     public override void Draw(GameTime gameTime)
     {
-        // ── Sfondo schermo (colore dipende dal tema) ─────────────────────
-        Core.GraphicsDevice.Clear(_map.BackgroundColor);
-
-        // ── Mappa + entità (scalata per adattarsi allo schermo) ──────────
+        // ── Mappa + entità → cattura nel render target VFX ───────────────
         int hudScreenH = GameHud.ScreenHeight(Core.GraphicsDevice);
-        var transform = Game1.GetMapScaleMatrix(hudScreenH);
+        var transform  = Game1.GetMapScaleMatrix(hudScreenH);
+
+        if (_vfx != null)
+            _vfx.BeginWorldCapture(_map.BackgroundColor);
+        else
+            Core.GraphicsDevice.Clear(_map.BackgroundColor);
+
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: transform);
 
         _map.Draw(_spriteBatch);
@@ -633,6 +650,16 @@ public class GameScene : Scene
         }
 
         _spriteBatch.End();
+
+        // ── Post-processing (compositing al back buffer con effetti) ─────
+        if (_vfx != null)
+            _vfx.ApplyPostProcess(transform);
+        else
+        {
+            Core.GraphicsDevice.Clear(_map.BackgroundColor);
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: transform);
+            _spriteBatch.End();
+        }
 
         // ── Overlay (pausa / game over / flash livello / upgrade) ────────
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);

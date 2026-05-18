@@ -1,41 +1,59 @@
 // colorgrade.fx — Per-biome colour grading for PoopMan
-// Applies: tint overlay, contrast, saturation, vignette.
+// Applies: unsharp-mask sharpening, filmic S-curve, saturation, tint, vignette.
 
 sampler2D SourceSampler : register(s0);
 
-float3 Tint; // per-biome colour tint  (0..1 each channel)
-float TintStrength; // how strongly tint mixes (0=none, 1=full)
-float Contrast; // contrast multiplier      (1=neutral)
-float Saturation; // saturation scalar        (1=neutral)
-float Brightness; // brightness add           (0=neutral)
-float VignetteRadius; // vignette inner radius   (0..1, screen UV space)
-float VignetteStrength; // vignette darkening      (0=none, 1=full black edge)
+float3  Tint;            // per-biome colour tint        (0..1 each channel)
+float   TintStrength;    // tint blend factor             (0=none, 1=full)
+float   Contrast;        // contrast multiplier           (1=neutral)
+float   Saturation;      // saturation scalar             (1=neutral)
+float   Brightness;      // brightness offset             (0=neutral)
+float   VignetteRadius;  // vignette inner radius (UV)   (0..1)
+float   VignetteStrength;// vignette darkening amount    (0=none, 1=full black)
+float   Sharpness;       // unsharp-mask strength         (0=off, 1=strong)
+float2  TexelSize;       // 1/texWidth, 1/texHeight
 
-float2 TexelSize; // unused but kept for pipeline uniformity
-
+// ── Utility ──────────────────────────────────────────────────────────────────
 float Luminance(float3 c)
 {
     return dot(c, float3(0.299, 0.587, 0.114));
 }
 
+// Filmic S-curve: lifts blacks slightly, rolls off highlights
+float3 FilmicCurve(float3 x)
+{
+    // Simplified ACES-inspired tone curve (cheap, no matrices)
+    float3 a = x * (x + 0.0245786) - 0.000090537;
+    float3 b = x * (0.983729 * x + 0.4329510) + 0.238081;
+    return saturate(a / b);
+}
+
 float4 PS_ColorGrade(float2 uv : TEXCOORD0) : COLOR0
 {
-    float4 col = tex2D(SourceSampler, uv);
+    // ── Unsharp-mask sharpening (5-tap cross, runs in texture space) ─────
+    float4 col   = tex2D(SourceSampler, uv);
+    float4 blur  = (tex2D(SourceSampler, uv + float2( TexelSize.x, 0))
+                  + tex2D(SourceSampler, uv + float2(-TexelSize.x, 0))
+                  + tex2D(SourceSampler, uv + float2(0,  TexelSize.y))
+                  + tex2D(SourceSampler, uv + float2(0, -TexelSize.y))) * 0.25;
+    col.rgb = saturate(col.rgb + (col.rgb - blur.rgb) * Sharpness);
 
-    // Saturation
+    // ── Saturation ───────────────────────────────────────────────────────
     float lum = Luminance(col.rgb);
     col.rgb = lerp(float3(lum, lum, lum), col.rgb, Saturation);
 
-    // Contrast  (pivot at 0.5)
+    // ── Filmic S-curve (replaces raw contrast) ───────────────────────────
+    // Scale contrast around pivot 0.5, then bake filmic roll-off
     col.rgb = (col.rgb - 0.5) * Contrast + 0.5 + Brightness;
+    col.rgb = FilmicCurve(saturate(col.rgb));
 
-    // Tint overlay
+    // ── Tint overlay ─────────────────────────────────────────────────────
     col.rgb = lerp(col.rgb, col.rgb * Tint, TintStrength);
 
-    // Vignette  (radial darkening from centre)
-    float2 centred = (uv - 0.5) * 2.0; // -1..1
-    float dist = length(centred);
-    float vign = smoothstep(VignetteRadius, 1.0, dist);
+    // ── Vignette (smooth cubic, pure black at corners) ───────────────────
+    float2 centred = (uv - 0.5) * 2.0;          // maps [0,1] → [-1,1]
+    float dist = dot(centred, centred);           // squared length (cheaper)
+    float vign = smoothstep(VignetteRadius * VignetteRadius, 1.2, dist);
     col.rgb *= (1.0 - vign * VignetteStrength);
 
     return float4(saturate(col.rgb), col.a);
@@ -53,6 +71,6 @@ technique ColorGrade
     pass P0
     {
         VertexShader = compile vs_4_0_level_9_1 VS_Pass();
-        PixelShader = compile ps_4_0_level_9_1 PS_ColorGrade();
+        PixelShader  = compile ps_4_0_level_9_1 PS_ColorGrade();
     }
 }

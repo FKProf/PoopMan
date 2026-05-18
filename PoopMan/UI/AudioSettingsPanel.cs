@@ -32,8 +32,9 @@ public class AudioSettingsPanel
     private readonly Texture2D _pixel;
 
     // ── Dimensioni barra ─────────────────────────────────────────────────
-    private const int BarWidth = 200;
-    private const int BarHeight = 12;
+    private const int BarWidth = 230;
+    private const int BarHeight = 14;
+    private const int RowSpacing = 52;
 
     public AudioSettingsPanel(SpriteFont font, Texture2D pixel)
     {
@@ -44,11 +45,11 @@ public class AudioSettingsPanel
     // ─────────────────────────────────────────────────────────────────────
     // Helpers geometrici (devono coincidere con DrawRow)
     // ─────────────────────────────────────────────────────────────────────
-    private int BarX(int cx) => cx - (90 + 8 + BarWidth + 8 + 40) / 2 + 90 + 8;
+    private int BarX(int cx) => cx - (100 + 10 + BarWidth + 10 + 48) / 2 + 100 + 10;
     private int BarY(int cy) => cy - BarHeight / 2;
     private Rectangle RowHitRect(int cx, int cy) =>
-        new Rectangle(cx - (90 + 8 + BarWidth + 8 + 40) / 2, cy - 14,
-                      90 + 8 + BarWidth + 8 + 40, 28);
+        new Rectangle(cx - (100 + 10 + BarWidth + 10 + 48) / 2, cy - 18,
+                      100 + 10 + BarWidth + 10 + 48, 36);
     private Rectangle BarRect(int cx, int cy) =>
         new Rectangle(BarX(cx), BarY(cy), BarWidth, BarHeight);
 
@@ -65,7 +66,7 @@ public class AudioSettingsPanel
         // ── Mouse: hover seleziona riga ───────────────────────────────────
         for (int row = 0; row < 3; row++)
         {
-            int rowCy = _lastCy + row * 38;
+            int rowCy = _lastCy + row * RowSpacing;
             if (RowHitRect(_lastCx, rowCy).Contains(mp))
                 _selectedRow = row;
         }
@@ -78,7 +79,7 @@ public class AudioSettingsPanel
         {
             for (int row = 0; row < 3; row++)
             {
-                int rowCy = _lastCy + row * 38;
+                int rowCy = _lastCy + row * RowSpacing;
                 if (row < 2)
                 {
                     if (BarRect(_lastCx, rowCy).Contains(mp))
@@ -103,7 +104,7 @@ public class AudioSettingsPanel
 
         if (_dragging && leftDown && _selectedRow < 2)
         {
-            int rowCy = _lastCy + _selectedRow * 38;
+            int rowCy = _lastCy + _selectedRow * RowSpacing;
             int bx = BarX(_lastCx);
             float vol = Math.Clamp((float)(mp.X - bx) / BarWidth, 0f, 1f);
             if (_selectedRow == 0) AudioManager.BgmVolume = vol;
@@ -182,11 +183,11 @@ public class AudioSettingsPanel
         _lastCy = cy;
 
         DrawRow(sb, cx, cy, "MUSICA", AudioManager.BgmVolume, _selectedRow == 0);
-        DrawRow(sb, cx, cy + 38, "SFX", AudioManager.SfxVolume, _selectedRow == 1);
-        DrawMuteRow(sb, cx, cy + 76, _selectedRow == 2);
+        DrawRow(sb, cx, cy + RowSpacing, "SFX", AudioManager.SfxVolume, _selectedRow == 1);
+        DrawMuteRow(sb, cx, cy + RowSpacing * 2, _selectedRow == 2);
 
         if (showHint)
-            DrawTextCentered(sb, "< > volume    ^ v seleziona    M = mute    scroll/click barra", cx, cy + 114, Color.DarkGray, 0.75f);
+            DrawTextCentered(sb, "< > volume    ^ v seleziona    M = mute    scroll/click barra", cx, cy + RowSpacing * 2 + 36, Color.DarkGray, 0.75f);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -197,18 +198,18 @@ public class AudioSettingsPanel
         Color barFill = selected ? new Color(80, 200, 255) : new Color(60, 130, 180);
         Color border = selected ? Color.Yellow : new Color(80, 80, 100);
 
-        int totalW = 90 + 8 + BarWidth + 8 + 40;   // label + gap + bar + gap + percent
+        int totalW = 100 + 10 + BarWidth + 10 + 48;   // label + gap + bar + gap + percent
         int startX = cx - totalW / 2;
 
         // Label
         string labelText = label + ":";
         Vector2 labelSz = _font.MeasureString(labelText);
         sb.DrawString(_font, labelText,
-            new Vector2(startX + 90 - (int)labelSz.X, cy - (int)(labelSz.Y * 0.5f)),
+            new Vector2(startX + 100 - (int)labelSz.X, cy - (int)(labelSz.Y * 0.5f)),
             labelColor);
 
         // Barra sfondo
-        int barX = startX + 90 + 8;
+        int barX = startX + 100 + 10;
         int barY = cy - BarHeight / 2;
         DrawRect(sb, new Rectangle(barX - 1, barY - 1, BarWidth + 2, BarHeight + 2), border);
         DrawRect(sb, new Rectangle(barX, barY, BarWidth, BarHeight), barBg);
@@ -221,7 +222,7 @@ public class AudioSettingsPanel
         // Percentuale
         string pct = $"{(int)(volume * 100)}%";
         sb.DrawString(_font, pct,
-            new Vector2(barX + BarWidth + 8, cy - (int)(_font.MeasureString(pct).Y * 0.5f)),
+            new Vector2(barX + BarWidth + 10, cy - (int)(_font.MeasureString(pct).Y * 0.5f)),
             labelColor);
     }
 
@@ -233,19 +234,19 @@ public class AudioSettingsPanel
         Color toggleFg = Color.White;
         Color border = selected ? Color.Yellow : new Color(80, 80, 100);
 
-        int totalW = 90 + 8 + BarWidth + 8 + 40;
+        int totalW = 100 + 10 + BarWidth + 10 + 48;
         int startX = cx - totalW / 2;
 
         // Label
         string labelText = "MUTE:";
         Vector2 labelSz = _font.MeasureString(labelText);
         sb.DrawString(_font, labelText,
-            new Vector2(startX + 90 - (int)labelSz.X, cy - (int)(labelSz.Y * 0.5f)),
+            new Vector2(startX + 100 - (int)labelSz.X, cy - (int)(labelSz.Y * 0.5f)),
             labelColor);
 
         // Toggle pill
-        int pillX = startX + 90 + 8;
-        int pillW = 80;
+        int pillX = startX + 100 + 10;
+        int pillW = 88;
         int pillH = BarHeight + 4;
         int pillY = cy - pillH / 2;
         DrawRect(sb, new Rectangle(pillX - 1, pillY - 1, pillW + 2, pillH + 2), border);

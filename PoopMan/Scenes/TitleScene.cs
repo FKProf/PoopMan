@@ -184,7 +184,7 @@ public class TitleScene : Scene
                 break;
         }
 
-        _sb.DrawString(_font, "v0.1.2", new Vector2(8, H - 18), Color.DarkGray * 0.7f);
+        _sb.DrawString(_font, "v0.1.4", new Vector2(8, H - 18), Color.DarkGray * 0.7f);
         _sb.End();
     }
 
@@ -233,18 +233,31 @@ public class TitleScene : Scene
     // ─────────────────────────────────────────────────────────────────
     private void DrawAudioOverlay(int W, int H)
     {
-        int boxW = 440;
-        int boxH = 175;
-        int boxX = W / 2 - boxW / 2;
+        const int rowSpacing = 52;
+        const int headerH = 58;   // titolo + separatore
+        const int footerH = 62;   // hint controls + hint ESC + padding
+        const int rowsH = 3 * rowSpacing;
+        int boxW = 520;
+        int boxH = headerH + rowsH + footerH;
+        int cx = W / 2;
+        int boxX = cx - boxW / 2;
         int boxY = H / 2 - boxH / 2;
 
         _sb.Draw(_pixel, new Rectangle(0, 0, W, H), Color.Black * 0.55f);
         _sb.Draw(_pixel, new Rectangle(boxX, boxY, boxW, boxH), new Color(18, 18, 38, 240));
         DrawBorder(boxX, boxY, boxW, boxH, Color.CornflowerBlue);
 
-        DrawTextCentered("IMPOSTAZIONI AUDIO", W / 2, boxY + 22, Color.CornflowerBlue, 1.0f);
-        _audioPanel.Draw(_sb, W / 2, boxY + 80);
-        DrawTextCentered("ESC: indietro", W / 2, boxY + boxH - 18, Color.DarkGray, 0.75f);
+        DrawTextCentered("IMPOSTAZIONI AUDIO", cx, boxY + 26, Color.CornflowerBlue, 1.3f);
+        _sb.Draw(_pixel, new Rectangle(boxX + 16, boxY + 46, boxW - 32, 2), new Color(40, 80, 160));
+
+        int firstRowY = boxY + headerH + rowSpacing / 2;
+        _audioPanel.Draw(_sb, cx, firstRowY, showHint: false);
+
+        int hintControlY = boxY + headerH + rowsH + 18;
+        int hintEscY     = boxY + headerH + rowsH + 42;
+        DrawTextCentered("< > volume    ^ v seleziona    M = mute    scroll/click barra",
+            cx, hintControlY, new Color(100, 100, 130), 0.90f);
+        DrawTextCentered("ESC: indietro", cx, hintEscY, Color.DarkGray, 0.95f);
     }
 
     // ─────────────────────────────────────────────────────────────────

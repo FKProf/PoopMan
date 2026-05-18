@@ -210,20 +210,30 @@ public class PauseMenu
 
     private void DrawAudioPanel(SpriteBatch sb, int cx, int midY)
     {
-        int boxW = 460;
-        int boxH = 190;
+        // 3 righe × 52 px + titolo (54) + separatore + hint controls (28) + hint esc (28) + padding
+        const int rowSpacing = 52;
+        const int headerH = 58;   // titolo + separatore
+        const int footerH = 62;   // hint controls + hint ESC + padding basso
+        const int rowsH = 3 * rowSpacing;
+        int boxW = 520;
+        int boxH = headerH + rowsH + footerH;
         int boxX = cx - boxW / 2;
         int boxY = midY - boxH / 2;
 
         DrawRect(sb, new Rectangle(boxX, boxY, boxW, boxH), new Color(15, 15, 35, 245));
         DrawBorderRect(sb, boxX, boxY, boxW, boxH, Color.CornflowerBlue);
-        DrawTextCentered(sb, "IMPOSTAZIONI AUDIO", cx, boxY + 22, Color.CornflowerBlue, 1.3f);
-        DrawRect(sb, new Rectangle(boxX + 16, boxY + 40, boxW - 32, 2), new Color(40, 80, 160));
+        DrawTextCentered(sb, "IMPOSTAZIONI AUDIO", cx, boxY + 26, Color.CornflowerBlue, 1.3f);
+        DrawRect(sb, new Rectangle(boxX + 16, boxY + 46, boxW - 32, 2), new Color(40, 80, 160));
 
-        _audioPanel.Draw(sb, cx, boxY + 85, showHint: false);
+        // Prima riga centrata verticalmente nell'area righe
+        int firstRowY = boxY + headerH + rowSpacing / 2;
+        _audioPanel.Draw(sb, cx, firstRowY, showHint: false);
 
-        DrawTextCentered(sb, "< > volume    ^ v seleziona", cx, boxY + 138, new Color(100, 100, 130), 1.0f);
-        DrawTextCentered(sb, "ESC: indietro", cx, boxY + boxH - 16, Color.DarkGray, 0.95f);
+        int hintControlY = boxY + headerH + rowsH + 18;
+        int hintEscY     = boxY + headerH + rowsH + 42;
+        DrawTextCentered(sb, "< > volume    ^ v seleziona    M = mute    scroll/click barra",
+            cx, hintControlY, new Color(100, 100, 130), 0.90f);
+        DrawTextCentered(sb, "ESC: indietro", cx, hintEscY, Color.DarkGray, 0.95f);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────

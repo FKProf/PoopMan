@@ -1,40 +1,40 @@
-// shockwave.fx — Radial shockwave distortion for explosions in PoopMan
-// Apply as a full-screen post-process pass right after world draw.
-// Multiple shockwaves: caller renders this pass once per active wave
-// (or use a single pass with 4 wave slots via arrays).
+// shockwave.fx — Radial shockwave distortion ring for explosions in PoopMan
+// Full-screen additive post-process; render once per active wave.
+// Distorts pixel UVs outward along the expanding ring edge.
 
 sampler2D SourceSampler : register(s0);
 
-// Shockwave origin in normalised screen UV [0..1]
-float2 WaveOrigin;
-// Current radius of the ring in UV space (0=just exploded, grows to ~1)
-float WaveRadius;
-// Thickness of the distortion ring in UV units
-float WaveThickness;
-// Distortion magnitude
-float WaveStrength;
-// Life fraction [0..1]: 1=fresh, 0=faded
-float WaveLife;
-
-float2 TexelSize;
+float2  WaveOrigin;    // explosion centre in normalised screen UV [0..1]
+float   WaveRadius;    // current outer radius of ring in UV space (grows 0→~1)
+float   WaveThickness; // UV width of the distortion band
+float   WaveStrength;  // distortion magnitude in UV units
+float   WaveLife;      // [0..1]: 1=fresh explosion, 0=fully faded
+float3  RingTint;      // additive flash colour (e.g. white, orange, green)
+float2  TexelSize;     // 1/width, 1/height (aspect correction)
 
 float4 PS_Shockwave(float2 uv : TEXCOORD0) : COLOR0
 {
-    float2 delta = uv - WaveOrigin;
-    float dist = length(delta);
-    // Signed distance from the ring edge
+    // Correct for non-square aspect ratio so ring stays circular
+    float2 aspect = float2(TexelSize.y / TexelSize.x, 1.0); // x stretched
+    float2 delta  = (uv - WaveOrigin) * aspect;
+    float  dist   = length(delta);
+
+    // Signed distance from the ring's outer edge → soft bell shape over the band
     float ring = dist - WaveRadius;
-    // Soft mask inside the ring band
-    float mask = 1.0 - saturate(abs(ring) / WaveThickness);
-    mask *= mask; // sharpen the bell
-    mask *= WaveLife; // fade over time
-    // Outward push along the delta direction
-    float2 dir = (dist > 0.001) ? normalize(delta) : float2(0, 1);
-    float2 distUV = uv + dir * mask * WaveStrength;
-    float4 col = tex2D(SourceSampler, distUV);
-    // Slight brightness flash at the ring
-    col.rgb += mask * 0.12;
-    return float4(saturate(col.rgb), col.a);
+    float mask = saturate(1.0 - abs(ring) / max(WaveThickness, 0.001));
+    mask = mask * mask * mask;   // cubic falloff: sharper at centre, soft edges
+    mask *= WaveLife;             // fade over lifetime
+
+    // Push pixels outward along the ring normal
+    float2 dir    = (dist > 0.001) ? normalize(delta) : float2(0, 1);
+    float2 distUV = uv + dir * (mask * WaveStrength);
+    float4 col    = tex2D(SourceSampler, distUV);
+
+    // Additive flash tinted by RingTint, strongest at ring centre
+    float flash = mask * 0.18 * WaveLife;
+    col.rgb = saturate(col.rgb + RingTint * flash);
+
+    return col;
 }
 
 float4x4 MatrixTransform;
@@ -49,6 +49,6 @@ technique Shockwave
     pass P0
     {
         VertexShader = compile vs_4_0_level_9_1 VS_Pass();
-        PixelShader = compile ps_4_0_level_9_1 PS_Shockwave();
+        PixelShader  = compile ps_4_0_level_9_1 PS_Shockwave();
     }
 }

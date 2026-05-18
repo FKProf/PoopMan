@@ -8,102 +8,104 @@ using PoopManLibrary.World;
 namespace PoopMan.Scenes;
 
 /// <summary>
-/// Centralises all post-processing and atmospheric visual effects for GameScene.
-/// Pipeline (per frame):
-///   1. Caller draws the world scene into WorldTarget.
-///   2. ApplyPostProcess() → applies distortion (heat/frost) → bloom → color-grade
-///      and composites the result onto the back buffer.
-///   3. Caller draws overlay + HUD on top (sharp, no post-process).
-///   4. Update() manages shockwaves, ambient particles, and performance throttling.
+/// Lightweight overlay-only VFX system for GameScene.
+///
+/// Draw pipeline (per frame):
+///   1. Caller calls BeginWorldCapture() — just clears the back buffer, no render target.
+///   2. Caller draws the world normally into the back buffer.
+///   3. ApplyPostProcess() draws overlays on top:
+///        a. Soft vignette
+///        b. Ambient particles
+///        c. Light flashes (explosion halos)
+///        d. Shockwave rings (CPU-drawn)
+///   4. Caller draws HUD + UI on top.
 /// </summary>
 internal sealed class VisualEffectSystem : IDisposable
 {
-    // ── Render targets ────────────────────────────────────────────────────────
-    private RenderTarget2D _worldTarget;    // full-res world scene
-    private RenderTarget2D _halfTarget;     // half-res for bloom downscale
-    private RenderTarget2D _blurTarget;     // half-res blur ping-pong
-    private RenderTarget2D _distortTarget;  // full-res after distortion
-
-    // ── Shaders ───────────────────────────────────────────────────────────────
-    private Effect _bloomFx;
-    private Effect _colorGradeFx;
-    private Effect _heatDistortFx;
-    private Effect _shockwaveFx;
+    // ── Explosion variants ────────────────────────────────────────────────────
+    public enum ExplosionType { Normal, Big, Walid, Nuke }
 
     // ── Graphics ──────────────────────────────────────────────────────────────
     private readonly GraphicsDevice _gd;
     private SpriteBatch _sb;
     private Texture2D _pixel;
 
-    // ── Shockwaves ────────────────────────────────────────────────────────────
+    // ── Shockwaves (CPU-drawn rings) ──────────────────────────────────────────
     private struct ShockwaveEntry
     {
-        public Vector2 OriginUV;    // normalised screen UV of explosion centre
-        public float Radius;      // current ring radius in UV units
-        public float Life;        // remaining life [0..1]
+        public Vector2 OriginUV;
+        public float   Radius;   // 0..1 in UV space
+        public float   Life;     // 1..0
+        public Color   Tint;
     }
     private readonly List<ShockwaveEntry> _shockwaves = new();
-    private const float ShockwaveSpeed = 0.9f;  // UV/s expansion
-    private const float ShockwaveThickness = 0.04f;
-    private const float ShockwaveStrength = 0.012f;
-    private const int MaxShockwaves = 4;      // performance cap
+    private const float ShockwaveSpeed = 0.70f;
+    private const int   MaxShockwaves  = 6;
 
-    // ── Ambient particles (lava embers, swamp dust, cave sparks, etc.) ────────
+    // ── Light flashes ─────────────────────────────────────────────────────────
+    private struct FlashEntry
+    {
+        public Vector2 OriginUV;
+        public float   Life;
+        public Color   Col;
+        public float   RadiusUV;
+    }
+    private readonly List<FlashEntry> _flashes = new();
+    private const int MaxFlashes = 8;
+
+    // ── Ambient particles ─────────────────────────────────────────────────────
     private struct AmbientParticle
     {
-        public Vector2 Pos;         // world-space (tile units * TileSize)
+        public Vector2 Pos;
         public Vector2 Vel;
-        public float Life;
-        public float MaxLife;
-        public Color Col;
-        public float Size;
+        public float   Life;
+        public float   MaxLife;
+        public Color   Col;
+        public float   Size;
     }
     private readonly List<AmbientParticle> _ambientParticles = new();
     private float _ambientTimer;
-    private const float AmbientInterval = 0.06f;  // ~16 particles/s
-    private const int MaxAmbientParticles = 120;
-
-    // ── Dynamic point lights (glow sources) ──────────────────────────────────
-    private struct PointLight
-    {
-        public Vector2 PosUV;   // screen UV
-        public Color Col;
-        public float Radius;  // screen UV radius
-        public float Life;    // [0..1]
-    }
-    private readonly List<PointLight> _lights = new();
+    private const float AmbientInterval     = 0.07f;
+    private const int   MaxAmbientParticles = 80;
 
     // ── State ─────────────────────────────────────────────────────────────────
     private TileMap.MapTheme _theme;
     private float _time;
-    private bool _initialized;
-    private int _mapW;
-    private int _mapH;
+    private bool  _initialized;
+    private int   _mapW;
+    private int   _mapH;
 
-    // Performance throttling: reduce quality when many explosions are active
-    private int _heavyFrameCount;
-    private bool _lowQuality;
-
-    // ── Biome color-grade parameters ──────────────────────────────────────────
-    private static readonly Dictionary<TileMap.MapTheme, (Vector3 tint, float tintStr, float contrast, float sat, float bright, float vignR, float vignS)> BiomeGrade = new()
+    // ── Vignette strength per biome ───────────────────────────────────────────
+    private static readonly Dictionary<TileMap.MapTheme, (Color col, float strength)>
+        BiomeVignette = new()
     {
-        [TileMap.MapTheme.Forest] = (new Vector3(0.80f, 1.00f, 0.70f), 0.18f, 1.10f, 1.15f, -0.02f, 0.65f, 0.55f),
-        [TileMap.MapTheme.Cave] = (new Vector3(0.60f, 0.65f, 0.90f), 0.20f, 1.20f, 0.90f, -0.04f, 0.55f, 0.70f),
-        [TileMap.MapTheme.Lava] = (new Vector3(1.00f, 0.70f, 0.45f), 0.22f, 1.15f, 1.25f, 0.02f, 0.60f, 0.65f),
-        [TileMap.MapTheme.Ice] = (new Vector3(0.75f, 0.90f, 1.00f), 0.20f, 1.10f, 0.85f, -0.03f, 0.62f, 0.50f),
-        [TileMap.MapTheme.Swamp] = (new Vector3(0.65f, 0.90f, 0.55f), 0.20f, 1.08f, 1.10f, -0.02f, 0.60f, 0.60f),
-        [TileMap.MapTheme.Ruins] = (new Vector3(0.85f, 0.80f, 0.60f), 0.18f, 1.12f, 0.95f, -0.01f, 0.60f, 0.55f),
+        [TileMap.MapTheme.Forest] = (Color.Black,                    0.28f),
+        [TileMap.MapTheme.Cave]   = (new Color( 20,  20,  50),       0.40f),
+        [TileMap.MapTheme.Lava]   = (new Color( 60,  10,   0),       0.35f),
+        [TileMap.MapTheme.Ice]    = (new Color( 30,  50,  80),       0.25f),
+        [TileMap.MapTheme.Swamp]  = (new Color( 10,  30,  10),       0.32f),
+        [TileMap.MapTheme.Ruins]  = (new Color( 30,  25,  10),       0.30f),
     };
 
-    // ── Bloom tuning per bioma ────────────────────────────────────────────────
-    private static readonly Dictionary<TileMap.MapTheme, (float threshold, float intensity, float saturation)> BiomeBloom = new()
+    // ── Bloom tuning per biome (kept for future use, not applied to world pass) ─
+    private static readonly Dictionary<TileMap.MapTheme, (float threshold, float intensity, float saturation)>
+        BiomeBloom = new()
     {
-        [TileMap.MapTheme.Forest] = (0.70f, 0.55f, 1.2f),
-        [TileMap.MapTheme.Cave] = (0.65f, 0.70f, 1.1f),
-        [TileMap.MapTheme.Lava] = (0.55f, 0.95f, 1.5f),
-        [TileMap.MapTheme.Ice] = (0.60f, 0.65f, 1.0f),
-        [TileMap.MapTheme.Swamp] = (0.72f, 0.50f, 1.1f),
-        [TileMap.MapTheme.Ruins] = (0.68f, 0.58f, 1.1f),
+        [TileMap.MapTheme.Forest] = (0.72f, 0.50f, 1.15f),
+        [TileMap.MapTheme.Cave]   = (0.68f, 0.65f, 1.05f),
+        [TileMap.MapTheme.Lava]   = (0.58f, 0.90f, 1.40f),
+        [TileMap.MapTheme.Ice]    = (0.65f, 0.60f, 0.95f),
+        [TileMap.MapTheme.Swamp]  = (0.74f, 0.45f, 1.05f),
+        [TileMap.MapTheme.Ruins]  = (0.70f, 0.55f, 1.05f),
+    };
+
+    // ── Flash colour per explosion type ──────────────────────────────────────
+    private static readonly Dictionary<ExplosionType, (Color col, float radiusUV)> ExplosionFlash = new()
+    {
+        [ExplosionType.Normal] = (new Color(255, 220, 140, 160), 0.08f),
+        [ExplosionType.Big]    = (new Color(255, 200,  80, 180), 0.14f),
+        [ExplosionType.Walid]  = (new Color(255,  80,  20, 190), 0.18f),
+        [ExplosionType.Nuke]   = (new Color( 80, 255,  50, 200), 0.30f),
     };
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -112,52 +114,23 @@ internal sealed class VisualEffectSystem : IDisposable
     // ─────────────────────────────────────────────────────────────────────────
     public void LoadContent(ContentManager content, int mapW, int mapH)
     {
-        _mapW = mapW;
-        _mapH = mapH;
-        _sb = new SpriteBatch(_gd);
-
+        _mapW  = mapW;
+        _mapH  = mapH;
+        _sb    = new SpriteBatch(_gd);
         _pixel = new Texture2D(_gd, 1, 1);
         _pixel.SetData(new[] { Color.White });
-
-        // Render targets
-        RebuildTargets(mapW, mapH);
-
-        // Shaders — loaded via MonoGame content pipeline
-        try
-        {
-            _bloomFx = content.Load<Effect>("fx/bloom");
-            _colorGradeFx = content.Load<Effect>("fx/colorgrade");
-            _heatDistortFx = content.Load<Effect>("fx/heatdistort");
-            _shockwaveFx = content.Load<Effect>("fx/shockwave");
-        }
-        catch
-        {
-            // If shader compilation fails at runtime, degrade gracefully
-            _bloomFx = _colorGradeFx = _heatDistortFx = _shockwaveFx = null;
-        }
-
         _initialized = true;
     }
 
-    private void RebuildTargets(int w, int h)
-    {
-        _worldTarget?.Dispose();
-        _distortTarget?.Dispose();
-        _halfTarget?.Dispose();
-        _blurTarget?.Dispose();
-
-        _worldTarget = new RenderTarget2D(_gd, w, h, false, SurfaceFormat.Color, DepthFormat.None);
-        _distortTarget = new RenderTarget2D(_gd, w, h, false, SurfaceFormat.Color, DepthFormat.None);
-        _halfTarget = new RenderTarget2D(_gd, w / 2, h / 2, false, SurfaceFormat.Color, DepthFormat.None);
-        _blurTarget = new RenderTarget2D(_gd, w / 2, h / 2, false, SurfaceFormat.Color, DepthFormat.None);
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
-    /// <summary>Set the render target so the caller can draw the world into it.</summary>
+    /// <summary>
+    /// Clears the back buffer with the map background colour.
+    /// The world is drawn directly into the back buffer — no render target capture.
+    /// </summary>
     public void BeginWorldCapture(Color clearColor)
     {
         if (!_initialized) return;
-        _gd.SetRenderTarget(_worldTarget);
+        _gd.SetRenderTarget(null);   // back buffer
         _gd.Clear(clearColor);
     }
 
@@ -167,21 +140,26 @@ internal sealed class VisualEffectSystem : IDisposable
     {
         if (!_initialized) return;
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-        _time += dt;
-        _theme = theme;
-
-        // Rebuild targets if resolution changed
-        if (_worldTarget.Width != worldW || _worldTarget.Height != worldH)
-            RebuildTargets(worldW, worldH);
+        _time  += dt;
+        _theme  = theme;
 
         // ── Shockwaves ────────────────────────────────────────────────────────
         for (int i = _shockwaves.Count - 1; i >= 0; i--)
         {
             var s = _shockwaves[i];
             s.Radius += ShockwaveSpeed * dt;
-            s.Life -= dt * 2.2f;            // fades in ~0.45 s
+            s.Life   -= dt * 2.4f;
             if (s.Life <= 0f) { _shockwaves.RemoveAt(i); continue; }
             _shockwaves[i] = s;
+        }
+
+        // ── Light flashes ─────────────────────────────────────────────────────
+        for (int i = _flashes.Count - 1; i >= 0; i--)
+        {
+            var f = _flashes[i];
+            f.Life -= dt * 3.0f;
+            if (f.Life <= 0f) { _flashes.RemoveAt(i); continue; }
+            _flashes[i] = f;
         }
 
         // ── Ambient particles ─────────────────────────────────────────────────
@@ -198,16 +176,11 @@ internal sealed class VisualEffectSystem : IDisposable
         for (int i = _ambientParticles.Count - 1; i >= 0; i--)
         {
             var p = _ambientParticles[i];
-            p.Pos += p.Vel * dt;
+            p.Pos  += p.Vel * dt;
             p.Life -= dt;
             if (p.Life <= 0) { _ambientParticles.RemoveAt(i); continue; }
             _ambientParticles[i] = p;
         }
-
-        // ── Performance throttling ────────────────────────────────────────────
-        int particleLoad = _shockwaves.Count * 20 + _ambientParticles.Count;
-        _heavyFrameCount = particleLoad > 150 ? _heavyFrameCount + 1 : Math.Max(0, _heavyFrameCount - 1);
-        _lowQuality = _heavyFrameCount > 10;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -219,80 +192,76 @@ internal sealed class VisualEffectSystem : IDisposable
         switch (theme)
         {
             case TileMap.MapTheme.Lava:
-                // Embers floating upward from lava pools
                 p = new AmbientParticle
                 {
-                    Pos = new Vector2(_rng.Next(0, worldW), _rng.Next(worldH / 2, worldH)),
-                    Vel = new Vector2((float)(_rng.NextDouble() - 0.5) * 14f, -(float)_rng.NextDouble() * 38f - 12f),
-                    Life = (float)(_rng.NextDouble() * 1.2 + 0.6f),
-                    MaxLife = 1.8f,
-                    Col = _rng.Next(3) == 0 ? new Color(255, 240, 80) : _rng.Next(2) == 0 ? new Color(255, 120, 0) : new Color(220, 50, 0),
-                    Size = (float)(_rng.NextDouble() * 2.5f + 0.5f),
+                    Pos     = new Vector2(_rng.Next(0, worldW), _rng.Next(worldH / 2, worldH)),
+                    Vel     = new Vector2((float)(_rng.NextDouble() - 0.5) * 14f, -(float)_rng.NextDouble() * 42f - 14f),
+                    Life    = (float)(_rng.NextDouble() * 1.0 + 0.5f),
+                    MaxLife = 1.5f,
+                    Col     = _rng.Next(3) == 0 ? new Color(255, 240, 80)
+                            : _rng.Next(2) == 0 ? new Color(255, 120,  0)
+                                                : new Color(220,  50,  0),
+                    Size    = (float)(_rng.NextDouble() * 2.5f + 0.5f),
                 };
                 break;
 
             case TileMap.MapTheme.Ice:
-                // Frost motes drifting downward
                 p = new AmbientParticle
                 {
-                    Pos = new Vector2(_rng.Next(0, worldW), _rng.Next(-8, worldH / 2)),
-                    Vel = new Vector2((float)(_rng.NextDouble() - 0.5) * 8f, (float)_rng.NextDouble() * 15f + 4f),
-                    Life = (float)(_rng.NextDouble() * 2.0 + 1.0f),
+                    Pos     = new Vector2(_rng.Next(0, worldW), _rng.Next(-8, worldH / 2)),
+                    Vel     = new Vector2((float)(_rng.NextDouble() - 0.5) * 8f, (float)_rng.NextDouble() * 14f + 4f),
+                    Life    = (float)(_rng.NextDouble() * 2.0 + 1.0f),
                     MaxLife = 3.0f,
-                    Col = new Color(190, 220, 255),
-                    Size = (float)(_rng.NextDouble() * 2.0f + 0.5f),
+                    Col     = new Color(200, 230, 255),
+                    Size    = (float)(_rng.NextDouble() * 1.8f + 0.4f),
                 };
                 break;
 
             case TileMap.MapTheme.Swamp:
-                // Poisonous bubbles floating up
                 p = new AmbientParticle
                 {
-                    Pos = new Vector2(_rng.Next(0, worldW), _rng.Next(worldH / 3, worldH)),
-                    Vel = new Vector2((float)(_rng.NextDouble() - 0.5) * 6f, -(float)_rng.NextDouble() * 20f - 5f),
-                    Life = (float)(_rng.NextDouble() * 1.5 + 0.8f),
-                    MaxLife = 2.3f,
-                    Col = _rng.Next(2) == 0 ? new Color(80, 200, 60) : new Color(100, 160, 40),
-                    Size = (float)(_rng.NextDouble() * 3.0f + 0.8f),
+                    Pos     = new Vector2(_rng.Next(0, worldW), _rng.Next(worldH / 3, worldH)),
+                    Vel     = new Vector2((float)(_rng.NextDouble() - 0.5) * 5f, -(float)_rng.NextDouble() * 18f - 4f),
+                    Life    = (float)(_rng.NextDouble() * 1.4 + 0.7f),
+                    MaxLife = 2.1f,
+                    Col     = _rng.Next(2) == 0 ? new Color(80, 200, 60) : new Color(100, 160, 40),
+                    Size    = (float)(_rng.NextDouble() * 2.5f + 0.8f),
                 };
                 break;
 
             case TileMap.MapTheme.Cave:
-                // Cave sparks / dust
                 p = new AmbientParticle
                 {
-                    Pos = new Vector2(_rng.Next(0, worldW), _rng.Next(0, worldH)),
-                    Vel = new Vector2((float)(_rng.NextDouble() - 0.5) * 10f, (float)_rng.NextDouble() * 5f - 6f),
-                    Life = (float)(_rng.NextDouble() * 1.8 + 0.5f),
-                    MaxLife = 2.3f,
-                    Col = _rng.Next(3) == 0 ? new Color(140, 130, 180) : new Color(80, 80, 120),
-                    Size = (float)(_rng.NextDouble() * 1.5f + 0.5f),
+                    Pos     = new Vector2(_rng.Next(0, worldW), _rng.Next(0, worldH)),
+                    Vel     = new Vector2((float)(_rng.NextDouble() - 0.5) * 8f, (float)_rng.NextDouble() * 4f - 5f),
+                    Life    = (float)(_rng.NextDouble() * 1.6 + 0.4f),
+                    MaxLife = 2.0f,
+                    Col     = _rng.Next(3) == 0 ? new Color(150, 140, 190) : new Color(85, 85, 130),
+                    Size    = (float)(_rng.NextDouble() * 1.5f + 0.4f),
                 };
                 break;
 
             case TileMap.MapTheme.Ruins:
-                // Dust motes
                 p = new AmbientParticle
                 {
-                    Pos = new Vector2(_rng.Next(0, worldW), _rng.Next(0, worldH)),
-                    Vel = new Vector2((float)(_rng.NextDouble() - 0.5) * 6f, -(float)_rng.NextDouble() * 8f - 1f),
-                    Life = (float)(_rng.NextDouble() * 2.5 + 1.0f),
-                    MaxLife = 3.5f,
-                    Col = new Color(180, 165, 120),
-                    Size = (float)(_rng.NextDouble() * 1.8f + 0.5f),
+                    Pos     = new Vector2(_rng.Next(0, worldW), _rng.Next(0, worldH)),
+                    Vel     = new Vector2((float)(_rng.NextDouble() - 0.5) * 5f, -(float)_rng.NextDouble() * 7f - 1f),
+                    Life    = (float)(_rng.NextDouble() * 2.2 + 0.8f),
+                    MaxLife = 3.0f,
+                    Col     = new Color(185, 170, 125),
+                    Size    = (float)(_rng.NextDouble() * 1.6f + 0.4f),
                 };
                 break;
 
             default: // Forest
-                // Firefly-like pollen
                 p = new AmbientParticle
                 {
-                    Pos = new Vector2(_rng.Next(0, worldW), _rng.Next(0, worldH)),
-                    Vel = new Vector2((float)(_rng.NextDouble() - 0.5) * 8f, -(float)_rng.NextDouble() * 12f - 2f),
-                    Life = (float)(_rng.NextDouble() * 2.0 + 0.8f),
-                    MaxLife = 2.8f,
-                    Col = _rng.Next(2) == 0 ? new Color(200, 255, 140) : new Color(160, 230, 100),
-                    Size = (float)(_rng.NextDouble() * 2.0f + 0.5f),
+                    Pos     = new Vector2(_rng.Next(0, worldW), _rng.Next(0, worldH)),
+                    Vel     = new Vector2((float)(_rng.NextDouble() - 0.5) * 8f, -(float)_rng.NextDouble() * 12f - 2f),
+                    Life    = (float)(_rng.NextDouble() * 1.8 + 0.6f),
+                    MaxLife = 2.4f,
+                    Col     = _rng.Next(2) == 0 ? new Color(205, 255, 145) : new Color(165, 235, 105),
+                    Size    = (float)(_rng.NextDouble() * 1.8f + 0.4f),
                 };
                 break;
         }
@@ -301,139 +270,148 @@ internal sealed class VisualEffectSystem : IDisposable
 
     // ─────────────────────────────────────────────────────────────────────────
     /// <summary>
-    /// Registers a shockwave originating from a world-space point.
-    /// Called by GameScene whenever a bomb or bat explodes.
+    /// Registers a shockwave + flash for an explosion.
+    /// Call this from GameScene whenever a bomb or bat explodes.
     /// </summary>
-    public void AddShockwave(Vector2 worldPos, Matrix worldTransform, bool big)
+    public void AddExplosionEffect(Vector2 worldPos, Matrix worldTransform, ExplosionType type)
     {
-        if (_shockwaves.Count >= MaxShockwaves) return;
-
-        // Transform world position to screen UV
-        Vector2 screen = Vector2.Transform(worldPos, worldTransform);
         int vw = _gd.Viewport.Width;
         int vh = _gd.Viewport.Height;
-        Vector2 uv = new Vector2(screen.X / vw, screen.Y / vh);
+        Vector2 screen = Vector2.Transform(worldPos, worldTransform);
+        Vector2 uv     = new(screen.X / vw, screen.Y / vh);
 
-        _shockwaves.Add(new ShockwaveEntry
+        // Shockwave ring (CPU-drawn circles later)
+        if (_shockwaves.Count < MaxShockwaves)
         {
-            OriginUV = uv,
-            Radius = 0f,
-            Life = 1f,
-        });
+            Color tint = type switch
+            {
+                ExplosionType.Big   => new Color(255, 200, 80),
+                ExplosionType.Walid => new Color(255, 100, 30),
+                ExplosionType.Nuke  => new Color(80,  255, 60),
+                _                   => Color.White,
+            };
+            _shockwaves.Add(new ShockwaveEntry { OriginUV = uv, Radius = 0f, Life = 1f, Tint = tint });
+        }
+
+        // Flash
+        if (_flashes.Count < MaxFlashes)
+        {
+            var (col, rad) = ExplosionFlash[type];
+            _flashes.Add(new FlashEntry { OriginUV = uv, Life = 1f, Col = col, RadiusUV = rad });
+        }
     }
+
+    // Legacy overload kept for compatibility
+    public void AddShockwave(Vector2 worldPos, Matrix worldTransform, bool big)
+        => AddExplosionEffect(worldPos, worldTransform, big ? ExplosionType.Big : ExplosionType.Normal);
 
     // ─────────────────────────────────────────────────────────────────────────
     /// <summary>
-    /// Composites the captured world target onto the back buffer with all effects.
-    /// Call after EndWorldCapture (SpriteBatch.End()) and before UI draws.
-    ///
-    /// Safe additive pipeline:
-    ///   1. Base scene  : _worldTarget → back buffer  (color grade or plain)
-    ///   2. Bloom       : bright-pass → blur → additive blit on top
-    ///   3. Shockwaves  : additive ring overlay
-    ///   4. Ambient     : additive particles
-    ///
-    /// Each step is independent: if a shader fails the base scene is still visible.
+    /// Draws overlay effects on top of the already-drawn world (back buffer).
+    /// No render-target capture, no full-screen shaders.
     /// </summary>
     public void ApplyPostProcess(Matrix worldTransform)
     {
         if (!_initialized) return;
 
-        int tw = _worldTarget.Width;
-        int th = _worldTarget.Height;
         int vw = _gd.Viewport.Width;
         int vh = _gd.Viewport.Height;
 
-        // ── 1: Base scene → back buffer ────────────────────────────────────
-        // Color grade is applied here; if shader unavailable, plain blit.
-        _gd.SetRenderTarget(null);
+        // ── 1: Soft vignette ─────────────────────────────────────────────
+        DrawVignette(vw, vh);
 
-        if (_colorGradeFx != null)
+        // ── 2: Light flashes (explosion halos) ────────────────────────────
+        DrawFlashes(vw, vh);
+
+        // ── 3: Shockwave rings (CPU-drawn expanding circles) ──────────────
+        DrawShockwaveRings(vw, vh);
+
+        // ── 4: Ambient particles ──────────────────────────────────────────
+        DrawAmbientParticles(worldTransform);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    private void DrawVignette(int vw, int vh)
+    {
+        if (!BiomeVignette.TryGetValue(_theme, out var v)) return;
+        if (v.strength <= 0f) return;
+
+        int steps = 12;
+        int edgeW = (int)(Math.Min(vw, vh) * 0.16f);
+
+        _sb.Begin(samplerState: SamplerState.PointClamp, blendState: BlendState.AlphaBlend);
+        for (int i = 0; i < steps; i++)
         {
-            var g = BiomeGrade[_theme];
-            _colorGradeFx.Parameters["Tint"].SetValue(g.tint);
-            _colorGradeFx.Parameters["TintStrength"].SetValue(g.tintStr);
-            _colorGradeFx.Parameters["Contrast"].SetValue(g.contrast);
-            _colorGradeFx.Parameters["Saturation"].SetValue(g.sat);
-            _colorGradeFx.Parameters["Brightness"].SetValue(g.bright);
-            _colorGradeFx.Parameters["VignetteRadius"].SetValue(g.vignR);
-            _colorGradeFx.Parameters["VignetteStrength"].SetValue(g.vignS);
-            _colorGradeFx.Parameters["TexelSize"].SetValue(new Vector2(1f / tw, 1f / th));
-            _colorGradeFx.CurrentTechnique = _colorGradeFx.Techniques["ColorGrade"];
-            _sb.Begin(effect: _colorGradeFx, samplerState: SamplerState.LinearClamp,
-                      transformMatrix: worldTransform);
+            float t = 1f - (float)i / steps;
+            float a = t * t * v.strength * 0.7f;
+            Color col = v.col * a;
+            int band = edgeW * i / steps;
+            // top
+            _sb.Draw(_pixel, new Rectangle(0, band, vw, edgeW / steps + 1), col);
+            // bottom
+            _sb.Draw(_pixel, new Rectangle(0, vh - band - edgeW / steps - 1, vw, edgeW / steps + 1), col);
+            // left
+            _sb.Draw(_pixel, new Rectangle(band, 0, edgeW / steps + 1, vh), col);
+            // right
+            _sb.Draw(_pixel, new Rectangle(vw - band - edgeW / steps - 1, 0, edgeW / steps + 1, vh), col);
         }
-        else
-        {
-            _sb.Begin(samplerState: SamplerState.PointClamp, transformMatrix: worldTransform);
-        }
-        _sb.Draw(_worldTarget, new Rectangle(0, 0, tw, th), Color.White);
         _sb.End();
+    }
 
-        // ── 2: Bloom (additive on top of base scene) ───────────────────────
-        if (_bloomFx != null && !_lowQuality)
+    // ─────────────────────────────────────────────────────────────────────────
+    private void DrawFlashes(int vw, int vh)
+    {
+        if (_flashes.Count == 0) return;
+        _sb.Begin(samplerState: SamplerState.PointClamp, blendState: BlendState.Additive);
+        foreach (var f in _flashes)
         {
-            var bloom = BiomeBloom[_theme];
-            float threshold = bloom.threshold;
-
-            // Bright-pass: _worldTarget → _halfTarget
-            _gd.SetRenderTarget(_halfTarget);
-            _gd.Clear(Color.Transparent);
-            _bloomFx.CurrentTechnique = _bloomFx.Techniques["BrightPass"];
-            _bloomFx.Parameters["TexelSize"].SetValue(new Vector2(1f / tw, 1f / th));
-            _bloomFx.Parameters["Threshold"].SetValue(threshold);
-            _sb.Begin(effect: _bloomFx, samplerState: SamplerState.LinearClamp);
-            _sb.Draw(_worldTarget, new Rectangle(0, 0, _halfTarget.Width, _halfTarget.Height), Color.White);
-            _sb.End();
-
-            // Blur H: _halfTarget → _blurTarget
-            _gd.SetRenderTarget(_blurTarget);
-            _gd.Clear(Color.Transparent);
-            _bloomFx.CurrentTechnique = _bloomFx.Techniques["BlurH"];
-            _bloomFx.Parameters["TexelSize"].SetValue(new Vector2(1f / _halfTarget.Width, 1f / _halfTarget.Height));
-            _sb.Begin(effect: _bloomFx, samplerState: SamplerState.LinearClamp);
-            _sb.Draw(_halfTarget, new Rectangle(0, 0, _blurTarget.Width, _blurTarget.Height), Color.White);
-            _sb.End();
-
-            // Blur V: _blurTarget → _halfTarget
-            _gd.SetRenderTarget(_halfTarget);
-            _gd.Clear(Color.Transparent);
-            _bloomFx.CurrentTechnique = _bloomFx.Techniques["BlurV"];
-            _bloomFx.Parameters["TexelSize"].SetValue(new Vector2(1f / _blurTarget.Width, 1f / _blurTarget.Height));
-            _sb.Begin(effect: _bloomFx, samplerState: SamplerState.LinearClamp);
-            _sb.Draw(_blurTarget, new Rectangle(0, 0, _halfTarget.Width, _halfTarget.Height), Color.White);
-            _sb.End();
-
-            // Add blurred bloom on top of back buffer (additive)
-            _gd.SetRenderTarget(null);
-            _sb.Begin(samplerState: SamplerState.LinearClamp,
-                      blendState: BlendState.Additive,
-                      transformMatrix: worldTransform);
-            _sb.Draw(_halfTarget, new Rectangle(0, 0, tw, th),
-                     Color.White * bloom.intensity * 0.6f);
-            _sb.End();
-        }
-
-        // ── 3: Shockwave overlay (additive flash ring) ─────────────────────
-        if (_shockwaveFx != null && _shockwaves.Count > 0 && !_lowQuality)
-        {
-            foreach (var sw in _shockwaves)
+            float alpha  = f.Life * f.Life * 0.50f;
+            Color col    = f.Col * alpha;
+            float radius = f.RadiusUV * MathF.Sqrt(vw * vw + vh * vh) * 0.5f;
+            for (int layer = 4; layer >= 1; layer--)
             {
-                _shockwaveFx.Parameters["WaveOrigin"].SetValue(sw.OriginUV);
-                _shockwaveFx.Parameters["WaveRadius"].SetValue(sw.Radius);
-                _shockwaveFx.Parameters["WaveThickness"].SetValue(ShockwaveThickness);
-                _shockwaveFx.Parameters["WaveStrength"].SetValue(ShockwaveStrength);
-                _shockwaveFx.Parameters["WaveLife"].SetValue(sw.Life);
-                _shockwaveFx.Parameters["TexelSize"].SetValue(new Vector2(1f / vw, 1f / vh));
-                _sb.Begin(effect: _shockwaveFx, samplerState: SamplerState.LinearClamp,
-                          blendState: BlendState.Additive);
-                _sb.Draw(_pixel, new Rectangle(0, 0, vw, vh), Color.White * sw.Life * 0.15f);
-                _sb.End();
+                float r = radius * layer / 4f;
+                float a = 0.10f / layer;
+                int size = (int)(r * 2);
+                int x    = (int)(f.OriginUV.X * vw - r);
+                int y    = (int)(f.OriginUV.Y * vh - r);
+                _sb.Draw(_pixel, new Rectangle(x, y, size, size), col * a);
             }
         }
+        _sb.End();
+    }
 
-        // ── 4: Ambient particles (world-space → screen) ────────────────────
-        DrawAmbientParticles(worldTransform);
+    // ─────────────────────────────────────────────────────────────────────────
+    private void DrawShockwaveRings(int vw, int vh)
+    {
+        if (_shockwaves.Count == 0) return;
+        // Draw thin expanding rings as per-pixel lines (CPU approximation)
+        _sb.Begin(samplerState: SamplerState.PointClamp, blendState: BlendState.Additive);
+        foreach (var sw in _shockwaves)
+        {
+            float alpha  = sw.Life * sw.Life * 0.35f;
+            Color col    = sw.Tint * alpha;
+            float radius = sw.Radius * Math.Min(vw, vh) * 0.55f;
+            int   cx     = (int)(sw.OriginUV.X * vw);
+            int   cy     = (int)(sw.OriginUV.Y * vh);
+            int   r      = (int)radius;
+            int   thickness = Math.Max(2, (int)(sw.Life * 6));
+            for (int t = 0; t < thickness; t++)
+            {
+                float fr = r + t - thickness / 2;
+                if (fr <= 0) continue;
+                // Approximate circle with 64 points
+                for (int seg = 0; seg < 64; seg++)
+                {
+                    float angle = seg * MathF.PI * 2 / 64f;
+                    int px = cx + (int)(MathF.Cos(angle) * fr);
+                    int py = cy + (int)(MathF.Sin(angle) * fr);
+                    if (px >= 0 && px < vw && py >= 0 && py < vh)
+                        _sb.Draw(_pixel, new Rectangle(px, py, 1, 1), col);
+                }
+            }
+        }
+        _sb.End();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -445,17 +423,16 @@ internal sealed class VisualEffectSystem : IDisposable
                   transformMatrix: worldTransform);
         foreach (var p in _ambientParticles)
         {
-            float alpha = MathF.Sin(p.Life / p.MaxLife * MathF.PI) * 0.65f;
-            Color c = p.Col * alpha;
-            int s = Math.Max(1, (int)(p.Size + 0.5f));
-            _sb.Draw(_pixel,
-                new Rectangle((int)(p.Pos.X - s / 2f), (int)(p.Pos.Y - s / 2f), s, s), c);
+            float alpha = MathF.Sin(p.Life / p.MaxLife * MathF.PI) * 0.55f;
+            Color c     = p.Col * alpha;
+            int   s     = Math.Max(1, (int)(p.Size + 0.5f));
+            _sb.Draw(_pixel, new Rectangle((int)(p.Pos.X - s / 2f), (int)(p.Pos.Y - s / 2f), s, s), c);
         }
         _sb.End();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    /// <summary>Draws additive glow halos for point-light sources (bombs, upgrades, etc.).</summary>
+    /// <summary>Draws additive glow halos for point-light sources.</summary>
     public void DrawGlowOverlay(SpriteBatch sb, IEnumerable<(Vector2 worldPos, Color col, float radius)> lights,
                                 Matrix worldTransform)
     {
@@ -468,15 +445,12 @@ internal sealed class VisualEffectSystem : IDisposable
                  transformMatrix: worldTransform);
         foreach (var (pos, col, radius) in lights)
         {
-            // Draw a soft square glow (radial gradient approximated with multiple layers)
             for (int layer = 3; layer >= 1; layer--)
             {
-                float r = radius * layer / 3f;
-                float a = 0.07f / layer;
-                int size = (int)(r * 2);
-                sb.Draw(_pixel,
-                    new Rectangle((int)(pos.X - r), (int)(pos.Y - r), size, size),
-                    col * a);
+                float r    = radius * layer / 3f;
+                float a    = 0.06f / layer;
+                int   size = (int)(r * 2);
+                sb.Draw(_pixel, new Rectangle((int)(pos.X - r), (int)(pos.Y - r), size, size), col * a);
             }
         }
         sb.End();
@@ -485,14 +459,6 @@ internal sealed class VisualEffectSystem : IDisposable
     // ─────────────────────────────────────────────────────────────────────────
     public void Dispose()
     {
-        _worldTarget?.Dispose();
-        _distortTarget?.Dispose();
-        _halfTarget?.Dispose();
-        _blurTarget?.Dispose();
-        _bloomFx?.Dispose();
-        _colorGradeFx?.Dispose();
-        _heatDistortFx?.Dispose();
-        _shockwaveFx?.Dispose();
         _pixel?.Dispose();
         _sb?.Dispose();
     }
