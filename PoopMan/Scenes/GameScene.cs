@@ -574,6 +574,9 @@ public class GameScene : Scene
             _batExplosionParticles[i] = p;
         }
 
+        // ── TileMap (animazione liquidi) ──────────────────────────────────
+        _map.Update(gameTime);
+
         // ── VFX update ───────────────────────────────────────────────────
         var mapTransform = Game1.GetMapScaleMatrix(GameHud.ScreenHeight(Core.GraphicsDevice));
         _vfx?.Update(gameTime, _map.Theme,
@@ -587,7 +590,7 @@ public class GameScene : Scene
     {
         // ── Mappa + entità → cattura nel render target VFX ───────────────
         int hudScreenH = GameHud.ScreenHeight(Core.GraphicsDevice);
-        var transform  = Game1.GetMapScaleMatrix(hudScreenH);
+        var transform = Game1.GetMapScaleMatrix(hudScreenH);
 
         if (_vfx != null)
             _vfx.BeginWorldCapture(_map.BackgroundColor);
@@ -645,8 +648,7 @@ public class GameScene : Scene
             int s = Math.Max(1, (int)(p.Size * alpha + 0.5f));
             _spriteBatch.Draw(_pixel,
                 new Rectangle((int)(p.Position.X - s / 2f),
-                               (int)(p.Position.Y - s / 2f), s, s),
-                c);
+                               (int)(p.Position.Y - s / 2f), s, s), c);
         }
 
         _spriteBatch.End();
@@ -729,15 +731,15 @@ public class GameScene : Scene
 
     /// <summary>
     /// Gestisce l'esplosione di un bat esplosivo alla sua morte.
-    /// Walid: area 3×3 tile (raggio 1).
-    /// Nuke:  area 5×5 tile (raggio 2), distrugge tutto tranne i muri indistruttibili.
+    /// Walid: area 6×6 tile (raggio 3).
+    /// Nuke:  area 12×12 tile (raggio 6), distrugge tutto tranne i muri indistruttibili.
     /// </summary>
     private void TriggerBatExplosion(Point origin, bool big)
     {
         // ── Area quadrata ─────────────────────────────────────────────────
-        // Walid: raggio 1 → 3×3 = 9 tile
-        // Nuke:  raggio 2 → 5×5 = 25 tile
-        int radius = big ? 2 : 1;
+        // Walid: raggio 3 → 7×7 ≈ 6 tile di diametro
+        // Nuke:  raggio 6 → 13×13 ≈ 12 tile di diametro
+        int radius = big ? 6 : 3;
         var hitTiles = new HashSet<Point>();
 
         for (int dy = -radius; dy <= radius; dy++)

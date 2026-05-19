@@ -10,35 +10,47 @@
 		<Region Name="log1" X="96" Y="0" Width="32" Height="32"/>
 
 		<!-- glass type -->
-		<Region Name="glass0" X="128" Y="0" Width="32" Height="32"/>
-		<Region Name="glass1" X="160" Y="0" Width="32" Height="32"/>
-		<Region Name="glass2" X="192" Y="0" Width="32" Height="32"/>
+		<Region Name="glass0" X="96" Y="96" Width="32" Height="32"/>
+		<Region Name="glass1" X="128" Y="96" Width="32" Height="32"/>
+		<Region Name="glass2" X="160" Y="96" Width="32" Height="32"/>
+		<Region Name="ice_glass0" X="96" Y="32" Width="32" Height="32"/>
+		<Region Name="ice_glass1" X="128" Y="32" Width="32" Height="32"/>
+		<Region Name="ice_glass2" X="160" Y="32" Width="32" Height="32"/>
 
 		<!-- sand -->
 		<Region Name="sand0" X="224" Y="0" Width="32" Height="32"/>
 
 		<!-- grounds  -->
-		<Region Name="ground0" X="0" Y="32" Width="32" Height="32"/>
-		<Region Name="ground1" X="32" Y="32" Width="32" Height="32"/>
-		<Region Name="ground2" X="64" Y="32" Width="32" Height="32"/>
+		<Region Name="ground0" X="0" Y="96" Width="32" Height="32"/>
+		<Region Name="ground1" X="32" Y="96" Width="32" Height="32"/>
+		<Region Name="ground2" X="64" Y="96" Width="32" Height="32"/>
 
 		<!-- stone -->
-		<Region Name="stone0" X="96" Y="32" Width="32" Height="32"/>
-		<Region Name="stone1" X="128" Y="32" Width="32" Height="32"/>
-		<Region Name="stone2" X="160" Y="32" Width="32" Height="32"/>
+		<Region Name="cobblestone" X="0" Y="64" Width="32" Height="32"/>
+		<Region Name="mossy_cobblestone" X="32" Y="64" Width="32" Height="32"/>
+		<Region Name="dirt_stone" X="64" Y="64" Width="32" Height="32"/>
+		<Region Name="magma_stone0" X="96" Y="64" Width="32" Height="32"/>
+		<Region Name="magma_stone1" X="128" Y="64" Width="32" Height="32"/>
+		<Region Name="magma_stone2" X="160" Y="64" Width="32" Height="32"/>
 
 		<!-- water -->
 		<Region Name="water0" X="192" Y="32" Width="32" Height="32"/>
 		<Region Name="water1" X="224" Y="32" Width="32" Height="32"/>
+		<Region Name="swamp_water0" X="192" Y="64" Width="32" Height="32"/>
+		<Region Name="swamp_water1" X="224" Y="64" Width="32" Height="32"/>
 
-		<!-- lava (same sprite as water, drawn with red tint in TileMap.Draw) -->
-		<Region Name="lava0" X="192" Y="32" Width="32" Height="32"/>
-		<Region Name="lava1" X="224" Y="32" Width="32" Height="32"/>
+		<!-- lava -->
+		<Region Name="lava0" X="192" Y="96" Width="32" Height="32"/>
+		<Region Name="lava1" X="224" Y="96" Width="32" Height="32"/>
 
 		<!-- walls -->
-		<Region Name="wall0" X="0" Y="64" Width="32" Height="32"/>
-		<Region Name="wall1" X="32" Y="64" Width="32" Height="32"/>
-		<Region Name="wall2" X="64" Y="64" Width="32" Height="32"/>
-		
+		<Region Name="ice_brick_wall" X="128" Y="0" Width="32" Height="32"/>
+		<Region Name="mossy_brick_wall" X="160" Y="0" Width="32" Height="32"/>
+		<Region Name="magma_brick_wall" X="192" Y="0" Width="32" Height="32"/>
+		<Region Name="brick_wall0" X="0" Y="32" Width="32" Height="32"/>
+		<Region Name="brick_wall1" X="32" Y="32" Width="32" Height="32"/>
+		<Region Name="stone_brick_wall" X="64" Y="32" Width="32" Height="32"/>
+
+
 	</Regions>
 </TilesetAtlas>

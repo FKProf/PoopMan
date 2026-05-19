@@ -198,6 +198,8 @@ namespace PoopMan.GameObjects
 
         private bool _shieldActive = false;
         private int _shieldRechargeLevel = 0;
+        private int _explosionResistanceSteps = 0;
+        private int _damageReductionSteps = 0;
         private const int ShieldRechargePeriod = 5;
 
         public bool UpgradeShield { get; private set; } = false;
@@ -234,8 +236,8 @@ namespace PoopMan.GameObjects
             UpgradeType.MaxLifeUp => _maxLifeSteps,
             UpgradeType.DoubleDrop => _doubleDropSteps,
             UpgradeType.BonusLoot => (int)Math.Round(BonusLootChance / 0.15f),
-            UpgradeType.ExplosionResistance => (int)Math.Round((_invincibilityDuration - 2f) / 1f),
-            UpgradeType.DamageReduction => (int)Math.Round((_invincibilityDuration - 2f) / 0.5f),
+            UpgradeType.ExplosionResistance => _explosionResistanceSteps,
+            UpgradeType.DamageReduction => _damageReductionSteps,
             UpgradeType.DashAfterHit => UpgradeDashAfterHit ? 1 : 0,
             UpgradeType.Shield => UpgradeShield ? 1 : 0,
             UpgradeType.MultiHit => UpgradeMultiHit ? 1 : 0,
@@ -718,11 +720,19 @@ namespace PoopMan.GameObjects
 
                 // ── Difensivi ─────────────────────────────────────────────
                 case UpgradeType.ExplosionResistance:
-                    _invincibilityDuration = Math.Min(_invincibilityDuration + 1f, UpgradeRegistry.MaxInvincibility);
+                    if (_explosionResistanceSteps < UpgradeRegistry.MaxInvincibility)
+                    {
+                        _explosionResistanceSteps++;
+                        _invincibilityDuration = Math.Min(_invincibilityDuration + 1f, UpgradeRegistry.MaxInvincibility);
+                    }
                     break;
 
                 case UpgradeType.DamageReduction:
-                    _invincibilityDuration = Math.Min(_invincibilityDuration + 0.5f, UpgradeRegistry.MaxInvincibility);
+                    if (_damageReductionSteps < UpgradeRegistry.MaxInvincibility)
+                    {
+                        _damageReductionSteps++;
+                        _invincibilityDuration = Math.Min(_invincibilityDuration + 0.5f, UpgradeRegistry.MaxInvincibility);
+                    }
                     break;
 
                 case UpgradeType.Shield:

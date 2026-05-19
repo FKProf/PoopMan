@@ -4,6 +4,7 @@ using PoopManLibrary.World;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GameTime = Microsoft.Xna.Framework.GameTime;
 
 namespace PoopManLibrary.World;
 
@@ -12,6 +13,11 @@ public class TileMap
     private TileAtlas atlas;
     private TileType[,] map;
     private string[,] tileVariant;
+
+    // ── Animazione liquidi ────────────────────────────────────────────────
+    private float _liquidAnimTimer = 0f;
+    private const float LiquidFrameInterval = 0.55f; // secondi per frame
+    private int _liquidFrame = 0;
 
     public const int TileSize = 32;
     public const int Rows = 23;
@@ -24,12 +30,12 @@ public class TileMap
 
     private static readonly Dictionary<MapTheme, (string wall, string[] breakable, string[] empty, string border)> ThemeTiles = new()
     {
-        [MapTheme.Forest] = ("wall2", new[] { "log0", "log1", "plank0", "plank1" }, new[] { "glass0", "glass1", "glass2" }, "wall1"),
-        [MapTheme.Cave] = ("wall2", new[] { "stone0", "stone1", "stone2" }, new[] { "ground2" }, "wall2"),
-        [MapTheme.Lava] = ("wall2", new[] { "stone0", "stone1" }, new[] { "ground2", "ground1" }, "wall2"),
-        [MapTheme.Ice] = ("wall0", new[] { "stone0", "stone1", "stone2" }, new[] { "glass0", "glass1", "glass2" }, "wall0"),
-        [MapTheme.Swamp] = ("wall2", new[] { "log0", "log1", "plank0", "plank1" }, new[] { "ground2", "ground0" }, "wall2"),
-        [MapTheme.Ruins] = ("wall0", new[] { "stone0", "stone1", "stone2", "plank0" }, new[] { "ground0", "ground1", "sand0" }, "wall0"),
+        [MapTheme.Forest] = ("brick_wall0", new[] { "log0", "log1", "plank0", "plank1" }, new[] { "glass0", "glass1", "glass2" }, "brick_wall1"),
+        [MapTheme.Cave] = ("stone_brick_wall", new[] { "cobblestone", "mossy_cobblestone", "dirt_stone" }, new[] { "ground2" }, "stone_brick_wall"),
+        [MapTheme.Lava] = ("magma_brick_wall", new[] { "cobblestone", "magma_stone1" }, new[] { "magma_stone0", "magma_stone2" }, "stone_brick_wall"),
+        [MapTheme.Ice] = ("ice_brick_wall", new[] { "log0", "log1", "plank0", "plank1" }, new[] { "ice_glass0", "ice_glass1", "ice_glass2" }, "ice_brick_wall"),
+        [MapTheme.Swamp] = ("mossy_brick_wall", new[] { "log0", "log1", "plank0", "plank1" }, new[] { "ground2", "ground0" }, "mossy_brick_wall"),
+        [MapTheme.Ruins] = ("mossy_brick_wall", new[] { "cobblestone", "mossy_cobblestone", "dirt_stone", "plank0" }, new[] { "ground0", "ground1", "sand0" }, "stone_brick_wall"),
     };
 
     private static readonly Dictionary<MapTheme, Color> ThemeBackground = new()
@@ -183,7 +189,7 @@ public class TileMap
     }
 
     private static bool IsHazardVariant(string variant) =>
-        variant.StartsWith("water") || variant.StartsWith("lava");
+        variant.StartsWith("water") || variant.StartsWith("lava") || variant.StartsWith("swamp_water");
 
     // -------------------------------------------------------------------------
     // Aggiunge elementi ambientali specifici per ogni bioma.
@@ -241,27 +247,27 @@ public class TileMap
                     AddRockCluster(rand.Next(1, rows - 1), rand.Next(1, cols - 1),
                         rand.Next(1, 3), rows, cols, rand);
 
-                // 5) Pavimento ghiacciato: quasi tutto glass (superficie scivolosa)
+                // 5) Pavimento ghiacciato: quasi tutto ice_glass (superficie scivolosa)
                 for (int y = 1; y < rows - 1; y++)
                     for (int x = 1; x < cols - 1; x++)
                         if (map[y, x] == TileType.Empty)
-                            tileVariant[y, x] = "glass" + rand.Next(3);
+                            tileVariant[y, x] = "ice_glass" + rand.Next(3);
 
-                // 6) Brina sui muri fissi: sostituisce wall1 con stone1 per varietà gelida
+                // 6) Brina sui muri fissi: sostituisce ice_brick_wall con ice_glass per varietà gelida
                 for (int y = 1; y < rows - 1; y++)
                     for (int x = 1; x < cols - 1; x++)
                         if (map[y, x] == TileType.Wall
                             && y % 2 == 0 && x % 2 == 0
-                            && tileVariant[y, x] == "wall0"
+                            && tileVariant[y, x] == "ice_brick_wall"
                             && rand.Next(100) < 40)
-                            tileVariant[y, x] = "stone" + rand.Next(3);
+                            tileVariant[y, x] = "ice_glass" + rand.Next(3);
                 break;
 
             case MapTheme.Swamp:
-                // Grandi pozze di acqua melmosa (verde scuro)
+                // Grandi pozze di acqua melmosa
                 for (int i = 0; i < rand.Next(4, 7 + intensity); i++)
                     GenerateLiquidBlob(rand.Next(1, rows - 1), rand.Next(1, cols - 1),
-                        rand.Next(10, 20 + intensity * 2), "water", rows, cols, rand);
+                        rand.Next(10, 20 + intensity * 2), "swamp_water", rows, cols, rand);
                 // Transizione fango attorno all'acqua
                 AddSandNearLiquid(rows, cols, rand);
                 // Alberi morti e vegetazione palustre (rock cluster = tronchi/radici)
@@ -510,52 +516,36 @@ public class TileMap
         return candidates[rand.Next(candidates.Count)];
     }
 
+    public void Update(GameTime gameTime)
+    {
+        _liquidAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+        if (_liquidAnimTimer >= LiquidFrameInterval)
+        {
+            _liquidAnimTimer -= LiquidFrameInterval;
+            _liquidFrame = 1 - _liquidFrame; // alterna 0 ↔ 1
+        }
+    }
+
+    private string AnimatedVariant(string variant)
+    {
+        if (variant == "water0" || variant == "water1")
+            return $"water{_liquidFrame}";
+        if (variant == "swamp_water0" || variant == "swamp_water1")
+            return $"swamp_water{_liquidFrame}";
+        if (variant == "lava0" || variant == "lava1")
+            return $"lava{_liquidFrame}";
+        return variant;
+    }
+
     public void Draw(SpriteBatch spriteBatch)
     {
         for (int y = 0; y < map.GetLength(0); y++)
             for (int x = 0; x < map.GetLength(1); x++)
             {
-                string variant = tileVariant[y, x];
+                string variant = AnimatedVariant(tileVariant[y, x]);
                 Rectangle sourceRect = atlas.GetTile(variant);
                 Rectangle destRect = new Rectangle(x * TileSize, y * TileSize, TileSize, TileSize);
-                // Tile lava: stesso sprite dell'acqua ma tinted rosso-arancio
-                // Tile ghiaccio (water nel bioma Ice): tinted azzurro-bianco
-                Color tint;
-                if (variant == "lava0" || variant == "lava1")
-                {
-                    tint = new Color(255, 80, 20);
-                }
-                else if ((variant == "water0" || variant == "water1") && Theme == MapTheme.Ice)
-                {
-                    // Lastra di ghiaccio: azzurro brillante
-                    tint = new Color(100, 200, 255);
-                }
-                else if ((variant == "water0" || variant == "water1") && Theme == MapTheme.Swamp)
-                {
-                    tint = new Color(60, 120, 40);
-                }
-                else if (Theme == MapTheme.Ice)
-                {
-                    // Tinting freddo globale per tutti i tile della Ice Zone
-                    tint = variant switch
-                    {
-                        "wall0" => new Color(170, 210, 255),   // muro: azzurro ghiaccio
-                        "wall1" => new Color(150, 195, 245),
-                        "wall2" => new Color(130, 175, 230),
-                        "stone0" => new Color(155, 195, 240),   // roccia ghiacciata: blu-grigio
-                        "stone1" => new Color(140, 185, 230),
-                        "stone2" => new Color(125, 175, 225),
-                        "glass0" => new Color(190, 225, 255),   // pavimento ghiaccio: quasi bianco-azzurro
-                        "glass1" => new Color(200, 230, 255),
-                        "glass2" => new Color(180, 218, 252),
-                        _ => new Color(180, 215, 255),   // fallback freddo generico
-                    };
-                }
-                else
-                {
-                    tint = Color.White;
-                }
-                spriteBatch.Draw(atlas.Texture, destRect, sourceRect, tint);
+                spriteBatch.Draw(atlas.Texture, destRect, sourceRect, Color.White);
             }
     }
 
