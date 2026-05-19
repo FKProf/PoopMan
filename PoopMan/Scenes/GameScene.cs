@@ -184,8 +184,9 @@ public class GameScene : Scene
 
         if (_showGameOver)
         {
-            if (GameController.Restart() || GameController.Action())
-                Core.ChangeScene(new GameScene());
+            bool mouseClick = Core.Input.Mouse.WasButtonJustPressed(PoopManLibrary.Input.MouseButton.Left);
+            if (GameController.Restart() || GameController.Action() || mouseClick)
+                Core.ChangeScene(new UI.NameEntryScreen(_score, _currentLevel));
             else if (pausePressed)
             {
                 AudioManager.StopGameAudio();

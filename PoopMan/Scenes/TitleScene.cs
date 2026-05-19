@@ -29,7 +29,7 @@ public class TitleScene : Scene
     private MenuScreen _screen = MenuScreen.Main;
     private int _selectedItem = 0;
 
-    private static readonly string[] MenuItems = { "GIOCA", "ISTRUZIONI", "AUDIO" };
+    private static readonly string[] MenuItems = { "GIOCA", "CLASSIFICA", "ISTRUZIONI", "AUDIO" };
     private const int BtnW = 260;
     private const int BtnH = 36;
     private const int BtnGap = 14;
@@ -119,8 +119,9 @@ public class TitleScene : Scene
                                 AudioManager.StopTitleAudio();
                                 Core.ChangeScene(new GameScene());
                                 break;
-                            case 1: _screen = MenuScreen.Istruzioni; break;
-                            case 2: _screen = MenuScreen.Audio; break;
+                            case 1: Core.ChangeScene(new UI.LeaderboardScreen(fromGameOver: false)); break;
+                            case 2: _screen = MenuScreen.Istruzioni; break;
+                            case 3: _screen = MenuScreen.Audio; break;
                         }
                     }
                 }
@@ -135,10 +136,13 @@ public class TitleScene : Scene
                     AudioManager.StopTitleAudio();
                     Core.ChangeScene(new GameScene());
                     break;
-                case 1: // ISTRUZIONI
+                case 1: // CLASSIFICA
+                    Core.ChangeScene(new UI.LeaderboardScreen(fromGameOver: false));
+                    break;
+                case 2: // ISTRUZIONI
                     _screen = MenuScreen.Istruzioni;
                     break;
-                case 2: // AUDIO
+                case 3: // AUDIO
                     _screen = MenuScreen.Audio;
                     break;
             }
