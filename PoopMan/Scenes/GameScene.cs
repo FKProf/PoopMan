@@ -549,7 +549,7 @@ public class GameScene : Scene
             var activeTiles = _miner.ActiveExplosionTiles.ToHashSet();
             if (activeTiles.Count > 0)
             {
-                foreach (var bat in _bats)
+                foreach (var bat in _bats.ToList())
                 {
                     if (bat.IsDead || bat.IsInvincible) continue;
                     if (!activeTiles.Contains(bat.VisualTilePosition)) continue;

@@ -253,14 +253,6 @@ public class TileMap
                         if (map[y, x] == TileType.Empty)
                             tileVariant[y, x] = "ice_glass" + rand.Next(3);
 
-                // 6) Brina sui muri fissi: sostituisce ice_brick_wall con ice_glass per varietà gelida
-                for (int y = 1; y < rows - 1; y++)
-                    for (int x = 1; x < cols - 1; x++)
-                        if (map[y, x] == TileType.Wall
-                            && y % 2 == 0 && x % 2 == 0
-                            && tileVariant[y, x] == "ice_brick_wall"
-                            && rand.Next(100) < 40)
-                            tileVariant[y, x] = "ice_glass" + rand.Next(3);
                 break;
 
             case MapTheme.Swamp:
@@ -397,6 +389,7 @@ public class TileMap
                 map[y, x] = TileType.Breakable;
                 tileVariant[y, x] = t.breakable[rand.Next(t.breakable.Length)];
             }
+            // Skip liquid tiles — never place breakable over water/lava/swamp
         }
     }
 
@@ -416,6 +409,10 @@ public class TileMap
                 {
                     map[y, x] = TileType.Breakable;
                     tileVariant[y, x] = t.breakable[rand.Next(t.breakable.Length)];
+                }
+                else if (map[y, x] == TileType.Wall && IsHazardVariant(tileVariant[y, x]))
+                {
+                    // Never place breakable on liquid tiles
                 }
             }
         }
