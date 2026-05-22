@@ -188,7 +188,7 @@ public class TitleScene : Scene
                 break;
         }
 
-        _sb.DrawString(_font, "PoopMan_Rank v0.1.0-alpha", new Vector2(8, H - 18), Color.DarkGray * 0.7f);
+        _sb.DrawString(_font, "PoopMan_Rank v0.1.1-alpha", new Vector2(8, H - 18), Color.DarkGray * 0.7f);
         _sb.End();
     }
 

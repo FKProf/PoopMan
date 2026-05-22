@@ -38,7 +38,7 @@ public static class LeaderboardManager
     // Record predefiniti sempre presenti in classifica
     private static readonly LeaderboardEntry[] SeedEntries =
     {
-        new() { Name = "KJ-Ash", Score = 99999, Level = 999, Date = "26/12/1893" },
+        new() { Name = "KJ-Ash", Score = 999999, Level = 999, Date = "26/12/1893" },
         new() { Name = "Criton", Score = 676767, Level = 67,  Date = "11/09/2001" },
     };
 

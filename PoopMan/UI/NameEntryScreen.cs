@@ -201,7 +201,7 @@ public sealed class NameEntryScreen : Scene
         DrawTextCentered($"{_name.Length}/{MaxNameLength}", cx, fieldY + fieldH + 6, Color.Gray * 0.7f, 0.75f);
 
         // ── Istruzioni ────────────────────────────────────────────────────
-        DrawTextCentered("ENTER  per confermare   ·   ESC  per saltare", cx, boxY + boxH - 36, Color.DimGray, 0.85f);
+        DrawTextCentered("ENTER  per confermare   -   ESC  per saltare", cx, boxY + boxH - 36, Color.DimGray, 0.85f);
 
         _sb.End();
     }

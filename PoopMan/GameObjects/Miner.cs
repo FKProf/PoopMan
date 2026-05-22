@@ -200,7 +200,7 @@ namespace PoopMan.GameObjects
         private int _shieldRechargeLevel = 0;
         private int _explosionResistanceSteps = 0;
         private int _damageReductionSteps = 0;
-        private const int ShieldRechargePeriod = 5;
+        private const int ShieldRechargePeriod = 3;
 
         public bool UpgradeShield { get; private set; } = false;
         public bool ShieldActive => _shieldActive;
