@@ -83,7 +83,7 @@ public class BatEncyclopedia
             Abilities: new[]
             {
                 "Esplode alla morte con bomba piccola",
-                "Esplosione area 3x3 tile (raggio 1)",
+                "Esplosione area 7x7 tile (raggio 3)",
                 "Knockback sulle unita adiacenti",
             },
             Tip: "Attenzione alla detonazione! Stai lontano quando muore.",
@@ -143,7 +143,7 @@ public class BatEncyclopedia
             Abilities: new[]
             {
                 "Esplode alla morte con bomba NUKE",
-                "Area 7x7 tile (raggio 3)",
+                "Area 13x13 tile (raggio 6)",
                 "Fungo atomico + detriti radioattivi",
                 "Instant kill e knockback estremo",
             },
