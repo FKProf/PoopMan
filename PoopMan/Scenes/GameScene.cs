@@ -184,8 +184,9 @@ public class GameScene : Scene
 
         if (_showGameOver)
         {
-            if (GameController.Restart() || GameController.Action())
-                Core.ChangeScene(new GameScene());
+            bool mouseClick = Core.Input.Mouse.WasButtonJustPressed(PoopManLibrary.Input.MouseButton.Left);
+            if (GameController.Restart() || GameController.Action() || mouseClick)
+                Core.ChangeScene(new UI.NameEntryScreen(_score, _currentLevel));
             else if (pausePressed)
             {
                 AudioManager.StopGameAudio();
@@ -548,7 +549,7 @@ public class GameScene : Scene
             var activeTiles = _miner.ActiveExplosionTiles.ToHashSet();
             if (activeTiles.Count > 0)
             {
-                foreach (var bat in _bats)
+                foreach (var bat in _bats.ToList())
                 {
                     if (bat.IsDead || bat.IsInvincible) continue;
                     if (!activeTiles.Contains(bat.VisualTilePosition)) continue;

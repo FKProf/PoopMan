@@ -112,13 +112,13 @@ C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\fx\
 C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\backgound\1.xnb
 C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\backgound\2.xnb
 C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\backgound\3.xnb
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\bat.xml
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\fxs\fsx.xml
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\items\items.xml
 C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\character\miner.xnb
 C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\character\miner_animation.xml
-C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\bat.xml
 C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\bat.xnb
-C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\fxs\fsx.xml
 C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\fxs\fxs.xnb
-C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\items\items.xml
 C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\items\items.xnb
 C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\Tile\terrain.xnb
 C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\Tile\TilesetAtlas.xml

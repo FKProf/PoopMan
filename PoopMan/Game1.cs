@@ -27,6 +27,7 @@ public class Game1 : Core
     protected override void Initialize()
     {
         base.Initialize();
+        LeaderboardManager.Load();
         Core.ChangeScene(new TitleScene());
     }
 
