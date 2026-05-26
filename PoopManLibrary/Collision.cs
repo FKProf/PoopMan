@@ -5,15 +5,13 @@ namespace PoopManLibrary;
 
 public readonly struct Collision : IEquatable<Collision>
 {
-    private static readonly Collision empty = new Collision();
-
     public readonly int X;
     public readonly int Y;
     public readonly int Radius;
 
-    public readonly Point Location => new Point(X, Y);
+    public readonly Point Location => new(X, Y);
 
-    public static Collision Empty => empty;
+    public static Collision Empty { get; } = new();
 
     public readonly bool IsEmpty => X == 0 && Y == 0 && Radius == 0;
 
@@ -38,20 +36,35 @@ public readonly struct Collision : IEquatable<Collision>
 
     public bool Intersects(Collision other)
     {
-        var radiiSquared = (this.Radius + other.Radius) * (this.Radius + other.Radius);
-        var distanceSquared = Vector2.DistanceSquared(this.Location.ToVector2(), other.Location.ToVector2());
+        var radiiSquared = (Radius + other.Radius) * (Radius + other.Radius);
+        var distanceSquared = Vector2.DistanceSquared(Location.ToVector2(), other.Location.ToVector2());
         return distanceSquared <= radiiSquared;
     }
 
-    public override readonly bool Equals(object obj) => obj is Collision other && Equals(other);
+    public readonly override bool Equals(object obj)
+    {
+        return obj is Collision other && Equals(other);
+    }
 
-    public readonly bool Equals(Collision other) => this.X == other.X &&
-                                                    this.Y == other.Y &&
-                                                    this.Radius == other.Radius;
+    public readonly bool Equals(Collision other)
+    {
+        return X == other.X &&
+               Y == other.Y &&
+               Radius == other.Radius;
+    }
 
-    public override readonly int GetHashCode() => HashCode.Combine(X, Y, Radius);
+    public readonly override int GetHashCode()
+    {
+        return HashCode.Combine(X, Y, Radius);
+    }
 
-    public static bool operator ==(Collision lhs, Collision rhs) => lhs.Equals(rhs);
+    public static bool operator ==(Collision lhs, Collision rhs)
+    {
+        return lhs.Equals(rhs);
+    }
 
-    public static bool operator !=(Collision lhs, Collision rhs) => !lhs.Equals(rhs);
+    public static bool operator !=(Collision lhs, Collision rhs)
+    {
+        return !lhs.Equals(rhs);
+    }
 }

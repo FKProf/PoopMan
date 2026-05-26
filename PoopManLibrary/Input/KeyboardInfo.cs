@@ -4,14 +4,14 @@ namespace PoopManLibrary.Input;
 
 public class KeyboardInfo
 {
-    public KeyboardState PreviousState { get; private set; }
-    public KeyboardState CurrentState { get; private set; }
-
     public KeyboardInfo()
     {
         PreviousState = new KeyboardState();
         CurrentState = Keyboard.GetState();
     }
+
+    public KeyboardState PreviousState { get; private set; }
+    public KeyboardState CurrentState { get; private set; }
 
     public void Update()
     {

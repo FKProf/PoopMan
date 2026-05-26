@@ -10,5 +10,5 @@ public struct MinerSegment
 
     public Vector2 Direction;
 
-    public Vector2 ReverseDirection => new Vector2(-Direction.X, -Direction.Y);
+    public Vector2 ReverseDirection => new(-Direction.X, -Direction.Y);
 }

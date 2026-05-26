@@ -2,15 +2,15 @@
 
 public class InputManager
 {
-    public KeyboardInfo Keyboard { get; private set; }
-
-    public MouseInfo Mouse { get; private set; }
-
     public InputManager()
     {
         Keyboard = new KeyboardInfo();
         Mouse = new MouseInfo();
     }
+
+    public KeyboardInfo Keyboard { get; }
+
+    public MouseInfo Mouse { get; }
 
     public void Update()
     {

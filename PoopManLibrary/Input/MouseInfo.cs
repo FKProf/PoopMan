@@ -5,6 +5,12 @@ namespace PoopManLibrary.Input;
 
 public class MouseInfo
 {
+    public MouseInfo()
+    {
+        PreviousState = new MouseState();
+        CurrentState = Mouse.GetState();
+    }
+
     public MouseState PreviousState { get; private set; }
 
     public MouseState CurrentState { get; private set; }
@@ -38,12 +44,6 @@ public class MouseInfo
     public int ScrollWheel => CurrentState.ScrollWheelValue;
 
     public int ScrollWheelDelta => CurrentState.ScrollWheelValue - PreviousState.ScrollWheelValue;
-
-    public MouseInfo()
-    {
-        PreviousState = new MouseState();
-        CurrentState = Mouse.GetState();
-    }
 
     public void Update()
     {
@@ -94,11 +94,14 @@ public class MouseInfo
         switch (button)
         {
             case MouseButton.Left:
-                return CurrentState.LeftButton == ButtonState.Pressed && PreviousState.LeftButton == ButtonState.Released;
+                return CurrentState.LeftButton == ButtonState.Pressed &&
+                       PreviousState.LeftButton == ButtonState.Released;
             case MouseButton.Right:
-                return CurrentState.RightButton == ButtonState.Pressed && PreviousState.RightButton == ButtonState.Released;
+                return CurrentState.RightButton == ButtonState.Pressed &&
+                       PreviousState.RightButton == ButtonState.Released;
             case MouseButton.Middle:
-                return CurrentState.MiddleButton == ButtonState.Pressed && PreviousState.MiddleButton == ButtonState.Released;
+                return CurrentState.MiddleButton == ButtonState.Pressed &&
+                       PreviousState.MiddleButton == ButtonState.Released;
             case MouseButton.XButton1:
                 return CurrentState.XButton1 == ButtonState.Pressed && PreviousState.XButton1 == ButtonState.Released;
             case MouseButton.XButton2:
@@ -113,11 +116,14 @@ public class MouseInfo
         switch (button)
         {
             case MouseButton.Left:
-                return CurrentState.LeftButton == ButtonState.Released && PreviousState.LeftButton == ButtonState.Pressed;
+                return CurrentState.LeftButton == ButtonState.Released &&
+                       PreviousState.LeftButton == ButtonState.Pressed;
             case MouseButton.Right:
-                return CurrentState.RightButton == ButtonState.Released && PreviousState.RightButton == ButtonState.Pressed;
+                return CurrentState.RightButton == ButtonState.Released &&
+                       PreviousState.RightButton == ButtonState.Pressed;
             case MouseButton.Middle:
-                return CurrentState.MiddleButton == ButtonState.Released && PreviousState.MiddleButton == ButtonState.Pressed;
+                return CurrentState.MiddleButton == ButtonState.Released &&
+                       PreviousState.MiddleButton == ButtonState.Pressed;
             case MouseButton.XButton1:
                 return CurrentState.XButton1 == ButtonState.Released && PreviousState.XButton1 == ButtonState.Pressed;
             case MouseButton.XButton2:

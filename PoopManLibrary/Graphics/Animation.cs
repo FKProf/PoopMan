@@ -5,10 +5,6 @@ namespace PoopManLibrary.Graphics;
 
 public class Animation
 {
-    public List<TextureRegion> Frames { get; set; }
-
-    public TimeSpan Delay { get; set; }
-
     public Animation()
     {
         Frames = new List<TextureRegion>();
@@ -20,4 +16,8 @@ public class Animation
         Frames = frames;
         Delay = delay;
     }
+
+    public List<TextureRegion> Frames { get; set; }
+
+    public TimeSpan Delay { get; set; }
 }

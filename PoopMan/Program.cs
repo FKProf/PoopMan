@@ -1,2 +1,4 @@
-﻿using var game = new PoopMan.Game1();
+﻿using PoopMan;
+
+using var game = new Game1();
 game.Run();

@@ -1,18 +1,18 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System.Collections.Generic;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System.Collections.Generic;
 
 namespace PoopManLibrary.World;
 
 public class TileAtlas
 {
-    public Texture2D Texture { get; }
-    public Dictionary<string, Rectangle> Tiles { get; } = new();
-
     public TileAtlas(Texture2D texture)
     {
         Texture = texture;
     }
+
+    public Texture2D Texture { get; }
+    public Dictionary<string, Rectangle> Tiles { get; } = new();
 
     public void AddTile(string name, int x, int y, int w, int h)
     {

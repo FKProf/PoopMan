@@ -5,6 +5,15 @@ namespace PoopManLibrary.Graphics;
 
 public class Sprite
 {
+    public Sprite()
+    {
+    }
+
+    public Sprite(TextureRegion region)
+    {
+        Region = region;
+    }
+
     public TextureRegion Region { get; set; }
 
     public Color Color { get; set; } = Color.White;
@@ -22,13 +31,6 @@ public class Sprite
     public float Width => Region.Width * Scale.X;
 
     public float Height => Region.Height * Scale.Y;
-
-    public Sprite() { }
-
-    public Sprite(TextureRegion region)
-    {
-        Region = region;
-    }
 
     public void CenterOrigin()
     {

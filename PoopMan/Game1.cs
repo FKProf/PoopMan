@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using PoopMan.Scenes;
 using PoopMan.UI;
@@ -10,10 +11,10 @@ namespace PoopMan;
 public class Game1 : Core
 {
     // Dimensioni base della mappa (pixel naturali)
-    private const int MapWidth = TileMap.Cols * TileMap.TileSize;  // 39×32 = 1248
-    private const int MapHeight = TileMap.Rows * TileMap.TileSize;  // 23×32 = 736
+    private const int MapWidth = TileMap.Cols * TileMap.TileSize; // 39×32 = 1248
+    private const int MapHeight = TileMap.Rows * TileMap.TileSize; // 23×32 = 736
     private const int DefaultWidth = MapWidth;
-    private const int DefaultHeight = MapHeight + GameHud.Height;  // 736+20 = 756
+    private const int DefaultHeight = MapHeight + GameHud.Height; // 736+20 = 756
 
     public Game1() : base("PoopMan Miner", DefaultWidth, DefaultHeight, false)
     {
@@ -21,14 +22,14 @@ public class Game1 : Core
         Window.AllowUserResizing = true;
         Graphics.SynchronizeWithVerticalRetrace = true;
         IsFixedTimeStep = true;
-        TargetElapsedTime = System.TimeSpan.FromSeconds(1.0 / 60.0);
+        TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 60.0);
     }
 
     protected override void Initialize()
     {
         base.Initialize();
         LeaderboardManager.Load();
-        Core.ChangeScene(new TitleScene());
+        ChangeScene(new TitleScene());
     }
 
     protected override void Update(GameTime gameTime)
@@ -46,6 +47,7 @@ public class Game1 : Core
                 Graphics.PreferredBackBufferWidth = GraphicsDevice.Adapter.CurrentDisplayMode.Width;
                 Graphics.PreferredBackBufferHeight = GraphicsDevice.Adapter.CurrentDisplayMode.Height;
             }
+
             Graphics.ApplyChanges();
         }
 
@@ -53,24 +55,24 @@ public class Game1 : Core
     }
 
     /// <summary>
-    /// Calcola la matrice di scala letterbox che adatta la mappa all'area disponibile
-    /// mantenendo l'aspect ratio. Usata da GameScene per il rendering.
+    ///     Calcola la matrice di scala letterbox che adatta la mappa all'area disponibile
+    ///     mantenendo l'aspect ratio. Usata da GameScene per il rendering.
     /// </summary>
     public static Matrix GetMapScaleMatrix(int hudHeight)
     {
-        int vw = Core.GraphicsDevice.Viewport.Width;
-        int vh = Core.GraphicsDevice.Viewport.Height;
-        int availH = vh - hudHeight;
+        var vw = GraphicsDevice.Viewport.Width;
+        var vh = GraphicsDevice.Viewport.Height;
+        var availH = vh - hudHeight;
 
-        float scaleX = (float)vw / MapWidth;
-        float scaleY = (float)availH / MapHeight;
-        float scale = scaleX < scaleY ? scaleX : scaleY;
+        var scaleX = (float)vw / MapWidth;
+        var scaleY = (float)availH / MapHeight;
+        var scale = scaleX < scaleY ? scaleX : scaleY;
 
         // Centra la mappa nell'area disponibile
-        float offsetX = (vw - MapWidth * scale) / 2f;
-        float offsetY = hudHeight + (availH - MapHeight * scale) / 2f;
+        var offsetX = (vw - MapWidth * scale) / 2f;
+        var offsetY = hudHeight + (availH - MapHeight * scale) / 2f;
 
         return Matrix.CreateScale(scale, scale, 1f)
-             * Matrix.CreateTranslation(offsetX, offsetY, 0f);
+               * Matrix.CreateTranslation(offsetX, offsetY, 0f);
     }
 }

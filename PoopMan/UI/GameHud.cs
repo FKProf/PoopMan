@@ -7,18 +7,13 @@ using PoopManLibrary.World;
 namespace PoopMan.UI;
 
 /// <summary>
-/// Barra HUD in cima alla finestra: score, vite, bombe, tema, livello, chiave.
-/// Spazio logico 1248×32; viene scalata alla larghezza viewport tramite GetHudMatrix().
+///     Barra HUD in cima alla finestra: score, vite, bombe, tema, livello, chiave.
+///     Spazio logico 1248×32; viene scalata alla larghezza viewport tramite GetHudMatrix().
 /// </summary>
 public class GameHud
 {
-    public const int Height = 36;          // altezza logica HUD (px di gioco)
-    private const int LogicalWidth = 1248;        // larghezza logica = mappa
-
-    private readonly SpriteFont _font;
-    private readonly Texture2D _minerIcon;
-    private readonly Texture2D _itemIcon;
-    private readonly Texture2D _pixel;
+    public const int Height = 36; // altezza logica HUD (px di gioco)
+    private const int LogicalWidth = 1248; // larghezza logica = mappa
 
     // Rettangoli sorgente dagli spritesheet
     private static readonly Rectangle SrcMinerIcon = new(128, 32, 32, 32);
@@ -38,8 +33,13 @@ public class GameHud
         [TileMap.MapTheme.Lava] = (new Color(255, 80, 20), "LAVA"),
         [TileMap.MapTheme.Ice] = (new Color(140, 210, 255), "ICE"),
         [TileMap.MapTheme.Swamp] = (new Color(80, 160, 60), "SWAMP"),
-        [TileMap.MapTheme.Ruins] = (new Color(200, 170, 100), "RUINS"),
+        [TileMap.MapTheme.Ruins] = (new Color(200, 170, 100), "RUINS")
     };
+
+    private readonly SpriteFont _font;
+    private readonly Texture2D _itemIcon;
+    private readonly Texture2D _minerIcon;
+    private readonly Texture2D _pixel;
 
     public GameHud(SpriteFont font, Texture2D minerIcon, Texture2D itemIcon, Texture2D pixel)
     {
@@ -51,21 +51,21 @@ public class GameHud
 
     public static Matrix GetHudMatrix(GraphicsDevice gd)
     {
-        float scale = gd.Viewport.Width / (float)LogicalWidth;
+        var scale = gd.Viewport.Width / (float)LogicalWidth;
         return Matrix.CreateScale(scale, scale, 1f);
     }
 
     public static int ScreenHeight(GraphicsDevice gd)
     {
-        float scale = gd.Viewport.Width / (float)LogicalWidth;
+        var scale = gd.Viewport.Width / (float)LogicalWidth;
         return (int)(Height * scale);
     }
 
     public void Draw(SpriteBatch sb, int score, int lives, int maxLives, int bigBombs,
-                     int level, bool hasKey, bool keyActive, TileMap.MapTheme theme)
+        int level, bool hasKey, bool keyActive, TileMap.MapTheme theme)
     {
-        float cy = (Height - _font.LineSpacing) / 2f;
-        float iconH = Height / 32f;   // scala icone all'altezza HUD
+        var cy = (Height - _font.LineSpacing) / 2f;
+        var iconH = Height / 32f; // scala icone all'altezza HUD
 
         // ── Sfondo sfumato (due rettangoli) ──────────────────────────────
         sb.Draw(_pixel, new Rectangle(0, 0, LogicalWidth, Height / 2), BgTop);
@@ -73,8 +73,8 @@ public class GameHud
         sb.Draw(_pixel, new Rectangle(0, Height - 2, LogicalWidth, 2), BorderColor);
 
         // ── SINISTRA: Score ───────────────────────────────────────────────
-        int lx = 10;
-        string scoreStr = $"SCORE: {score,6}";
+        var lx = 10;
+        var scoreStr = $"SCORE: {score,6}";
         DrawS(sb, scoreStr, new Vector2(lx, cy), Color.Yellow);
         lx += (int)_font.MeasureString(scoreStr).X + 16;
 
@@ -85,14 +85,15 @@ public class GameHud
         // ── SINISTRA: Vite (slot dinamici basati su maxLives) ────────────
         DrawS(sb, "HP:", new Vector2(lx, cy), new Color(220, 220, 220));
         lx += (int)_font.MeasureString("HP:").X + 6;
-        float lifeIconScale = maxLives <= 5 ? iconH * 0.85f : iconH * (4.25f / maxLives);
-        int iconStep = Math.Max(2, (int)(32 * lifeIconScale) + 2);
-        for (int i = 0; i < maxLives; i++)
+        var lifeIconScale = maxLives <= 5 ? iconH * 0.85f : iconH * (4.25f / maxLives);
+        var iconStep = Math.Max(2, (int)(32 * lifeIconScale) + 2);
+        for (var i = 0; i < maxLives; i++)
         {
-            Color lifeColor = i < lives ? Color.White : new Color(60, 20, 20) * 0.6f;
+            var lifeColor = i < lives ? Color.White : new Color(60, 20, 20) * 0.6f;
             sb.Draw(_minerIcon, new Vector2(lx + i * iconStep, 2),
                 SrcMinerIcon, lifeColor, 0f, Vector2.Zero, lifeIconScale, SpriteEffects.None, 0f);
         }
+
         lx += maxLives * iconStep + 14;
 
         // Separatore
@@ -107,42 +108,42 @@ public class GameHud
             bigBombs > 0 ? Color.Orange : Color.Gray * 0.5f);
 
         // ── CENTRO: Tema + Livello ────────────────────────────────────────
-        (Color accent, string label) style = ThemeStyle[theme];
-        Color themeAccent = style.accent;
-        string themeLabel = style.label;
-        string centerText = $"{themeLabel}  |  LVL {level}";
-        Vector2 centerSize = _font.MeasureString(centerText);
-        float centerX = LogicalWidth / 2f - centerSize.X / 2f;
+        var style = ThemeStyle[theme];
+        var themeAccent = style.accent;
+        var themeLabel = style.label;
+        var centerText = $"{themeLabel}  |  LVL {level}";
+        var centerSize = _font.MeasureString(centerText);
+        var centerX = LogicalWidth / 2f - centerSize.X / 2f;
 
         // Sfondo pillola centrata
-        int pillPad = 8;
+        var pillPad = 8;
         sb.Draw(_pixel,
             new Rectangle((int)centerX - pillPad, 4,
-                          (int)centerSize.X + pillPad * 2, Height - 8),
+                (int)centerSize.X + pillPad * 2, Height - 8),
             themeAccent * 0.18f);
         sb.Draw(_pixel,
             new Rectangle((int)centerX - pillPad, Height - 4,
-                          (int)centerSize.X + pillPad * 2, 2),
+                (int)centerSize.X + pillPad * 2, 2),
             themeAccent * 0.8f);
 
         // Testo tema (colorato) + separatore + livello (cyan)
-        Vector2 themeSize = _font.MeasureString(themeLabel);
+        var themeSize = _font.MeasureString(themeLabel);
         DrawS(sb, themeLabel, new Vector2(centerX, cy), themeAccent);
 
-        string separator = "  |  ";
-        float sepX = centerX + themeSize.X;
+        var separator = "  |  ";
+        var sepX = centerX + themeSize.X;
         DrawS(sb, separator, new Vector2(sepX, cy), BorderColor);
 
-        float lvlX = sepX + _font.MeasureString(separator).X;
+        var lvlX = sepX + _font.MeasureString(separator).X;
         DrawS(sb, $"LVL {level}", new Vector2(lvlX, cy), Color.Cyan);
 
         // ── DESTRA: Chiave ────────────────────────────────────────────────
-        int rx = LogicalWidth - 10;
+        var rx = LogicalWidth - 10;
 
         if (keyActive)
         {
-            Color keyColor = hasKey ? Color.Gold : new Color(80, 80, 80);
-            string keyStr = hasKey ? "KEY" : "NO KEY";
+            var keyColor = hasKey ? Color.Gold : new Color(80, 80, 80);
+            var keyStr = hasKey ? "KEY" : "NO KEY";
             rx -= (int)_font.MeasureString(keyStr).X;
             DrawS(sb, keyStr, new Vector2(rx, cy), keyColor);
             rx -= (int)(32 * iconH * 0.9f) + 4;

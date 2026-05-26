@@ -19,19 +19,16 @@ public sealed class LeaderboardEntry
 /// <summary>Gestisce la persistenza della classifica in un file JSON locale.</summary>
 public static class LeaderboardManager
 {
+    private const int MaxEntries = 20;
+
     private static readonly string FilePath =
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "leaderboard.json");
-
-    private const int MaxEntries = 20;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never
     };
-
-    // Indice dell'ultima entry salvata (-1 se nessuna)
-    public static int LastSavedIndex { get; private set; } = -1;
 
     private static List<LeaderboardEntry> _entries = new();
 
@@ -39,8 +36,11 @@ public static class LeaderboardManager
     private static readonly LeaderboardEntry[] SeedEntries =
     {
         new() { Name = "KJ-Ash", Score = 999999, Level = 999, Date = "26/12/1893" },
-        new() { Name = "Criton", Score = 676767, Level = 67,  Date = "11/09/2001" },
+        new() { Name = "Criton", Score = 676767, Level = 67, Date = "11/09/2001" }
     };
+
+    // Indice dell'ultima entry salvata (-1 se nessuna)
+    public static int LastSavedIndex { get; private set; } = -1;
 
     /// <summary>Carica la classifica dal disco. Da chiamare all'avvio del gioco.</summary>
     public static void Load()
@@ -49,10 +49,9 @@ public static class LeaderboardManager
         LastSavedIndex = -1;
 
         if (File.Exists(FilePath))
-        {
             try
             {
-                string json = File.ReadAllText(FilePath);
+                var json = File.ReadAllText(FilePath);
                 var loaded = JsonSerializer.Deserialize<List<LeaderboardEntry>>(json, JsonOptions);
                 if (loaded != null)
                     _entries = loaded;
@@ -62,18 +61,15 @@ public static class LeaderboardManager
                 // File corrotto o illeggibile: si reimposta la classifica
                 _entries = new List<LeaderboardEntry>();
             }
-        }
 
         // Aggiunge i seed solo se non sono già presenti (confronto per nome)
-        bool changed = false;
+        var changed = false;
         foreach (var seed in SeedEntries)
-        {
             if (!_entries.Any(e => e.Name == seed.Name))
             {
                 _entries.Add(seed);
                 changed = true;
             }
-        }
 
         if (changed)
         {
@@ -87,12 +83,14 @@ public static class LeaderboardManager
     }
 
     /// <summary>Restituisce la classifica ordinata dal punteggio più alto.</summary>
-    public static IReadOnlyList<LeaderboardEntry> GetEntries() =>
-        _entries.OrderByDescending(e => e.Score).ThenByDescending(e => e.Level).ToList();
+    public static IReadOnlyList<LeaderboardEntry> GetEntries()
+    {
+        return _entries.OrderByDescending(e => e.Score).ThenByDescending(e => e.Level).ToList();
+    }
 
     /// <summary>
-    /// Aggiunge un nuovo record, ordina e mantiene al massimo <see cref="MaxEntries"/> voci.
-    /// Aggiorna <see cref="LastSavedIndex"/> con la posizione del record appena inserito.
+    ///     Aggiunge un nuovo record, ordina e mantiene al massimo <see cref="MaxEntries" /> voci.
+    ///     Aggiorna <see cref="LastSavedIndex" /> con la posizione del record appena inserito.
     /// </summary>
     public static void AddEntry(string name, int score, int level)
     {
@@ -101,7 +99,7 @@ public static class LeaderboardManager
             Name = string.IsNullOrWhiteSpace(name) ? "???" : name.Trim(),
             Score = score,
             Level = level,
-            Date = DateTime.Now.ToString("dd/MM/yyyy"),
+            Date = DateTime.Now.ToString("dd/MM/yyyy")
         };
 
         _entries.Add(entry);
@@ -127,7 +125,7 @@ public static class LeaderboardManager
     {
         try
         {
-            string json = JsonSerializer.Serialize(_entries, JsonOptions);
+            var json = JsonSerializer.Serialize(_entries, JsonOptions);
             File.WriteAllText(FilePath, json);
         }
         catch

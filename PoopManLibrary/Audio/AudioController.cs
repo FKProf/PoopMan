@@ -1,99 +1,52 @@
-﻿using Microsoft.Xna.Framework.Audio;
-using Microsoft.Xna.Framework.Media;
-using Microsoft.Xna.Framework.Content;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using Microsoft.Xna.Framework.Audio;
+using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Media;
 
 namespace PoopManLibrary.Audio;
 
 /// <summary>
-/// Controller audio centrale. Gestisce BGM (Song) e SoundEffect.
-/// Da inizializzare una volta sola e accessibile tramite istanza statica.
+///     Controller audio centrale. Gestisce BGM (Song) e SoundEffect.
+///     Da inizializzare una volta sola e accessibile tramite istanza statica.
 /// </summary>
 public class AudioController : IDisposable
 {
-    // ── Singleton leggero ─────────────────────────────────────────────────
-    public static AudioController Instance { get; private set; } = new AudioController();
-
-    // ── BGM ───────────────────────────────────────────────────────────────
-    private readonly List<Song> _bgmTracks = new();
-    private int _currentBgmIndex = -1;
-    private float _bgmVolume = 0.6f;
-    private bool _isMuted = false;
-
     // ── Cartella preferenze ───────────────────────────────────────────────
     private static readonly string _prefPath =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                     "PoopMan", "audio.cfg");
+            "PoopMan", "audio.cfg");
+
+    private static readonly Random _rand = new();
+
+    // ── BGM ───────────────────────────────────────────────────────────────
+    private readonly List<Song> _bgmTracks = new();
+
+    // ── Suoni piazza-bomba (fart) ──────────────────────────────────────────
+    private readonly List<SoundEffect> _placeBombSounds = new();
+    private float _bgmVolume = 0.6f;
+    private int _currentBgmIndex = -1;
+    private bool _disposed;
+    private SoundEffect? _explosionBig;
+
+    // ── Suoni esplosione ────────────────────────────────────────────────
+    private SoundEffect? _explosionSmall;
+    private bool _isMuted;
+    private int _lastPlaceBombIndex = -1; // evita ripetizioni consecutive
+    private float _sfxVolume = 1.0f;
 
     // ── Suoni UI ──────────────────────────────────────────────────────────
     private SoundEffect? _uiSound;
     private SoundEffectInstance? _uiSoundInst;
 
-    // ── Suoni piazza-bomba (fart) ──────────────────────────────────────────
-    private readonly List<SoundEffect> _placeBombSounds = new();
-    private int _lastPlaceBombIndex = -1;   // evita ripetizioni consecutive
-    private float _sfxVolume = 1.0f;
-
-    // ── Suoni esplosione ────────────────────────────────────────────────
-    private SoundEffect? _explosionSmall;
-    private SoundEffect? _explosionBig;
-
-    private static readonly Random _rand = new();
-    private bool _disposed;
-
-    private AudioController() { }
-
-    // ─────────────────────────────────────────────────────────────────────
-    // Caricamento
-    // ─────────────────────────────────────────────────────────────────────
-
-    /// <summary>Carica tutti i BGM (ogg) dalla cartella Audio/BMG.</summary>
-    public void LoadBgm(ContentManager content, IEnumerable<string> assetPaths)
+    private AudioController()
     {
-        _bgmTracks.Clear();
-        foreach (var path in assetPaths)
-        {
-            try { _bgmTracks.Add(content.Load<Song>(path)); }
-            catch { /* file mancante: ignora */ }
-        }
     }
 
-    /// <summary>Carica il suono UI dalla cartella Audio/UISounds.</summary>
-    public void LoadUiSound(ContentManager content, string assetPath)
-    {
-        try { _uiSound = content.Load<SoundEffect>(assetPath); }
-        catch { }
-    }
-
-    /// <summary>Carica i suoni piazza-bomba (wav) dalla cartella Audio/PlaceBomb.</summary>
-    public void LoadPlaceBombSounds(ContentManager content, IEnumerable<string> assetPaths)
-    {
-        _placeBombSounds.Clear();
-        foreach (var path in assetPaths)
-        {
-            try { _placeBombSounds.Add(content.Load<SoundEffect>(path)); }
-            catch { }
-        }
-    }
-
-    /// <summary>Carica i suoni di esplosione (fxs = piccola, fxsBig = grande).</summary>
-    public void LoadExplosionSounds(ContentManager content, string smallPath, string bigPath)
-    {
-        try { _explosionSmall = content.Load<SoundEffect>(smallPath); } catch { }
-        try { _explosionBig = content.Load<SoundEffect>(bigPath); } catch { }
-    }
-
-    /// <summary>Riproduce il suono di esplosione corrispondente al tipo di bomba.</summary>
-    public void PlayExplosion(bool bigBomb)
-    {
-        var sfx = bigBomb ? _explosionBig : _explosionSmall;
-        if (sfx == null) return;
-        var inst = sfx.CreateInstance();
-        inst.Volume = _isMuted ? 0f : _sfxVolume;
-        inst.Play();
-    }
+    // ── Singleton leggero ─────────────────────────────────────────────────
+    public static AudioController Instance { get; private set; } = new();
 
     // ─────────────────────────────────────────────────────────────────────
     // Proprietà volume
@@ -124,8 +77,8 @@ public class AudioController : IDisposable
     }
 
     /// <summary>
-    /// Mute totale: quando true silenzia MediaPlayer e tutte le SoundEffectInstance.
-    /// Usando IsMuted di MediaPlayer il silenzio è garantito anche su WindowsDX.
+    ///     Mute totale: quando true silenzia MediaPlayer e tutte le SoundEffectInstance.
+    ///     Usando IsMuted di MediaPlayer il silenzio è garantito anche su WindowsDX.
     /// </summary>
     public bool IsMuted
     {
@@ -137,6 +90,98 @@ public class AudioController : IDisposable
             if (_uiSoundInst != null)
                 _uiSoundInst.Volume = _isMuted ? 0f : _bgmVolume * 0.7f;
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // IDisposable
+    // ─────────────────────────────────────────────────────────────────────
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        MediaPlayer.Stop();
+        _uiSoundInst?.Stop();
+        foreach (var s in _placeBombSounds) s.Dispose();
+        _uiSound?.Dispose();
+        _explosionSmall?.Dispose();
+        _explosionBig?.Dispose();
+        foreach (var t in _bgmTracks) t.Dispose();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Caricamento
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>Carica tutti i BGM (ogg) dalla cartella Audio/BMG.</summary>
+    public void LoadBgm(ContentManager content, IEnumerable<string> assetPaths)
+    {
+        _bgmTracks.Clear();
+        foreach (var path in assetPaths)
+            try
+            {
+                _bgmTracks.Add(content.Load<Song>(path));
+            }
+            catch
+            {
+                /* file mancante: ignora */
+            }
+    }
+
+    /// <summary>Carica il suono UI dalla cartella Audio/UISounds.</summary>
+    public void LoadUiSound(ContentManager content, string assetPath)
+    {
+        try
+        {
+            _uiSound = content.Load<SoundEffect>(assetPath);
+        }
+        catch
+        {
+        }
+    }
+
+    /// <summary>Carica i suoni piazza-bomba (wav) dalla cartella Audio/PlaceBomb.</summary>
+    public void LoadPlaceBombSounds(ContentManager content, IEnumerable<string> assetPaths)
+    {
+        _placeBombSounds.Clear();
+        foreach (var path in assetPaths)
+            try
+            {
+                _placeBombSounds.Add(content.Load<SoundEffect>(path));
+            }
+            catch
+            {
+            }
+    }
+
+    /// <summary>Carica i suoni di esplosione (fxs = piccola, fxsBig = grande).</summary>
+    public void LoadExplosionSounds(ContentManager content, string smallPath, string bigPath)
+    {
+        try
+        {
+            _explosionSmall = content.Load<SoundEffect>(smallPath);
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            _explosionBig = content.Load<SoundEffect>(bigPath);
+        }
+        catch
+        {
+        }
+    }
+
+    /// <summary>Riproduce il suono di esplosione corrispondente al tipo di bomba.</summary>
+    public void PlayExplosion(bool bigBomb)
+    {
+        var sfx = bigBomb ? _explosionBig : _explosionSmall;
+        if (sfx == null) return;
+        var inst = sfx.CreateInstance();
+        inst.Volume = _isMuted ? 0f : _sfxVolume;
+        inst.Play();
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -162,7 +207,10 @@ public class AudioController : IDisposable
             File.WriteAllText(_prefPath,
                 $"{_bgmVolume:F3}\n{_sfxVolume:F3}\n{(_isMuted ? 1 : 0)}");
         }
-        catch { /* non critico */ }
+        catch
+        {
+            /* non critico */
+        }
     }
 
     /// <summary>Carica le preferenze salvate; se il file non esiste usa i valori di default.</summary>
@@ -173,19 +221,22 @@ public class AudioController : IDisposable
             if (!File.Exists(_prefPath)) return;
             var lines = File.ReadAllLines(_prefPath);
             if (lines.Length >= 1 && float.TryParse(lines[0],
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out float bgm))
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture, out var bgm))
                 _bgmVolume = Math.Clamp(bgm, 0f, 1f);
             if (lines.Length >= 2 && float.TryParse(lines[1],
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out float sfx))
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture, out var sfx))
                 _sfxVolume = Math.Clamp(sfx, 0f, 1f);
-            if (lines.Length >= 3 && int.TryParse(lines[2], out int muted))
+            if (lines.Length >= 3 && int.TryParse(lines[2], out var muted))
                 _isMuted = muted != 0;
             // Applica subito
             ApplyBgmVolume();
         }
-        catch { /* file corrotto: usa default */ }
+        catch
+        {
+            /* file corrotto: usa default */
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -193,7 +244,7 @@ public class AudioController : IDisposable
     // ─────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Riproduce un BGM specifico per indice (ciclico), fermando quello precedente.
+    ///     Riproduce un BGM specifico per indice (ciclico), fermando quello precedente.
     /// </summary>
     public void PlayBgm(int index)
     {
@@ -204,12 +255,12 @@ public class AudioController : IDisposable
         _currentBgmIndex = index;
         MediaPlayer.IsRepeating = true;
         MediaPlayer.Play(_bgmTracks[_currentBgmIndex]);
-        ApplyBgmVolume();   // imposta Volume e IsMuted dopo Play (richiesto da MonoGame)
+        ApplyBgmVolume(); // imposta Volume e IsMuted dopo Play (richiesto da MonoGame)
     }
 
     /// <summary>
-    /// Sceglie il BGM in base al tema della mappa.
-    /// Forest→0, Cave→1, Stone→2, Desert→3, poi ricicla se ci sono più tracce.
+    ///     Sceglie il BGM in base al tema della mappa.
+    ///     Forest→0, Cave→1, Stone→2, Desert→3, poi ricicla se ci sono più tracce.
     /// </summary>
     public void PlayBgmForTheme(int themeIndex)
     {
@@ -224,9 +275,20 @@ public class AudioController : IDisposable
         PlayBgm(_rand.Next(_bgmTracks.Count));
     }
 
-    public void StopBgm() => MediaPlayer.Stop();
-    public void PauseBgm() => MediaPlayer.Pause();
-    public void ResumeBgm() => MediaPlayer.Resume();
+    public void StopBgm()
+    {
+        MediaPlayer.Stop();
+    }
+
+    public void PauseBgm()
+    {
+        MediaPlayer.Pause();
+    }
+
+    public void ResumeBgm()
+    {
+        MediaPlayer.Resume();
+    }
 
     // ─────────────────────────────────────────────────────────────────────
     // SFX
@@ -270,8 +332,8 @@ public class AudioController : IDisposable
     }
 
     /// <summary>
-    /// Riproduce un suono piazza-bomba casuale, evitando di ripetere
-    /// lo stesso suono due volte di fila.
+    ///     Riproduce un suono piazza-bomba casuale, evitando di ripetere
+    ///     lo stesso suono due volte di fila.
     /// </summary>
     public void PlayPlaceBomb()
     {
@@ -279,35 +341,16 @@ public class AudioController : IDisposable
 
         int idx;
         if (_placeBombSounds.Count == 1)
-        {
             idx = 0;
-        }
         else
-        {
-            do { idx = _rand.Next(_placeBombSounds.Count); }
-            while (idx == _lastPlaceBombIndex);
-        }
+            do
+            {
+                idx = _rand.Next(_placeBombSounds.Count);
+            } while (idx == _lastPlaceBombIndex);
 
         _lastPlaceBombIndex = idx;
         var inst = _placeBombSounds[idx].CreateInstance();
         inst.Volume = _isMuted ? 0f : _sfxVolume;
         inst.Play();
-    }
-
-    // ─────────────────────────────────────────────────────────────────────
-    // IDisposable
-    // ─────────────────────────────────────────────────────────────────────
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        MediaPlayer.Stop();
-        _uiSoundInst?.Stop();
-        foreach (var s in _placeBombSounds) s.Dispose();
-        _uiSound?.Dispose();
-        _explosionSmall?.Dispose();
-        _explosionBig?.Dispose();
-        foreach (var t in _bgmTracks) t.Dispose();
     }
 }

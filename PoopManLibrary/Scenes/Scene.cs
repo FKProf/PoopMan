@@ -6,10 +6,6 @@ namespace PoopManLibrary.Scenes;
 
 public class Scene : IDisposable
 {
-    protected ContentManager Content { get; private set; }
-
-    public bool IsDisposed { get; private set; }
-
     public Scene()
     {
         Content = new ContentManager(Core.ContentManager.ServiceProvider);
@@ -17,25 +13,40 @@ public class Scene : IDisposable
         Content.RootDirectory = Core.ContentManager.RootDirectory;
     }
 
-    ~Scene() => Dispose(false);
+    protected ContentManager Content { get; }
+
+    public bool IsDisposed { get; private set; }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    ~Scene()
+    {
+        Dispose(false);
+    }
 
     public virtual void Initialize()
     {
         LoadContent();
     }
 
-    public virtual void LoadContent() { }
-
-    public virtual void UnloadContent() { }
-
-    public virtual void Update(GameTime gameTime) { }
-
-    public virtual void Draw(GameTime gameTime) { }
-
-    public void Dispose()
+    public virtual void LoadContent()
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
+    }
+
+    public virtual void UnloadContent()
+    {
+    }
+
+    public virtual void Update(GameTime gameTime)
+    {
+    }
+
+    public virtual void Draw(GameTime gameTime)
+    {
     }
 
     protected virtual void Dispose(bool disposing)
@@ -48,6 +59,7 @@ public class Scene : IDisposable
             UnloadContent();
             Content.Dispose();
         }
+
         IsDisposed = true;
     }
 }

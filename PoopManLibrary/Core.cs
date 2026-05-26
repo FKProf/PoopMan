@@ -12,18 +12,6 @@ public class Core : Game
 {
     internal static Core p_istance;
 
-    public static Core Instance => p_istance;
-
-    public static GraphicsDeviceManager Graphics { get; private set; }
-
-    public static new GraphicsDevice GraphicsDevice { get; private set; }
-
-    public static SpriteBatch SpriteBatch { get; private set; }
-
-    public static ContentManager ContentManager { get; private set; }
-
-    public static InputManager Input { get; private set; }
-
     private static Scene p_activeScene;
 
     private static Scene p_nextScene;
@@ -40,13 +28,25 @@ public class Core : Game
         Graphics.PreferredBackBufferHeight = height;
         Graphics.IsFullScreen = fullScreen;
 
-        ContentManager = base.Content;
+        ContentManager = Content;
         IsMouseVisible = true;
         Window.Title = Title;
-        Content = base.Content;
+        Content = Content;
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
     }
+
+    public static Core Instance => p_istance;
+
+    public static GraphicsDeviceManager Graphics { get; private set; }
+
+    public new static GraphicsDevice GraphicsDevice { get; private set; }
+
+    public static SpriteBatch SpriteBatch { get; private set; }
+
+    public static ContentManager ContentManager { get; private set; }
+
+    public static InputManager Input { get; private set; }
 
     protected override void Initialize()
     {
@@ -60,15 +60,9 @@ public class Core : Game
     {
         Input.Update(); // ✅ aggiorna keyboard/mouse ogni frame
 
-        if (p_nextScene != null)
-        {
-            TransitionScene();
-        }
+        if (p_nextScene != null) TransitionScene();
 
-        if (p_activeScene != null)
-        {
-            p_activeScene.Update(gameTime);
-        }
+        if (p_activeScene != null) p_activeScene.Update(gameTime);
 
         base.Update(gameTime);
     }
@@ -78,10 +72,7 @@ public class Core : Game
         GraphicsDevice.SetRenderTarget(null);
         if (p_activeScene == null)
             GraphicsDevice.Clear(Color.CornflowerBlue);
-        if (p_activeScene != null)
-        {
-            p_activeScene.Draw(gameTime);
-        }
+        if (p_activeScene != null) p_activeScene.Draw(gameTime);
         base.Draw(gameTime);
     }
 

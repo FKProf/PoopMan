@@ -5,9 +5,18 @@ namespace PoopManLibrary.Graphics;
 
 public class AnimatedSprite : Sprite
 {
+    private Animation _animation;
     private int _currentFrame;
     private TimeSpan _elapsed;
-    private Animation _animation;
+
+    public AnimatedSprite()
+    {
+    }
+
+    public AnimatedSprite(Animation animation)
+    {
+        Animation = animation;
+    }
 
     public Animation Animation
     {
@@ -17,13 +26,6 @@ public class AnimatedSprite : Sprite
             _animation = value;
             Region = _animation.Frames[0];
         }
-    }
-
-    public AnimatedSprite() { }
-
-    public AnimatedSprite(Animation animation)
-    {
-        Animation = animation;
     }
 
     public void Update(GameTime gameTime)

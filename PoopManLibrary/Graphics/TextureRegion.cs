@@ -5,6 +5,16 @@ namespace PoopManLibrary.Graphics;
 
 public class TextureRegion
 {
+    public TextureRegion()
+    {
+    }
+
+    public TextureRegion(Texture2D texture, int x, int y, int width, int height)
+    {
+        Texture = texture;
+        Bounds = new Rectangle(x, y, width, height);
+    }
+
     public string Name { get; set; }
 
     public Texture2D Texture { get; set; }
@@ -15,13 +25,13 @@ public class TextureRegion
 
     public Rectangle Bounds { get; set; }
 
-    public TextureRegion() { }
+    public float TopTextureCoordinate => Bounds.Top / (float)Texture.Height;
 
-    public TextureRegion(Texture2D texture, int x, int y, int width, int height)
-    {
-        Texture = texture;
-        Bounds = new Rectangle(x, y, width, height);
-    }
+    public float BottomTextureCoordinate => Bounds.Bottom / (float)Texture.Height;
+
+    public float LeftTextureCoordinate => Bounds.Left / (float)Texture.Width;
+
+    public float RightTextureCoordinate => Bounds.Right / (float)Texture.Width;
 
     public void Draw(SpriteBatch spriteBatch, Vector2 position, Color color)
     {
@@ -58,13 +68,4 @@ public class TextureRegion
             layerDepth
         );
     }
-
-    public float TopTextureCoordinate => Bounds.Top / (float)Texture.Height;
-
-    public float BottomTextureCoordinate => Bounds.Bottom / (float)Texture.Height;
-
-    public float LeftTextureCoordinate => Bounds.Left / (float)Texture.Width;
-
-    public float RightTextureCoordinate => Bounds.Right / (float)Texture.Width;
-
 }

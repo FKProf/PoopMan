@@ -8,34 +8,34 @@ using PoopManLibrary.Scenes;
 namespace PoopMan.UI;
 
 /// <summary>
-/// Schermata di inserimento nome dopo il Game Over.
-/// Mostra punteggio e livello raggiunti, chiede il nome e salva nella leaderboard.
+///     Schermata di inserimento nome dopo il Game Over.
+///     Mostra punteggio e livello raggiunti, chiede il nome e salva nella leaderboard.
 /// </summary>
 public sealed class NameEntryScreen : Scene
 {
-    private readonly int _score;
+    private const int MaxNameLength = 16;
     private readonly int _level;
+    private readonly int _score;
+    private float _caretTimer;
+    private bool _caretVisible = true;
+    private bool _confirmed;
+    private SpriteFont _font;
+
+    // ── Input nome ────────────────────────────────────────────────────────
+    private string _name = "";
+    private Texture2D _pixel;
+
+    // ── Stato ─────────────────────────────────────────────────────────────
+    private KeyboardState _prevKb;
+
+    // ── Risorse ───────────────────────────────────────────────────────────
+    private SpriteBatch _sb;
 
     public NameEntryScreen(int score, int level)
     {
         _score = score;
         _level = level;
     }
-
-    // ── Risorse ───────────────────────────────────────────────────────────
-    private SpriteBatch _sb;
-    private SpriteFont _font;
-    private Texture2D _pixel;
-
-    // ── Input nome ────────────────────────────────────────────────────────
-    private string _name = "";
-    private const int MaxNameLength = 16;
-    private float _caretTimer = 0f;
-    private bool _caretVisible = true;
-
-    // ── Stato ─────────────────────────────────────────────────────────────
-    private KeyboardState _prevKb;
-    private bool _confirmed = false;
 
     // ─────────────────────────────────────────────────────────────────────
     public override void LoadContent()
@@ -54,7 +54,7 @@ public sealed class NameEntryScreen : Scene
     {
         if (_confirmed) return;
 
-        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
         // Lampeggio caret
         _caretTimer += dt;
@@ -65,13 +65,12 @@ public sealed class NameEntryScreen : Scene
         }
 
         // ── Legge i tasti premuti in questo frame ─────────────────────────
-        KeyboardState kb = Keyboard.GetState();
-        Keys[] pressed = kb.GetPressedKeys();
+        var kb = Keyboard.GetState();
+        var pressed = kb.GetPressedKeys();
 
-        bool shift = kb.IsKeyDown(Keys.LeftShift) || kb.IsKeyDown(Keys.RightShift);
+        var shift = kb.IsKeyDown(Keys.LeftShift) || kb.IsKeyDown(Keys.RightShift);
 
-        foreach (Keys key in pressed)
-        {
+        foreach (var key in pressed)
             if (WasJustPressed(key, kb))
             {
                 // Backspace
@@ -99,18 +98,19 @@ public sealed class NameEntryScreen : Scene
                 // Caratteri validi (lettere, cifre, spazio, trattino)
                 if (_name.Length < MaxNameLength)
                 {
-                    char? c = KeyToChar(key, shift);
+                    var c = KeyToChar(key, shift);
                     if (c.HasValue)
                         _name += c.Value;
                 }
             }
-        }
 
         _prevKb = kb;
     }
 
-    private bool WasJustPressed(Keys key, KeyboardState current) =>
-        current.IsKeyDown(key) && !_prevKb.IsKeyDown(key);
+    private bool WasJustPressed(Keys key, KeyboardState current)
+    {
+        return current.IsKeyDown(key) && !_prevKb.IsKeyDown(key);
+    }
 
     private static char? KeyToChar(Keys key, bool shift)
     {
@@ -139,16 +139,16 @@ public sealed class NameEntryScreen : Scene
     {
         _confirmed = true;
         LeaderboardManager.AddEntry(_name, _score, _level);
-        Core.ChangeScene(new LeaderboardScreen(LeaderboardManager.LastSavedIndex, fromGameOver: true));
+        Core.ChangeScene(new LeaderboardScreen(LeaderboardManager.LastSavedIndex, true));
     }
 
     // ─────────────────────────────────────────────────────────────────────
     public override void Draw(GameTime gameTime)
     {
-        int vw = Core.GraphicsDevice.Viewport.Width;
-        int vh = Core.GraphicsDevice.Viewport.Height;
-        int cx = vw / 2;
-        int cy = vh / 2;
+        var vw = Core.GraphicsDevice.Viewport.Width;
+        var vh = Core.GraphicsDevice.Viewport.Height;
+        var cx = vw / 2;
+        var cy = vh / 2;
 
         Core.GraphicsDevice.Clear(new Color(12, 10, 28));
 
@@ -158,10 +158,10 @@ public sealed class NameEntryScreen : Scene
         DrawRect(new Rectangle(0, 0, vw, vh), Color.Black * 0.85f);
 
         // ── Riquadro centrale ─────────────────────────────────────────────
-        int boxW = (int)(vw * 0.54f);
-        int boxH = (int)(vh * 0.52f);
-        int boxX = cx - boxW / 2;
-        int boxY = cy - boxH / 2;
+        var boxW = (int)(vw * 0.54f);
+        var boxH = (int)(vh * 0.52f);
+        var boxX = cx - boxW / 2;
+        var boxY = cy - boxH / 2;
 
         DrawRect(new Rectangle(boxX, boxY, boxW, boxH), new Color(18, 12, 36) * 0.98f);
         DrawRect(new Rectangle(boxX, boxY, boxW, 3), new Color(180, 20, 20));
@@ -181,18 +181,18 @@ public sealed class NameEntryScreen : Scene
         DrawTextCentered("Inserisci il tuo nome:", cx, boxY + 162, Color.LightGray, 1f);
 
         // Campo testo
-        int fieldW = 340;
-        int fieldH = 40;
-        int fieldX = cx - fieldW / 2;
-        int fieldY = boxY + 190;
+        var fieldW = 340;
+        var fieldH = 40;
+        var fieldX = cx - fieldW / 2;
+        var fieldY = boxY + 190;
 
         DrawRect(new Rectangle(fieldX, fieldY, fieldW, fieldH), new Color(30, 20, 60));
         DrawRect(new Rectangle(fieldX, fieldY, fieldW, 2), new Color(120, 80, 220));
         DrawRect(new Rectangle(fieldX, fieldY + fieldH - 2, fieldW, 2), new Color(120, 80, 220));
 
-        string displayText = _name + (_caretVisible ? "|" : " ");
+        var displayText = _name + (_caretVisible ? "|" : " ");
         var textSize = _font.MeasureString(displayText);
-        float textScale = Math.Min(1f, (fieldW - 20f) / Math.Max(textSize.X, 1f));
+        var textScale = Math.Min(1f, (fieldW - 20f) / Math.Max(textSize.X, 1f));
         _sb.DrawString(_font, displayText,
             new Vector2(fieldX + 10, fieldY + (fieldH - textSize.Y * textScale) / 2f),
             Color.White, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
@@ -207,12 +207,15 @@ public sealed class NameEntryScreen : Scene
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
-    private void DrawRect(Rectangle r, Color c) =>
+    private void DrawRect(Rectangle r, Color c)
+    {
         _sb.Draw(_pixel, r, c);
+    }
 
     private void DrawTextCentered(string text, int cx, int y, Color color, float scale)
     {
         var size = _font.MeasureString(text) * scale;
-        _sb.DrawString(_font, text, new Vector2(cx - size.X / 2f, y), color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+        _sb.DrawString(_font, text, new Vector2(cx - size.X / 2f, y), color, 0f, Vector2.Zero, scale,
+            SpriteEffects.None, 0f);
     }
 }

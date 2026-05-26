@@ -11,11 +11,8 @@ namespace PoopManLibrary.Graphics;
 
 public class TextureCharacter
 {
-    private Dictionary<string, TextureRegion> _regions;
-
-    private Dictionary<string, Animation> _animations;
-
-    public Texture2D Texture { get; set; }
+    private readonly Dictionary<string, Animation> _animations;
+    private readonly Dictionary<string, TextureRegion> _regions;
 
     public TextureCharacter()
     {
@@ -24,7 +21,7 @@ public class TextureCharacter
     }
 
     /// <summary>
-    /// Crea un personaggio a partire da una texture, senza definizioni di regioni o animazioni
+    ///     Crea un personaggio a partire da una texture, senza definizioni di regioni o animazioni
     /// </summary>
     /// <param name="texture"></param>
     public TextureCharacter(Texture2D texture)
@@ -34,9 +31,11 @@ public class TextureCharacter
         _animations = new Dictionary<string, Animation>();
     }
 
+    public Texture2D Texture { get; set; }
+
     /// <summary>
-    /// Crea una nuova regione per il personaggio,
-    /// definendo un'area specifica della texture da utilizzare come parte del personaggio
+    ///     Crea una nuova regione per il personaggio,
+    ///     definendo un'area specifica della texture da utilizzare come parte del personaggio
     /// </summary>
     /// <param name="name"></param>
     /// <param name="x"></param>
@@ -45,12 +44,12 @@ public class TextureCharacter
     /// <param name="height"></param>
     public void AddRegion(string name, int x, int y, int width, int height)
     {
-        TextureRegion region = new TextureRegion(Texture, x, y, width, height);
+        var region = new TextureRegion(Texture, x, y, width, height);
         _regions.Add(name, region);
     }
 
     /// <summary>
-    /// Ottiene una regione specifica del personaggio, identificata dal nome.
+    ///     Ottiene una regione specifica del personaggio, identificata dal nome.
     /// </summary>
     /// <param name="name"></param>
     /// <returns></returns>
@@ -71,18 +70,18 @@ public class TextureCharacter
 
     public static TextureCharacter FromFile(ContentManager content, string fileName)
     {
-        TextureCharacter character = new TextureCharacter();
+        var character = new TextureCharacter();
 
-        string filePath = Path.Combine(content.RootDirectory, fileName);
+        var filePath = Path.Combine(content.RootDirectory, fileName);
 
         try
         {
-            using (Stream stream = TitleContainer.OpenStream(filePath))
+            using (var stream = TitleContainer.OpenStream(filePath))
             {
-                using (XmlReader reader = XmlReader.Create(stream))
+                using (var reader = XmlReader.Create(stream))
                 {
-                    XDocument doc = XDocument.Load(reader);
-                    XElement root = doc.Root;
+                    var doc = XDocument.Load(reader);
+                    var root = doc.Root;
 
                     var texturePath = root.Element("Texture").Value;
                     character.Texture = content.Load<Texture2D>(texturePath);
@@ -90,7 +89,6 @@ public class TextureCharacter
                     var regions = root.Element("Regions")?.Elements("Region");
 
                     if (regions != null)
-                    {
                         foreach (var region in regions)
                         {
                             var name = region.Attribute("name")?.Value;
@@ -101,12 +99,10 @@ public class TextureCharacter
 
                             if (!string.IsNullOrEmpty(name)) character.AddRegion(name, x, y, width, height);
                         }
-                    }
 
                     var animationElements = root.Element("Animations").Elements("Animation");
 
                     if (animationElements != null)
-                    {
                         foreach (var animationElement in animationElements)
                         {
                             var name = animationElement.Attribute("name")?.Value;
@@ -118,19 +114,16 @@ public class TextureCharacter
                             var frameElements = animationElement.Elements("Frame");
 
                             if (frameElements != null)
-                            {
                                 foreach (var frameElement in frameElements)
                                 {
                                     var regionName = frameElement.Attribute("region")?.Value;
                                     var region = character.GetRegion(regionName);
                                     frames.Add(region);
                                 }
-                            }
 
                             var animation = new Animation(frames, delay);
                             character.AddAnimation(name, animation);
                         }
-                    }
 
                     return character;
                 }
@@ -145,7 +138,7 @@ public class TextureCharacter
 
     public Sprite CreaSprite(string regionName)
     {
-        TextureRegion region = GetRegion(regionName);
+        var region = GetRegion(regionName);
         return new Sprite(region);
     }
 
@@ -166,7 +159,7 @@ public class TextureCharacter
 
     public AnimatedSprite CreaAnimatedSprite(string animationName)
     {
-        Animation animation = GetAnimation(animationName);
+        var animation = GetAnimation(animationName);
         return new AnimatedSprite(animation);
     }
 }
