@@ -15,7 +15,7 @@ public enum UpgradeType
 
     // ── Offensivi ─────────────────────────────────────────────────────────
     IncreasedDamage, // raggio esplosione +1 tile (max 4)
-    ExplosionDamage, // danno esplosioni: 1 colpo extra ogni 2 livelli upgrade (max 6)
+    ExplosionDamage, // danno esplosioni: +1 danno per ogni livello upgrade (max 5)
     FasterBomb, // timer bomba -0.4 s (max 4 livelli)
     ExtraBomb, // +1 bomba simultanea (max 3 livelli)
     ChainExplosion, // esplosioni a catena tra nemici uccisi (max 4)
@@ -27,7 +27,7 @@ public enum UpgradeType
     // ── Difensivi ────────────────────────────────────────────────────────
     ExplosionResistance, // invincibilità dopo respawn +1 s (max cumulativo)
     DamageReduction, // +0.5 s invincibilità (max cumulativo)
-    Shield, // assorbe 1 colpo ogni N livelli (1 livello)
+    Shield, // assorbe 1 colpo ogni 3 livelli (1 livello)
 
     // ── Speciali ─────────────────────────────────────────────────────────
     MultiHit, // esplosioni ignorano i breakable (1 livello)
@@ -64,7 +64,7 @@ public static class UpgradeRegistry
 
     // ── Limiti massimi per upgrade cumulativi ─────────────────────────────
     public const int MaxExplosionRange = 4;
-    public const int MaxExplosionDamageSteps = 6;
+    public const int MaxExplosionDamageSteps = 5;
     public const int MaxExtraBombs = 3;
     public const int MaxFasterBombSteps = 4;
     public const int MaxMoveSteps = 6;
@@ -100,7 +100,7 @@ public static class UpgradeRegistry
 
         new(UpgradeType.ExplosionDamage,
             "POTENZA",
-            $"Le bombe normali fanno piu' danni.\n+1 danno ogni 2 livelli (max {MaxExplosionDamageSteps} lv).",
+            $"Le bombe normali fanno piu' danni.\n+1 danno per ogni lv (max {MaxExplosionDamageSteps} lv).",
             new Color(255, 90, 0)),
 
         new(UpgradeType.FasterBomb,
@@ -142,7 +142,7 @@ public static class UpgradeRegistry
 
         new(UpgradeType.Shield,
             "SCUDO",
-            "Assorbe 1 colpo senza danni.\nSi ricarica ogni 5 livelli.",
+            "Assorbe 1 colpo senza danni.\nSi ricarica ogni 3 livelli.",
             Color.Silver),
 
         // ── Speciali ──────────────────────────────────────────────────────

@@ -181,11 +181,12 @@ public class GameOverlay
         DrawRect(sb, new Rectangle(0, 0, vw, vh), Color.Black * 0.82f);
 
         // ── Titolo ────────────────────────────────────────────────────────
-        var titleY = Math.Max(16, (int)(vh * 0.05f));
+        // Abbassato: almeno 12% dall'alto (min 28px) così non tocca il bordo
+        var titleY = Math.Max(28, (int)(vh * 0.12f));
         DrawTextCentered(sb, "SCEGLI UN POTENZIAMENTO", cx, titleY, Color.Gold, 2.0f);
         var subtitleScale = vw < 900 ? 0.85f : 1.0f;
         DrawTextCentered(sb, "Frecce / A-D  |  ENTER  |  Click",
-            cx, titleY + 42, new Color(170, 170, 170), subtitleScale);
+            cx, titleY + 46, new Color(170, 170, 170), subtitleScale);
 
         // ── Layout card adattivo ──────────────────────────────────────────
         var padding = 14;
@@ -215,7 +216,7 @@ public class GameOverlay
 
         var totalW = options.Count * cardW + (options.Count - 1) * gap;
         var startX = cx - totalW / 2;
-        var topReserved = titleY + 60;
+        var topReserved = titleY + 66;
         var availableH = vh - topReserved - 20;
         var cardY = topReserved + Math.Max(0, (availableH - cardH) / 2);
 

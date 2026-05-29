@@ -278,16 +278,23 @@ public class GameScene : Scene
             foreach (var bat in _bats)
             {
                 if (bat.IsDead) continue;
-                if (bat.VisualTilePosition == _miner.TilePosition)
+                if (bat.VisualTilePosition != _miner.TilePosition) continue;
+
+                // Walid: avvia la sequenza di detonazione, non danno diretto
+                if (bat.WalidDetonating == false)
+                    bat.TriggerWalidDetonation();
+
+                if (!bat.WalidDetonating)
                 {
+                    // Bat normale: infligge danno immediato
                     if (!_miner.TryAbsorbWithShield())
                     {
                         _miner.TriggerDashAfterHit();
                         _miner.Kill();
                     }
-
-                    break;
                 }
+
+                break;
             }
 
         // ── Collisione esplosione ↔ miner ─────────────────────────────────
@@ -428,7 +435,10 @@ public class GameScene : Scene
                 var hitBats = new HashSet<Bat>();
                 foreach (var b in _bats)
                 {
-                    if (b.IsDead || b.IsInvincible) continue;
+                    if (b.IsDead) continue;
+                    // Bomba grande: bypassa IsInvincible (instant kill su tutti)
+                    // Bomba normale: rispetta l'immunità inter-hit
+                    if (!bomb.BigBomb && b.IsInvincible) continue;
 
                     // 1) Controllo tile esatto (principale)
                     if (explosionSet.Contains(b.VisualTilePosition))
@@ -466,13 +476,16 @@ public class GameScene : Scene
                     bool killed;
                     if (bomb.BigBomb)
                     {
+                        // Bomba grande: instant kill, ignora IsInvincible (Kill non lo controlla)
                         killed = true;
                         _score += b.KillPoints;
                         b.Kill();
                     }
                     else
                     {
-                        killed = b.TakeDamage();
+                        // Bomba normale: applica danno base + bonus ExplosionDamage upgrade
+                        var dmg = 1 + _miner.ExplosionDamageBonus;
+                        killed = b.TakeDamage(dmg);
                         if (killed) _score += b.KillPoints;
                     }
 
@@ -683,7 +696,9 @@ public class GameScene : Scene
         var hudMatrix2 = GameHud.GetHudMatrix(Core.GraphicsDevice);
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: hudMatrix2);
         _hud.Draw(_spriteBatch, _score, _miner.Lives, _miner.MaxLives, _miner.BigBombCount,
-            _currentLevel, _hasKey, _currentLevel >= 5, _map.Theme);
+            _currentLevel, _hasKey, _currentLevel >= 5, _map.Theme,
+            _miner.UpgradeShield, _miner.ShieldActive,
+            _miner.ExplosionDamageBonus, _miner.IsInvincible);
         _spriteBatch.End();
     }
 
@@ -779,7 +794,9 @@ public class GameScene : Scene
 
         foreach (var b in _bats.ToList())
         {
-            if (b.IsDead || b.IsInvincible) continue;
+            if (b.IsDead) continue;
+            // Nuke (big): bypassa IsInvincible per instant kill; normale: rispetta immunità
+            if (!big && b.IsInvincible) continue;
             if (!hitTiles.Contains(b.VisualTilePosition)) continue;
 
             // Knockback dalla posizione di esplosione
@@ -1058,6 +1075,7 @@ public class GameScene : Scene
                 mini.SetInvincible(1f);
                 mini.OnSplit += SpawnMiniBats; // non farà nulla (SetMini blocca CanSplit)
                 mini.OnDeathExplosion += TriggerBatExplosion;
+                mini.OnWalidDetonation += tile => TriggerBatExplosion(tile, false);
                 _bats.Add(mini);
                 spawned++;
             }
@@ -1117,6 +1135,7 @@ public class GameScene : Scene
 
             bat.OnSplit += SpawnMiniBats;
             bat.OnDeathExplosion += TriggerBatExplosion;
+            bat.OnWalidDetonation += tile => TriggerBatExplosion(tile, false);
             _bats.Add(bat);
         }
     }

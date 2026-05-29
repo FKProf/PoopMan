@@ -62,7 +62,9 @@ public class GameHud
     }
 
     public void Draw(SpriteBatch sb, int score, int lives, int maxLives, int bigBombs,
-        int level, bool hasKey, bool keyActive, TileMap.MapTheme theme)
+        int level, bool hasKey, bool keyActive, TileMap.MapTheme theme,
+        bool hasShield = false, bool shieldActive = false,
+        int explosionDmgBonus = 0, bool isInvincible = false)
     {
         var cy = (Height - _font.LineSpacing) / 2f;
         var iconH = Height / 32f; // scala icone all'altezza HUD
@@ -149,6 +151,39 @@ public class GameHud
             rx -= (int)(32 * iconH * 0.9f) + 4;
             sb.Draw(_itemIcon, new Vector2(rx, 2),
                 SrcKey, keyColor, 0f, Vector2.Zero, iconH * 0.9f, SpriteEffects.None, 0f);
+        }
+
+        // ── DESTRA: Indicatori abilità permanenti ─────────────────────────
+        rx -= 10;
+        var abilityY = (Height - 14) / 2f; // centra verticalmente l'etichetta
+
+        // Invincibilità temporanea attiva (bordo luminoso pulsante)
+        if (isInvincible)
+        {
+            var iAlpha = 0.5f + 0.5f * (float)Math.Sin(Environment.TickCount64 * 0.012);
+            var iStr = "INV";
+            rx -= (int)_font.MeasureString(iStr).X;
+            DrawS(sb, iStr, new Vector2(rx, cy), new Color(255, 255, 120) * iAlpha);
+            rx -= 8;
+        }
+
+        // Scudo
+        if (hasShield)
+        {
+            var shColor = shieldActive ? new Color(180, 220, 255) : new Color(100, 130, 180);
+            var shStr = shieldActive ? "[SH]" : "[sh]";
+            rx -= (int)_font.MeasureString(shStr).X;
+            DrawS(sb, shStr, new Vector2(rx, cy), shColor);
+            rx -= 8;
+        }
+
+        // Danno esplosione extra
+        if (explosionDmgBonus > 0)
+        {
+            var dmgStr = $"+{explosionDmgBonus}dmg";
+            rx -= (int)_font.MeasureString(dmgStr).X;
+            DrawS(sb, dmgStr, new Vector2(rx, cy), new Color(255, 160, 40));
+            rx -= 8;
         }
     }
 

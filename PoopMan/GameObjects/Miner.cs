@@ -185,8 +185,8 @@ public class Miner
     public bool UpgradeMultiHit { get; private set; }
     public bool UpgradeCritical { get; private set; }
 
-    /// <summary>Danno aggiuntivo inflitto dalle bombe normali (1 extra ogni 2 livelli upgrade).</summary>
-    public int ExplosionDamageBonus => _explosionDamageSteps / 2;
+    /// <summary>Danno aggiuntivo inflitto dalle bombe normali (1 extra per ogni livello upgrade).</summary>
+    public int ExplosionDamageBonus => _explosionDamageSteps;
 
     public bool UpgradeDashAfterHit { get; private set; }
 
@@ -838,7 +838,18 @@ public class Miner
         if (!ShieldActive) return false;
         ShieldActive = false;
         _shieldRechargeLevel = 0;
+        // Breve invincibilità dopo assorbimento scudo
+        StartInvincibility(_invincibilityDuration);
         return true;
+    }
+
+    /// <summary>Avvia il periodo di invincibilità per la durata corrente configurata.</summary>
+    public void StartInvincibility(float duration)
+    {
+        IsInvincible = true;
+        _invincibilityTimer = duration;
+        _blinkTimer = BlinkInterval;
+        _blinkVisible = true;
     }
 
     /// <summary>Attiva il boost di velocità post-danno se l'upgrade DashAfterHit è presente.</summary>
