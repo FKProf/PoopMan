@@ -10,7 +10,8 @@ internal readonly record struct MinerUpgradeEntry(
     string EffectType,
     string Description,
     string[] Effects,
-    int MaxLevel);
+    int MaxLevel,
+    bool IsMythic = false);
 
 /// <summary>
 ///     Catalogo delle descrizioni degli upgrade del Miner per l'enciclopedia.
@@ -92,34 +93,29 @@ internal static class MinerUpgradeDescriptions
         new("BOTTINO", "SPECIALE", new Color(240, 240, 180), "LOOT",
             $"I pipistrelli uccisi hanno una probabilita di lasciare un item. Max {UpgradeRegistry.MaxDoubleDropSteps} lv.",
             new[] { "Ogni lv: +15% chance drop da kill" }, UpgradeRegistry.MaxDoubleDropSteps),
-    };
 
-    // --------------------------------------------------------------------
-    // UPGRADE MYTHIC
-    // --------------------------------------------------------------------
-    internal static readonly MinerUpgradeEntry[] Mythic =
-    {
-        new("IMMORTALITA MISTICA", "MYTHIC \u2726", new Color(220, 180, 30), "DIFESA",
-            "Rarissimo upgrade Mythic (0,5%). Il Miner e immune a tutte le esplosioni delle proprie bombe.",
+        // -- Mythic ----------------------------------
+        new("IMMORTALITA MISTICA", "MYTHIC", new Color(220, 180, 30), "DIFESA",
+            "Upgrade Mythic rarissimo (0,5%). Il Miner diventa immune a tutte le esplosioni delle proprie bombe.",
             new[]
             {
                 "Immunita totale alle esplosioni delle bombe piccole del Miner",
                 "Immunita totale alle esplosioni delle bombe grandi del Miner",
                 "Immunita totale alle esplosioni speciali originate dal Miner",
                 "LIMITE: non protegge da pipistrelli, Walid, Nuke o nemici speciali",
-                "LIMITE: pericoli ambientali continuano a infliggere danno normalmente",
-                "Rarita: 0,5% di comparsa per slot upgrade"
-            }, 1),
-        new("KILL ISTANTANEO", "MYTHIC \u2726", new Color(255, 80, 80), "BOMBA",
-            "Rarissimo upgrade Mythic (0,5%). Le bombe piccole eliminano istantaneamente qualsiasi pipistrello.",
+                "LIMITE: pericoli ambientali continuano a infliggere danno normalmente"
+            }, 1, IsMythic: true),
+        new("KILL ISTANTANEO", "MYTHIC", new Color(255, 80, 80), "BOMBA",
+            "Upgrade Mythic rarissimo (0,5%). Le bombe piccole eliminano istantaneamente qualsiasi pipistrello.",
             new[]
             {
                 "Le bombe piccole uccidono all'istante qualsiasi bat normale o speciale",
                 "L'effetto ignora completamente i punti vita del nemico",
                 "Si applica a tutti i pipistrelli colpiti dall'area di esplosione",
                 "LIMITE: l'effetto vale solo per le bombe piccole",
-                "LIMITE: bomba grande, Walid, Nuke e attacchi speciali NON sono influenzati",
-                "Rarita: 0,5% di comparsa per slot upgrade"
-            }, 1),
+                "LIMITE: bomba grande, Walid, Nuke e attacchi speciali NON sono influenzati"
+            }, 1, IsMythic: true),
     };
+
+    // Mythic entries are now included at the end of Standard above.
 }

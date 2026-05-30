@@ -27,8 +27,13 @@ public class BatEncyclopedia
     private const float ScrollSettledThreshold = 2f;
     private const float AnimSpeed = 0.14f;
 
-    // -- Tab -------------------------------------
-    private static readonly string[] TabNames = { "NEMICI", "UPGRADE", "BIOMI", "MYTHIC ✦" };
+    // -- Tab layout
+    private const int TabBarY = 70;   // y-coordinate of the tab bar
+    private const int TabH = 32;
+    private const int TabW = 150;
+    private const int TabGap = 12;
+
+    private static readonly string[] TabNames = { "NEMICI", "UPGRADE", "BIOMI" };
     private int _tab; // 0=Nemici, 1=Upgrade, 2=Biomi
 
     // --------------------------------------------------------------------
@@ -36,6 +41,24 @@ public class BatEncyclopedia
     // --------------------------------------------------------------------
     private static readonly BatEntry[] BatEntries =
     {
+        new(
+            "BAT ROBUSTO",
+            "Sblocca al Livello 20",
+            new Color(255, 100, 100),
+            Color.Transparent,
+            new[]
+            {
+                "Versione corazzata del pipistrello normale",
+                "Ha da 2 a 6 HP in base al livello (lv 20+)",
+                "Ogni 5 livelli oltre il 20 guadagna +1 HP (max 6 HP)",
+                "Velocita identica al bat normale ma piu resistente",
+                "Richiede piu bombe o esplosioni potenziate per essere eliminato",
+                "+75 punti al kill (base)"
+            },
+            "Usa upgrade Potenza o Danno+ per abbatterlo rapidamente!",
+            "ROBUSTO",
+            new Color(255, 100, 100)
+        ),
         new(
             "PIPISTRELLO NORMALE",
             "Presente dal Livello 1",
@@ -156,6 +179,7 @@ public class BatEncyclopedia
     };
 
     // Le descrizioni degli upgrade del Miner sono definite in MinerUpgradeDescriptions.cs
+    // Gli upgrade Mythic sono inclusi alla fine dell'array Standard con IsMythic=true
 
     // --------------------------------------------------------------------
     // SEZIONE BIOMI
@@ -235,10 +259,11 @@ public class BatEncyclopedia
     private int _hoveredArrow;
     private int _hoveredCard = -1;
     private float _pulse;
+    private int _prevTab = -1;  // detects tab switches to reset scroll instantly
 
     // -- Scroll / selezione per sezione ----------
-    private readonly float[] _scrollOffsets = new float[4];
-    private readonly int[] _selectedCards = new int[4];
+    private readonly float[] _scrollOffsets = new float[3];
+    private readonly int[] _selectedCards = new int[3];
 
     public BatEncyclopedia(SpriteFont font, Texture2D pixel, ContentManager content)
     {
@@ -251,8 +276,7 @@ public class BatEncyclopedia
     {
         0 => BatEntries.Length,
         1 => Standard.Length,
-        2 => BiomeEntries.Length,
-        _ => Mythic.Length
+        _ => BiomeEntries.Length
     };
 
     private int Selected
@@ -308,7 +332,7 @@ public class BatEncyclopedia
     public void Open()
     {
         _tab = 0;
-        for (var i = 0; i < 4; i++)
+        for (var i = 0; i < 3; i++)
         {
             _selectedCards[i] = 0;
             _scrollOffsets[i] = 0f;
@@ -336,9 +360,9 @@ public class BatEncyclopedia
 
         // -- Navigazione tab -------------------------
         if (kb.WasKeyJustPressed(Keys.Tab) || kb.WasKeyJustPressed(Keys.E))
-            _tab = (_tab + 1) % TabNames.Length;
+            _tab = (_tab + 1) % 3;
         if (kb.WasKeyJustPressed(Keys.Q))
-            _tab = (_tab - 1 + TabNames.Length) % TabNames.Length;
+            _tab = (_tab - 1 + 3) % 3;
 
         // -- Navigazione card ------------------------
         if (kb.WasKeyJustPressed(Keys.Left) || kb.WasKeyJustPressed(Keys.A))
@@ -347,7 +371,20 @@ public class BatEncyclopedia
             Selected = Math.Min(CurrentCount - 1, Selected + 1);
 
         // -- Scroll fluido ---------------------------
-        var targetScroll = Selected * (CardW + CardGap) - vw / 2f + CardW / 2f;
+        // On tab switch, snap immediately to avoid mismatched offsets
+        if (_tab != _prevTab)
+        {
+            _prevTab = _tab;
+            var snapTotal = CurrentCount * (CardW + CardGap) - CardGap;
+            ScrollOffset = Selected * (CardW + CardGap) + CardW / 2f - snapTotal / 2f;
+        }
+
+        var total = CurrentCount * (CardW + CardGap) - CardGap;
+        var targetScroll = Selected * (CardW + CardGap) + CardW / 2f - total / 2f;
+        // Clamp so we never scroll into empty space
+        var minS = CardW / 2f - total / 2f;
+        var maxS = (CurrentCount - 1) * (CardW + CardGap) + CardW / 2f - total / 2f;
+        targetScroll = Math.Clamp(targetScroll, minS, maxS);
         var delta = targetScroll - ScrollOffset;
         ScrollOffset += delta * ScrollLerpSpeed;
         if (Math.Abs(delta) < 0.5f) ScrollOffset = targetScroll;
@@ -371,12 +408,10 @@ public class BatEncyclopedia
         }
 
         // Tab hit-test
-        var tabW = 140;
-        var tabGap = 10;
-        var tabsStartX = vw / 2 - (TabNames.Length * (tabW + tabGap) - tabGap) / 2;
-        for (var t = 0; t < TabNames.Length; t++)
+        var tabsStartX = vw / 2 - (3 * (TabW + TabGap) - TabGap) / 2;
+        for (var t = 0; t < 3; t++)
         {
-            var tr = new Rectangle(tabsStartX + t * (tabW + tabGap), 50, tabW, 30);
+            var tr = new Rectangle(tabsStartX + t * (TabW + TabGap), TabBarY, TabW, TabH);
             if (tr.Contains(mp) && mouse.WasButtonJustPressed(MouseButton.Left))
                 _tab = t;
         }
@@ -404,7 +439,7 @@ public class BatEncyclopedia
         return false;
     }
 
-    private int GetCardY(int vh) => vh / 2 - (int)CardH / 2 + 20;
+    private int GetCardY(int vh) => TabBarY + TabH + 36;
 
     public void Draw(SpriteBatch sb)
     {
@@ -420,25 +455,26 @@ public class BatEncyclopedia
         DrawRect(sb, new Rectangle(cx - 240, 38, 480, 2), new Color(120, 90, 30));
 
         // -- Tab -------------------------------------
-        var tabW = 140;
-        var tabH = 30;
-        var tabGap = 10;
-        var tabsStartX = cx - (TabNames.Length * (tabW + tabGap) - tabGap) / 2;
-        for (var t = 0; t < TabNames.Length; t++)
+        var tabsStartX = cx - (3 * (TabW + TabGap) - TabGap) / 2;
+        for (var t = 0; t < 3; t++)
         {
-            var tx = tabsStartX + t * (tabW + tabGap);
+            var tx = tabsStartX + t * (TabW + TabGap);
             var isActive = t == _tab;
-            DrawRect(sb, new Rectangle(tx - 1, 49, tabW + 2, tabH + 2), isActive ? Color.Yellow : new Color(70, 60, 100));
-            DrawRect(sb, new Rectangle(tx, 50, tabW, tabH), isActive ? new Color(60, 40, 130) : new Color(20, 14, 50));
-            DrawTextCentered(sb, TabNames[t], tx + tabW / 2, 50 + tabH / 2, isActive ? Color.Yellow : Color.Gray, 1.0f);
+            DrawRect(sb, new Rectangle(tx - 1, TabBarY - 1, TabW + 2, TabH + 2), isActive ? Color.Yellow : new Color(70, 60, 100));
+            DrawRect(sb, new Rectangle(tx, TabBarY, TabW, TabH), isActive ? new Color(60, 40, 130) : new Color(20, 14, 50));
+            DrawTextCentered(sb, TabNames[t], tx + TabW / 2, TabBarY + TabH / 2, isActive ? Color.Yellow : Color.Gray, 1.0f);
         }
 
         // Hint tab + counter
-        DrawTextCentered(sb, "TAB/Q/E: cambia sezione", cx, 88, new Color(80, 80, 120), 0.9f);
-        DrawTextCentered(sb, $"{Selected + 1} / {CurrentCount}", cx, 100, Color.Gray, 0.95f);
+        var hintY = TabBarY + TabH + 8;
+        DrawTextCentered(sb, "TAB/Q/E: cambia sezione", cx, hintY, new Color(80, 80, 120), 0.9f);
+        DrawTextCentered(sb, $"{Selected + 1} / {CurrentCount}", cx, hintY + 14, Color.Gray, 0.95f);
 
         // -- Cards -----------------------------------
         var totalW2 = CurrentCount * (CardW + CardGap) - CardGap;
+        // The scroll offset represents (selectedCard center) - (total cards center)
+        // so the first card starts at: cx - totalW2/2 - ScrollOffset + offset_of_card_0_center
+        // Simplified: first card left edge = cx - totalW2/2 - ScrollOffset
         var startX2 = cx - totalW2 / 2f - ScrollOffset;
         var cardY = GetCardY(vh);
 
@@ -453,7 +489,6 @@ public class BatEncyclopedia
                 case 0: DrawBatCard(sb, BatEntries[i], (int)cardX, cardY, isSel, isHov); break;
                 case 1: DrawUpgradeCard(sb, Standard[i], (int)cardX, cardY, isSel, isHov); break;
                 case 2: DrawBiomeCard(sb, BiomeEntries[i], (int)cardX, cardY, isSel, isHov); break;
-                case 3: DrawMythicCard(sb, Mythic[i], (int)cardX, cardY, isSel, isHov); break;
             }
         }
 
@@ -490,64 +525,74 @@ public class BatEncyclopedia
         var w = (int)CardW;
         var iy = y + 10;
 
-        DrawBatSprite(sb, e, x + w / 2, iy + 42, 80, pulse);
-        iy += 90;
+        DrawBatSprite(sb, e, x + w / 2, iy + 36, 68, pulse);
+        iy += 78;
         iy = DrawTag(sb, e.Tag, e.TagColor, x, iy, w);
         DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), e.PrimaryColor * 0.6f);
         iy += 5;
-        DrawTextCentered(sb, e.Name, x + w / 2, iy + 10, e.PrimaryColor * pulse, 1.1f);
-        iy += 26;
-        DrawTextCentered(sb, e.UnlockInfo, x + w / 2, iy, new Color(160, 200, 160), 1.0f);
+        DrawTextCentered(sb, e.Name, x + w / 2, iy + 9, e.PrimaryColor * pulse, 1.05f);
         iy += 22;
-        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
-        iy += 6;
-        iy = DrawBulletList(sb, e.Abilities, x, iy, w, e.PrimaryColor, Color.White, 1.0f);
-        iy += 4;
+        DrawTextCentered(sb, e.UnlockInfo, x + w / 2, iy, new Color(160, 200, 160), 0.9f);
+        iy += 18;
         DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
         iy += 5;
-        DrawWrappedText(sb, e.Tip, x + 10, iy, w - 20, new Color(255, 235, 120), 0.97f);
+        var yBotBat = y + (int)CardH - 36;
+        iy = DrawBulletList(sb, e.Abilities, x, iy, w, e.PrimaryColor, Color.White, 0.88f, yBotBat);
+        if (iy + 10 < yBotBat)
+        {
+            DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
+            iy += 5;
+            DrawWrappedText(sb, e.Tip, x + 10, iy, w - 20, new Color(255, 235, 120), 0.86f, yBotBat);
+        }
     }
 
     private void DrawUpgradeCard(SpriteBatch sb, MinerUpgradeEntry e, int x, int y, bool selected, bool hovered)
     {
+        if (e.IsMythic)
+        {
+            DrawMythicCard(sb, e, x, y, selected, hovered);
+            return;
+        }
+
         DrawCardBase(sb, x, y, (int)CardW, (int)CardH, selected, hovered, e.Color, Color.Transparent);
         var pulse = selected ? 0.85f + 0.15f * (float)Math.Sin(_pulse) : 1f;
         var w = (int)CardW;
         var iy = y + 10;
 
         // Icona
-        var iconSz = 64;
+        var iconSz = 60;
         var iconX = x + w / 2 - iconSz / 2;
-        DrawRect(sb, new Rectangle(iconX - 2, iy - 2, iconSz + 4, iconSz + 4), e.Color * (0.4f + 0.15f * (float)Math.Sin(_pulse)));
+        DrawRect(sb, new Rectangle(iconX - 2, iy - 2, iconSz + 4, iconSz + 4), e.Color * (0.35f + 0.15f * (float)Math.Sin(_pulse)));
         DrawRect(sb, new Rectangle(iconX, iy, iconSz, iconSz), new Color(20, 14, 40));
         DrawTextCentered(sb, GetUpgradeIcon(e.Category), x + w / 2, iy + iconSz / 2, e.Color * pulse, 2.0f);
         iy += iconSz + 6;
 
         iy = DrawTag(sb, e.Category, e.Color, x, iy, w);
-        DrawTextCentered(sb, $"[{e.EffectType}]", x + w / 2, iy, new Color(140, 140, 180), 0.9f);
-        iy += 18;
+        DrawTextCentered(sb, $"[{e.EffectType}]", x + w / 2, iy, new Color(140, 140, 180), 0.85f);
+        iy += 16;
         DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), e.Color * 0.6f);
         iy += 5;
-        DrawTextCentered(sb, e.Name, x + w / 2, iy + 10, e.Color * pulse, 1.1f);
-        iy += 26;
+        DrawTextCentered(sb, e.Name, x + w / 2, iy + 9, e.Color * pulse, 1.05f);
+        iy += 22;
         var maxStr = e.MaxLevel == int.MaxValue ? "illimitato" : $"{e.MaxLevel}";
-        DrawTextCentered(sb, $"Max livello: {maxStr}", x + w / 2, iy, new Color(160, 200, 160), 0.95f);
-        iy += 20;
-        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
-        iy += 6;
-        iy = DrawWrappedText(sb, e.Description, x + 10, iy, w - 20, Color.White, 0.97f);
-        iy += 6;
+        DrawTextCentered(sb, $"Max livello: {maxStr}", x + w / 2, iy, new Color(160, 200, 160), 0.87f);
+        iy += 18;
         DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
         iy += 5;
-        DrawTextCentered(sb, "EFFETTI", x + w / 2, iy + 8, e.Color, 0.95f);
-        iy += 20;
-        DrawBulletList(sb, e.Effects, x, iy, w, e.Color, new Color(220, 220, 180), 0.97f);
+        var yBotUpg = y + (int)CardH - 10;
+        iy = DrawWrappedText(sb, e.Description, x + 10, iy, w - 20, Color.White, 0.88f, yBotUpg);
+        iy += 5;
+        DrawRect(sb, new Rectangle(x + 10, Math.Min(iy, yBotUpg - 1), w - 20, 1), new Color(50, 50, 80));
+        iy += 5;
+        DrawTextCentered(sb, "EFFETTI", x + w / 2, iy + 6, e.Color, 0.90f);
+        iy += 18;
+        DrawBulletList(sb, e.Effects, x, iy, w, e.Color, new Color(220, 220, 180), 0.86f, yBotUpg);
     }
 
     private void DrawMythicCard(SpriteBatch sb, MinerUpgradeEntry e, int x, int y, bool selected, bool hovered)
     {
-        // Aura dorata/viola pulsante per le card Mythic
-        var aura = e.Color == new Color(220, 180, 30)
+        // Aura dorata/rossa pulsante per le card Mythic
+        var aura = e.Color.R > 200 && e.Color.G > 140
             ? new Color(220, 180, 30, 90)
             : new Color(255, 80, 80, 90);
         DrawCardBase(sb, x, y, (int)CardW, (int)CardH, selected, hovered, e.Color, aura);
@@ -563,28 +608,27 @@ public class BatEncyclopedia
         DrawRect(sb, new Rectangle(iconX - 4, iy - 4, iconSz + 8, iconSz + 8), new Color(180, 80, 255) * shimmer);
         DrawRect(sb, new Rectangle(iconX - 2, iy - 2, iconSz + 4, iconSz + 4), new Color(220, 180, 30) * shimmer);
         DrawRect(sb, new Rectangle(iconX, iy, iconSz, iconSz), new Color(10, 6, 24));
-        DrawTextCentered(sb, "✦", x + w / 2, iy + iconSz / 2, e.Color * pulse, 2.5f);
+        DrawTextCentered(sb, "*", x + w / 2, iy + iconSz / 2, e.Color * pulse, 2.5f);
         iy += iconSz + 8;
 
         // Tag MYTHIC con colore speciale
-        iy = DrawTag(sb, "MYTHIC ✦", e.Color, x, iy, w);
-        DrawTextCentered(sb, $"[{e.EffectType}]", x + w / 2, iy, new Color(180, 140, 220), 0.9f);
-        iy += 18;
+        iy = DrawTag(sb, "MYTHIC", e.Color, x, iy, w);
+        DrawTextCentered(sb, $"[{e.EffectType}]  |  0.5% per slot", x + w / 2, iy, new Color(220, 180, 30) * shimmer, 0.83f);
+        iy += 16;
         DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), e.Color * 0.8f);
         iy += 5;
-        DrawTextCentered(sb, e.Name, x + w / 2, iy + 10, e.Color * pulse, 1.1f);
-        iy += 26;
-        DrawTextCentered(sb, "Rarita: MYTHIC  |  0,5% per slot", x + w / 2, iy, new Color(220, 180, 30) * shimmer, 0.92f);
-        iy += 20;
-        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(80, 50, 80));
-        iy += 6;
-        iy = DrawWrappedText(sb, e.Description, x + 10, iy, w - 20, Color.White, 0.97f);
-        iy += 6;
+        DrawTextCentered(sb, e.Name, x + w / 2, iy + 9, e.Color * pulse, 1.05f);
+        iy += 22;
         DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(80, 50, 80));
         iy += 5;
-        DrawTextCentered(sb, "EFFETTI & LIMITI", x + w / 2, iy + 8, e.Color, 0.95f);
-        iy += 20;
-        DrawBulletList(sb, e.Effects, x, iy, w, e.Color, new Color(220, 220, 180), 0.97f);
+        var yBotMyt = y + (int)CardH - 10;
+        iy = DrawWrappedText(sb, e.Description, x + 10, iy, w - 20, Color.White, 0.88f, yBotMyt);
+        iy += 5;
+        DrawRect(sb, new Rectangle(x + 10, Math.Min(iy, yBotMyt - 1), w - 20, 1), new Color(80, 50, 80));
+        iy += 5;
+        DrawTextCentered(sb, "EFFETTI E LIMITI", x + w / 2, iy + 6, e.Color, 0.90f);
+        iy += 18;
+        DrawBulletList(sb, e.Effects, x, iy, w, e.Color, new Color(220, 220, 180), 0.86f, yBotMyt);
     }
 
     private void DrawBiomeCard(SpriteBatch sb, BiomeEntry e, int x, int y, bool selected, bool hovered)
@@ -604,19 +648,22 @@ public class BatEncyclopedia
         iy = DrawTag(sb, e.LevelRange, e.PrimaryColor, x, iy, w);
         DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), e.PrimaryColor * 0.6f);
         iy += 5;
-        DrawTextCentered(sb, e.Name, x + w / 2, iy + 10, e.PrimaryColor * pulse, 1.15f);
-        iy += 28;
-        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
-        iy += 6;
-        iy = DrawWrappedText(sb, e.Description, x + 10, iy, w - 20, Color.White, 0.97f);
-        iy += 6;
+        DrawTextCentered(sb, e.Name, x + w / 2, iy + 9, e.PrimaryColor * pulse, 1.1f);
+        iy += 24;
         DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
         iy += 5;
-        iy = DrawBulletList(sb, e.Features, x, iy, w, e.PrimaryColor, Color.White, 0.97f);
-        iy += 4;
-        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
+        var yBotBio = y + (int)CardH - 36;
+        iy = DrawWrappedText(sb, e.Description, x + 10, iy, w - 20, Color.White, 0.88f, yBotBio);
         iy += 5;
-        DrawWrappedText(sb, e.Tip, x + 10, iy, w - 20, new Color(255, 235, 120), 0.97f);
+        DrawRect(sb, new Rectangle(x + 10, Math.Min(iy, yBotBio - 1), w - 20, 1), new Color(50, 50, 80));
+        iy += 5;
+        iy = DrawBulletList(sb, e.Features, x, iy, w, e.PrimaryColor, Color.White, 0.88f, yBotBio);
+        if (iy + 10 < yBotBio)
+        {
+            DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
+            iy += 5;
+            DrawWrappedText(sb, e.Tip, x + 10, iy, w - 20, new Color(255, 235, 120), 0.86f, yBotBio);
+        }
     }
 
     // --------------------------------------------------------------------
@@ -658,14 +705,16 @@ public class BatEncyclopedia
     }
 
     private int DrawBulletList(SpriteBatch sb, string[] items, int x, int iy, int w,
-        Color bulletColor, Color textColor, float scale)
+        Color bulletColor, Color textColor, float scale, int yMax = int.MaxValue)
     {
         foreach (var ab in items)
         {
+            if (iy >= yMax) break;
             var lines = WrapText(ab, w - 30, scale);
             var first = true;
             foreach (var line in lines)
             {
+                if (iy >= yMax) break;
                 var sz = _font.MeasureString(line) * scale;
                 if (first)
                 {
@@ -681,10 +730,11 @@ public class BatEncyclopedia
         return iy;
     }
 
-    private int DrawWrappedText(SpriteBatch sb, string text, int x, int iy, int maxW, Color color, float scale)
+    private int DrawWrappedText(SpriteBatch sb, string text, int x, int iy, int maxW, Color color, float scale, int yMax = int.MaxValue)
     {
         foreach (var line in WrapText(text, maxW, scale))
         {
+            if (iy >= yMax) break;
             sb.DrawString(_font, line, new Vector2(x + 1, iy + 1), Color.Black * 0.85f, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
             sb.DrawString(_font, line, new Vector2(x, iy), color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
             iy += (int)(_font.MeasureString(line).Y * scale) + 2;
@@ -753,6 +803,7 @@ public class BatEncyclopedia
         "OFFENSIVO" => "!",
         "MOVIMENTO" => ">",
         "DIFENSIVO" => "O",
+        "MYTHIC" => "*",
         _ => "*"
     };
 

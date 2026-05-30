@@ -579,7 +579,18 @@ public class GameScene : Scene
                 {
                     if (bat.IsDead || bat.IsInvincible) continue;
                     if (!activeTiles.Contains(bat.VisualTilePosition)) continue;
-                    var killed = bat.TakeDamage();
+                    // Applica lo stesso bonus danno del percorso principale (FreshExplosions)
+                    bool killed;
+                    if (_miner.UpgradeInstantKill)
+                    {
+                        bat.Kill();
+                        killed = true;
+                    }
+                    else
+                    {
+                        var continuousDmg = 1 + _miner.ExplosionDamageBonus;
+                        killed = bat.TakeDamage(continuousDmg);
+                    }
                     if (killed) _score += bat.KillPoints;
                 }
         }

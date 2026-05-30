@@ -1,18 +1,26 @@
-# Visual Studio IntelliSense and cache files
+# ═══════════════════════════════════════════════════════════════════
+# VISUAL STUDIO
+# ═══════════════════════════════════════════════════════════════════
+
 .vs/
-*.db
-*.db-shm
-*.db-wal
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
+*.userprefs
+*.csproj.user
+*.VC.db
+*.VC.opendb
 
-# Build results
+# ═══════════════════════════════════════════════════════════════════
+# BUILD OUTPUT
+# ═══════════════════════════════════════════════════════════════════
+
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+[Bb]uild/
 x64/
 x86/
 [Aa][Rr][Mm]/
@@ -20,12 +28,167 @@ x86/
 bld/
 [Bb]in/
 [Oo]bj/
+out/
+publish/
+artifacts/
+_publish/
 
-# Visual Studio profiler
+# ═══════════════════════════════════════════════════════════════════
+# .NET / NUGET
+# ═══════════════════════════════════════════════════════════════════
+
+packages/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+nuget.config.local
+
+# ═══════════════════════════════════════════════════════════════════
+# MONOGAME / MGCB CONTENT PIPELINE
+# ═══════════════════════════════════════════════════════════════════
+
+# Compiled XNB content — rebuilt by MGCB on every build
+Content/bin/
+Content/obj/
+*.xnb
+
+# IMPORTANT: source assets in Content/ must never be ignored
+# (textures, audio, maps, shaders, XML, encyclopaedia data, etc.)
+
+# MGCB editor temp files only — NOT the .mgcb config itself
+*.mgb
+Content.mgcb~
+*.mgcontent
+
+# ═══════════════════════════════════════════════════════════════════
+# SQLITE / LOCAL DATABASES
+# ═══════════════════════════════════════════════════════════════════
+
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# ═══════════════════════════════════════════════════════════════════
+# VISUAL STUDIO PROFILER & DIAGNOSTICS
+# ═══════════════════════════════════════════════════════════════════
+
 *.psess
 *.vsp
 *.vspx
 *.sap
+*.diagsession
+*.etl
+*.dmp
 
-# Local game data
+# ═══════════════════════════════════════════════════════════════════
+# TEST RESULTS & COVERAGE
+# ═══════════════════════════════════════════════════════════════════
+
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+coverage*/
+*.coverage
+*.coveragexml
+TestResults/
+*.trx
+
+# ═══════════════════════════════════════════════════════════════════
+# OS GENERATED FILES
+# ═══════════════════════════════════════════════════════════════════
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+*~
+
+# ═══════════════════════════════════════════════════════════════════
+# EDITORS & IDEs (OTHER THAN VISUAL STUDIO)
+# ═══════════════════════════════════════════════════════════════════
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+_ReSharper*/
+
+# VS Code
+.vscode/
+
+# MonoDevelop
+*.pidb
+
+# ═══════════════════════════════════════════════════════════════════
+# LOGS & TEMPORARY FILES
+# ═══════════════════════════════════════════════════════════════════
+
+*.log
+logs/
+*.tmp
+*.temp
+*.cache
+*.bak
+*.old
+*.orig
+*.rej
+*.swp
+
+# ═══════════════════════════════════════════════════════════════════
+# SECRETS & ENVIRONMENT
+# ═══════════════════════════════════════════════════════════════════
+
+.env
+.env.*
+!.env.example
+secrets.json
+apikeys.json
+*.pfx
+*.p12
+*.key
+*.pem
+*.cer
+
+# ═══════════════════════════════════════════════════════════════════
+# LOCAL GAME DATA (PROJECT-SPECIFIC)
+# ═══════════════════════════════════════════════════════════════════
+
+# Startup / local INI config
 /ini/
+
+# Save files
+Saves/
+savegames/
+*.save
+*.sav
+
+# Runtime cache & temp
+cache/
+temp/
+shadercache/
+shader_cache/
+
+# Profiling & performance captures
+profiling/
+performance/
+
+# Per-user local config (not shared with the team)
+settings.local.json
+user_settings.json
+
+# Local leaderboards (generated at runtime)
+leaderboard.json
+leaderboard_backup.json

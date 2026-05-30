@@ -15,8 +15,8 @@ Place bombs to destroy breakable tiles, eliminate bat enemies, collect power-ups
   - `Game1.cs` — window setup, fullscreen toggle, letterbox scaling
   - `GameController.cs` — input abstraction (keyboard bindings)
   - `Scenes/` — `TitleScene` (animated title screen), `GameScene` (gameplay loop), `VisualEffectSystem` (VFX)
-  - `GameObjects/` — `Miner` (player), `Bat` (enemy), `Bomb` (small & big)
-  - `UI/` — `GameHud`, `GameOverlay`, `PauseMenu`, `AudioSettingsPanel`, `BatEncyclopedia`
+  - `GameObjects/` — `Miner` (player), `Bat` (enemy), `Bomb` (small & big), `MinerUpgrade` (upgrade registry & gameplay state), `MinerUpgradeDescriptions` (encyclopedia copy)
+  - `UI/` — `GameHud`, `GameOverlay`, `PauseMenu`, `AudioSettingsPanel`, `BatEncyclopedia` (3-tab encyclopedia: Nemici · Upgrade · Biomi)
 - `PoopManLibrary/` — shared game logic
   - `Core.cs` — game bootstrap (window, graphics, content, scene management)
   - `Collision.cs` — circular hitbox system
@@ -55,21 +55,23 @@ Place bombs to destroy breakable tiles, eliminate bat enemies, collect power-ups
 
 ### Enemies (Bat)
 
-Seven **bat variants**, each with a unique ability, unlocked progressively:
+Eight **bat variants**, each with a unique ability, unlocked progressively:
 
 | Variant | Unlocks | Ability |
 |---------|---------|---------|
-| Normal | Lv 0 | Standard AI |
+| Normal | Lv 0 | Standard AI; 1 HP until lv 19 |
 | Dasher | Lv 5 | Rapid dash (3 s cooldown, 25 % chance) |
 | Walid | Lv 8 | Explodes on death — 6×6 tile area |
 | Ghost | Lv 10 | Phases through solid bombs (2 s, 8 s cooldown) |
 | Splitter | Lv 15 | Splits into 2 faster mini-bats on death |
 | Berserk | Lv 16 | Speed ×2.2 when within 3 tiles of the miner |
-| Nuke | Lv 20 | Explodes on death — 12×12 tile area (instant kill) |
+| Robusto | Lv 20 | Same as Normal but armoured: 2–6 HP depending on level |
+| Nuke | Lv 20 | Explodes on death — 12×12 tile area (instant kill on all bats in range) |
 
 - Difficulty scales with level: speed, chase chance, sight range, and HP all increase
 - From level 20 onward, multiple variants can appear in the same wave
-- HP cap per bat: 1 HP (lv 0–19), scaling up to 6 HP at lv 40+
+- **Robusto** HP progression: +1 HP every 5 levels past 20, cap 6 HP at lv 40+
+- The **exit door** and the **key** are always immune to Nuke explosions
 
 ### Chest System
 
@@ -95,7 +97,7 @@ Each upgrade tracks its own level counter and is filtered from the pool when cap
 | Upgrade | Effect |
 |---------|--------|
 | Danno+ | Explosion radius +1 tile (max 4 lv) |
-| Potenza | +1 bomb damage every 2 levels (max 6 lv) |
+| Potenza | +1 small-bomb damage per level — lv 0 = 1 dmg, lv 5 = 6 dmg (max 5 lv) |
 | Miccia Corta | Fuse timer −0.4 s (max 4 lv) |
 | Bomba+ | +1 simultaneous bomb (max 3 lv) |
 | Catena | +15 % chance enemy death triggers a mini-explosion (max 4 lv) |
@@ -111,7 +113,7 @@ Each upgrade tracks its own level counter and is filtered from the pool when cap
 |---------|--------|
 | Resistenza | +1 s invincibility after respawn (cumulative, max 7 s) |
 | Armatura | +0.5 s invincibility on hit (cumulative, max 7 s) |
-| Scudo | Absorbs 1 hit; recharges every 5 levels |
+| Scudo | Absorbs 1 hit; recharges every 3 levels |
 
 **Speciali:**
 | Upgrade | Effect |
@@ -123,6 +125,12 @@ Each upgrade tracks its own level counter and is filtered from the pool when cap
 | Rallenta | Nearby bats slowed 40 % for 3 s after an explosion |
 | Fortuna | +15 % bonus loot chance from chests (max 4 lv) |
 | Bottino | +15 % chance bat drops an item on kill (max 4 lv) |
+
+**Mythic** *(0.5 % probability per slot — extremely rare)*:
+| Upgrade | Effect |
+|---------|--------|
+| Mythic Immortality | Complete immunity to own bomb explosions (small, big, and chain) |
+| Instant Kill | Small bombs instantly kill any bat regardless of HP |
 
 ### Level Progression
 
@@ -138,9 +146,14 @@ Each upgrade tracks its own level counter and is filtered from the pool when cap
 
 ### HUD & UI
 
-- Top HUD bar: score, HP icons, big-bomb count, map theme, level, key indicator
-- **Pause menu** (`Esc`) with Audio and Bat Encyclopedia sub-pages
-- **Bat Encyclopedia** — scrollable card gallery of all seven bat variants with mouse & keyboard navigation
+- Top HUD bar: score, HP icons (with golden border when **Mythic Immortality** is active), big-bomb count, map theme, level, key indicator
+- Small-bomb icon pulses with a special effect when **Instant Kill** is active
+- Skull/explosion ability icon shown when a Mythic upgrade is held
+- **Pause menu** (`Esc`): Audio Settings and Bat Encyclopedia sub-pages
+- **Bat Encyclopedia** — 3-tab scrollable card gallery (Nemici · Upgrade · Biomi):
+  - *Nemici*: all eight bat variants with sprite preview, stats, and spawn level
+  - *Upgrade*: all Miner upgrades including Mythic entries (highlighted with a special card style)
+  - *Biomi*: six visual themes with descriptions
 - **Audio Settings** — independent Music / SFX volume sliders with mute toggle, available in-game and on the title screen
 - **Game Over overlay** with final score (`R` / `Enter` to restart, `Esc` to title)
 - **Level flash** on completion (1.8 s, with theme name every 3 levels)
