@@ -187,12 +187,12 @@ public static class UpgradeRegistry
 
         // ── Mythic ─────────────────────────────────────────────────────
         new(UpgradeType.MythicImmortality,
-            "✦ IMMORTALITA' MISTICA",
+            "IMMORTALITA' MISTICA",
             "[MYTHIC] Immunit\u00e0 totale alle\nesplosioni delle proprie bombe.",
             new Color(220, 180, 30)),
 
         new(UpgradeType.InstantKill,
-            "✦ KILL ISTANTANEO",
+            "KILL ISTANTANEO",
             "[MYTHIC] Le bombe piccole eliminano\nistantaneamente qualsiasi pipistrello.",
             new Color(255, 80, 80))
     };

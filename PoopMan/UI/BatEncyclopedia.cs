@@ -186,7 +186,7 @@ public class BatEncyclopedia
     // --------------------------------------------------------------------
     private static readonly BiomeEntry[] BiomeEntries =
     {
-        new("PRATERIA", "Livelli 1-4", new Color(80, 200, 80), new Color(60, 180, 60, 60),
+        new("PRATERIA", "Livelli 0-3", new Color(80, 200, 80), new Color(60, 180, 60, 60),
             "Il bioma di partenza. Terreno verde e luminoso, ideale per imparare le meccaniche di gioco.",
             new[]
             {
@@ -198,23 +198,25 @@ public class BatEncyclopedia
             "Impara i movimenti e la gestione delle bombe qui prima di avanzare.",
             new Color(60, 200, 60)),
 
-        new("GHIACCIO", "Livelli 5-9", new Color(140, 200, 255), new Color(100, 180, 255, 70),
-            "Ambiente innevato e gelido. Dal livello 5 la porta richiede la chiave per aprirsi.",
+        new("CAVERNA", "Livelli 4-7", new Color(180, 100, 255), new Color(160, 80, 255, 100),
+            "Grotte oscure e claustrofobiche. Il Dasher compare qui per la prima volta.",
             new[]
             {
-                "DAL LV 5: serve la CHIAVE per aprire la porta",
-                "Sfondo bianco-azzurro con cristalli di ghiaccio",
-                "Walid compare in questo bioma (lv 8)",
-                "Trova la chiave prima di avvicinarti all'uscita"
+                "Sfondo viola scuro con elementi rocciosi",
+                "Dasher sblocca al livello 5",
+                "I bat normali diventano resistenti (multi-HP)",
+                "Varianti miste: piu bat speciali per ondata",
+                "La porta e SEMPRE immune alle esplosioni Nuke"
             },
-            "Trova la chiave prima di cercare la porta! Walid esplode: stai lontano.",
-            new Color(120, 180, 255)),
+            "Usa la big bomb per il Nuke ma solo da distanza di sicurezza!",
+            new Color(160, 100, 255)),
 
-        new("LAVA", "Livelli 10-14", new Color(255, 100, 20), new Color(255, 80, 0, 80),
+        new("LAVA", "Livelli 8-11", new Color(255, 100, 20), new Color(255, 80, 0, 80),
             "Zone vulcaniche con lava animata. L'ambiente rosso-arancione crea alta tensione.",
             new[]
             {
                 "Sfondo rosso-arancione con lava in movimento",
+                "Walid sblocca in questo bioma (lv 8)",
                 "Ghost Bat sblocca in questo bioma (lv 10)",
                 "Maggiore densita di blocchi breakable strategici",
                 "Il Ghost ignora le bombe solide: usa esplosioni dirette"
@@ -222,30 +224,42 @@ public class BatEncyclopedia
             "Il Ghost Bat e imprevedibile: evita di usare solo bombe-blocco.",
             new Color(255, 120, 0)),
 
-        new("PALUDE", "Livelli 15-19", new Color(80, 160, 80), new Color(60, 140, 60, 80),
+        new("GHIACCIO", "Livelli 12-15", new Color(140, 200, 255), new Color(100, 180, 255, 70),
+            "Ambiente innevato e gelido. Dal livello 5 la porta richiede la chiave per aprirsi.",
+            new[]
+            {
+                "DAL LV 5: serve la CHIAVE per aprire la porta",
+                "Sfondo bianco-azzurro con cristalli di ghiaccio",
+                "Splitter compare in questo bioma (lv 15)",
+                "Trova la chiave prima di avvicinarti all'uscita"
+            },
+            "Trova la chiave prima di cercare la porta! Walid esplode: stai lontano.",
+            new Color(120, 180, 255)),
+
+        new("PALUDE", "Livelli 16-19", new Color(80, 160, 80), new Color(60, 140, 60, 80),
             "Terreno fangoso e cupo. I pipistrelli piu pericolosi iniziano a comparire.",
             new[]
             {
                 "Sfondo verde scuro con ambiance pesante",
-                "Splitter (lv 15) e Berserk (lv 16) sbloccati",
+                "Berserk (lv 16) sbloccati",
                 "I mini-bat dello Splitter sono molto veloci",
                 "Il Berserk entra in furia a 3 tile di distanza"
             },
             "Non lasciare mai lo Splitter vicino a te quando esplode.",
             new Color(80, 180, 80)),
 
-        new("CAVERNA", "Livelli 20+", new Color(180, 100, 255), new Color(160, 80, 255, 100),
-            "Grotte oscure e claustrofobiche. Il Nuke compare qui per la prima volta.",
+        new("RUNE", "Livello 20", new Color(255, 80, 80), new Color(255, 60, 60, 120),
+            "Il bioma finale. Il Nuke e il Bat Robusto raggiungono la loro massima pericolosita.",
             new[]
             {
-                "Sfondo viola scuro con elementi rocciosi",
-                "NUKE sblocca al livello 20: area 13x13 tile",
-                "I bat normali diventano resistenti (multi-HP)",
-                "Varianti miste: piu bat speciali per ondata",
-                "La porta e SEMPRE immune alle esplosioni Nuke"
+                "Nuke (lv 20) e Bat Robusto (lv 20+) sbloccati",
+                "Il Nuke ha un'area di esplosione enorme (raggio 6)",
+                "Il Bat Robusto puo avere fino a 6 HP al lv 50+",
+                "La porta e immune all'esplosione del Nuke: attenzione ai bat vicini!"
             },
-            "Usa la big bomb per il Nuke ma solo da distanza di sicurezza!",
-            new Color(160, 100, 255)),
+            "Usa la big bomb per il Nuke ma stai lontano dall'area di esplosione!",
+            new Color(255, 100, 80))
+
     };
 
     // -- Dipendenze ------------------------------

@@ -298,7 +298,7 @@ public class GameScene : Scene
             }
 
         // ── Collisione esplosione ↔ miner ─────────────────────────────────
-        if (!_miner.IsDead && !_miner.IsInvincible)
+        if (!_miner.IsDead && !_miner.IsInvincible && !_miner.UpgradeMythicImmortality)
             foreach (var tile in _miner.ActiveExplosionTiles)
                 if (_miner.TilePosition == tile)
                 {

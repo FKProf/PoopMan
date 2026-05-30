@@ -206,7 +206,7 @@ public class GameHud
         // ── DESTRA: Upgrade Mythic ─────────────────────────────────────────
         if (instantKill)
         {
-            var ikStr = "[☠IK]";
+            var ikStr = "[IK]";
             var ikPulse = 0.7f + 0.3f * (float)Math.Sin(Environment.TickCount64 * 0.009);
             rx -= (int)_font.MeasureString(ikStr).X;
             DrawS(sb, ikStr, new Vector2(rx, cy), new Color(255, 80, 80) * ikPulse);
@@ -215,7 +215,7 @@ public class GameHud
 
         if (mythicImmortality)
         {
-            var miStr = "[✦IMM]";
+            var miStr = "[IMM]";
             var miPulse = 0.7f + 0.3f * (float)Math.Sin(Environment.TickCount64 * 0.008);
             rx -= (int)_font.MeasureString(miStr).X;
             DrawS(sb, miStr, new Vector2(rx, cy), new Color(220, 180, 30) * miPulse);
