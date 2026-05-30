@@ -1,10 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using PoopMan.GameObjects;
 using PoopManLibrary.World;
+using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace PoopMan.UI;
 
@@ -310,11 +310,11 @@ public class GameOverlay
             var maxTextW = cardW - padding * 2;
             var rawLines = opt.Description.Split('\n');
             foreach (var raw in rawLines)
-            foreach (var wline in WrapText(raw, descScale, maxTextW))
-            {
-                DrawTextCentered(sb, wline, nameCx, cursorY, descColor, descScale);
-                cursorY += lineH;
-            }
+                foreach (var wline in WrapText(raw, descScale, maxTextW))
+                {
+                    DrawTextCentered(sb, wline, nameCx, cursorY, descColor, descScale);
+                    cursorY += lineH;
+                }
 
             // ── Riga bonus danno dinamica ─────────────────────────────────
             if (opt.Type == UpgradeType.ExplosionDamage && getLevelInfo != null)

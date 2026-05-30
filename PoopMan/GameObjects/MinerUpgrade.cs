@@ -1,7 +1,7 @@
+using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Xna.Framework;
 
 namespace PoopMan.GameObjects;
 
@@ -36,7 +36,11 @@ public enum UpgradeType
     StunOnHit, // bat storditi vicino all'esplosione (1 livello)
     SlowOnHit, // bat rallentati vicino all'esplosione (1 livello)
     BonusLoot, // +15% probabilità bonus casse (max 4)
-    DoubleDrop // bat uccisi lasciano sempre item (max 4)
+    DoubleDrop, // bat uccisi lasciano sempre item (max 4)
+
+    // ── Mythic ────────────────────────────────────────────────────────────
+    MythicImmortality, // immunità totale alle esplosioni delle proprie bombe (0,5%)
+    InstantKill // bombe piccole uccidono istantaneamente qualsiasi bat (0,5%)
 }
 
 /// <summary>Dati di presentazione di un upgrade.</summary>
@@ -179,7 +183,18 @@ public static class UpgradeRegistry
         new(UpgradeType.DoubleDrop,
             "BOTTINO",
             $"+15% probabilita' che un bat ucciso\nlasci un item. Max {MaxDoubleDropSteps} lv.",
-            Color.LightYellow)
+            Color.LightYellow),
+
+        // ── Mythic ─────────────────────────────────────────────────────
+        new(UpgradeType.MythicImmortality,
+            "✦ IMMORTALITA' MISTICA",
+            "[MYTHIC] Immunit\u00e0 totale alle\nesplosioni delle proprie bombe.",
+            new Color(220, 180, 30)),
+
+        new(UpgradeType.InstantKill,
+            "✦ KILL ISTANTANEO",
+            "[MYTHIC] Le bombe piccole eliminano\nistantaneamente qualsiasi pipistrello.",
+            new Color(255, 80, 80))
     };
 
     /// <summary>
@@ -210,9 +225,15 @@ public static class UpgradeRegistry
             UpgradeType.SlowOnHit => 1,
             UpgradeType.BonusLoot => MaxBonusLootSteps,
             UpgradeType.DoubleDrop => MaxDoubleDropSteps,
+            UpgradeType.MythicImmortality => 1,
+            UpgradeType.InstantKill => 1,
             _ => 1
         };
     }
+
+    /// <summary>Restituisce true se l'upgrade è di rarità Mythic.</summary>
+    public static bool IsMythic(UpgradeType type) =>
+        type is UpgradeType.MythicImmortality or UpgradeType.InstantKill;
 
     /// <summary>
     ///     Restituisce <paramref name="count" /> upgrade casuali distinti,
@@ -224,17 +245,49 @@ public static class UpgradeRegistry
         IReadOnlyDictionary<UpgradeType, int> currentLevels)
     {
         var rng = new Random();
-        var available = All
+
+        // Separa pool normale e Mythic
+        var normalPool = All
+            .Where(def => !IsMythic(def.Type))
             .Where(def =>
             {
                 var cur = currentLevels.TryGetValue(def.Type, out var v) ? v : 0;
-                var max = MaxLevel(def.Type);
-                return cur < max;
+                return cur < MaxLevel(def.Type);
             })
             .OrderBy(_ => rng.Next())
-            .Take(Math.Min(count, All.Length))
             .ToList();
-        return available;
+
+        var mythicPool = All
+            .Where(def => IsMythic(def.Type))
+            .Where(def =>
+            {
+                var cur = currentLevels.TryGetValue(def.Type, out var v) ? v : 0;
+                return cur < MaxLevel(def.Type);
+            })
+            .ToList();
+
+        var result = new List<UpgradeDef>();
+        var normalIndex = 0;
+
+        for (var i = 0; i < count && result.Count < count; i++)
+        {
+            // Tenta slot Mythic con probabilita' 0,5%
+            if (mythicPool.Count > 0 && rng.NextDouble() < 0.005)
+            {
+                var mythic = mythicPool[rng.Next(mythicPool.Count)];
+                if (!result.Contains(mythic))
+                {
+                    result.Add(mythic);
+                    continue;
+                }
+            }
+
+            // Slot normale
+            if (normalIndex < normalPool.Count)
+                result.Add(normalPool[normalIndex++]);
+        }
+
+        return result;
     }
 
     /// <summary>Overload senza livelli (retrocompatibilità): considera tutti disponibili.</summary>

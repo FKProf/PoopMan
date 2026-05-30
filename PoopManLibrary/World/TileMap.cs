@@ -1,8 +1,8 @@
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using GameTime = Microsoft.Xna.Framework.GameTime;
 
 namespace PoopManLibrary.World;
@@ -105,35 +105,35 @@ public class TileMap
         var noiseMap = GenerateNoiseMap(rows, cols, rand);
 
         for (var y = 0; y < rows; y++)
-        for (var x = 0; x < cols; x++)
-            if (y == 0 || y == rows - 1 || x == 0 || x == cols - 1)
-            {
-                map[y, x] = TileType.Wall;
-                tileVariant[y, x] = t.border;
-            }
-            else if (y % 2 == 0 && x % 2 == 0)
-            {
-                map[y, x] = TileType.Wall;
-                tileVariant[y, x] = t.wall;
-            }
-            else if (rand.Next(100) < breakableChance)
-            {
-                map[y, x] = TileType.Breakable;
-                // Varia il breakable tile in base alla zona (noise)
-                var n = noiseMap[y, x];
-                var breakIdx = n < 0.4f ? 0 :
-                    n < 0.75f ? t.breakable.Length > 1 ? 1 : 0 :
-                    t.breakable.Length > 2 ? 2 : 0;
-                tileVariant[y, x] = t.breakable[breakIdx % t.breakable.Length];
-            }
-            else
-            {
-                map[y, x] = TileType.Empty;
-                // Scegli il floor tile in base alla zona noise per varietà visiva
-                var n = noiseMap[y, x];
-                var emptyIdx = n < 0.35f ? 0 : n < 0.70f ? t.empty.Length > 1 ? 1 : 0 : t.empty.Length > 2 ? 2 : 0;
-                tileVariant[y, x] = t.empty[emptyIdx % t.empty.Length];
-            }
+            for (var x = 0; x < cols; x++)
+                if (y == 0 || y == rows - 1 || x == 0 || x == cols - 1)
+                {
+                    map[y, x] = TileType.Wall;
+                    tileVariant[y, x] = t.border;
+                }
+                else if (y % 2 == 0 && x % 2 == 0)
+                {
+                    map[y, x] = TileType.Wall;
+                    tileVariant[y, x] = t.wall;
+                }
+                else if (rand.Next(100) < breakableChance)
+                {
+                    map[y, x] = TileType.Breakable;
+                    // Varia il breakable tile in base alla zona (noise)
+                    var n = noiseMap[y, x];
+                    var breakIdx = n < 0.4f ? 0 :
+                        n < 0.75f ? t.breakable.Length > 1 ? 1 : 0 :
+                        t.breakable.Length > 2 ? 2 : 0;
+                    tileVariant[y, x] = t.breakable[breakIdx % t.breakable.Length];
+                }
+                else
+                {
+                    map[y, x] = TileType.Empty;
+                    // Scegli il floor tile in base alla zona noise per varietà visiva
+                    var n = noiseMap[y, x];
+                    var emptyIdx = n < 0.35f ? 0 : n < 0.70f ? t.empty.Length > 1 ? 1 : 0 : t.empty.Length > 2 ? 2 : 0;
+                    tileVariant[y, x] = t.empty[emptyIdx % t.empty.Length];
+                }
 
         var chosenSpawn = playerSpawn ?? SpawnCorners[rand.Next(SpawnCorners.Length)];
         _playerSpawn = chosenSpawn;
@@ -164,18 +164,18 @@ public class TileMap
     {
         var theme = ThemeTiles[Theme];
         for (var dy = -3; dy <= 3; dy++)
-        for (var dx = -3; dx <= 3; dx++)
-        {
-            var cy = spawn.Y + dy;
-            var cx = spawn.X + dx;
-            if (cy <= 0 || cy >= rows - 1 || cx <= 0 || cx >= cols - 1) continue;
-            if (cy % 2 == 0 && cx % 2 == 0) continue; // pilastri fissi: indistruttibili
-            if (map[cy, cx] != TileType.Empty)
+            for (var dx = -3; dx <= 3; dx++)
             {
-                map[cy, cx] = TileType.Empty;
-                tileVariant[cy, cx] = theme.empty[rand.Next(theme.empty.Length)];
+                var cy = spawn.Y + dy;
+                var cx = spawn.X + dx;
+                if (cy <= 0 || cy >= rows - 1 || cx <= 0 || cx >= cols - 1) continue;
+                if (cy % 2 == 0 && cx % 2 == 0) continue; // pilastri fissi: indistruttibili
+                if (map[cy, cx] != TileType.Empty)
+                {
+                    map[cy, cx] = TileType.Empty;
+                    tileVariant[cy, cx] = theme.empty[rand.Next(theme.empty.Length)];
+                }
             }
-        }
     }
 
     // -------------------------------------------------------------------------
@@ -185,18 +185,18 @@ public class TileMap
     {
         var t = ThemeTiles[Theme];
         for (var dy = -3; dy <= 3; dy++)
-        for (var dx = -3; dx <= 3; dx++)
-        {
-            var y = spawn.Y + dy;
-            var x = spawn.X + dx;
-            if (y <= 0 || y >= rows - 1 || x <= 0 || x >= cols - 1) continue;
-            if (y % 2 == 0 && x % 2 == 0) continue;
-            if (map[y, x] == TileType.Wall && IsHazardVariant(tileVariant[y, x]))
+            for (var dx = -3; dx <= 3; dx++)
             {
-                map[y, x] = TileType.Empty;
-                tileVariant[y, x] = t.empty[0];
+                var y = spawn.Y + dy;
+                var x = spawn.X + dx;
+                if (y <= 0 || y >= rows - 1 || x <= 0 || x >= cols - 1) continue;
+                if (y % 2 == 0 && x % 2 == 0) continue;
+                if (map[y, x] == TileType.Wall && IsHazardVariant(tileVariant[y, x]))
+                {
+                    map[y, x] = TileType.Empty;
+                    tileVariant[y, x] = t.empty[0];
+                }
             }
-        }
     }
 
     private static bool IsHazardVariant(string variant)
@@ -262,9 +262,9 @@ public class TileMap
 
                 // 5) Pavimento ghiacciato: quasi tutto ice_glass (superficie scivolosa)
                 for (var y = 1; y < rows - 1; y++)
-                for (var x = 1; x < cols - 1; x++)
-                    if (map[y, x] == TileType.Empty)
-                        tileVariant[y, x] = "ice_glass" + rand.Next(3);
+                    for (var x = 1; x < cols - 1; x++)
+                        if (map[y, x] == TileType.Empty)
+                            tileVariant[y, x] = "ice_glass" + rand.Next(3);
 
                 break;
 
@@ -284,16 +284,16 @@ public class TileMap
                     AddColumnCluster(rand.Next(1, rows - 1), rand.Next(1, cols - 1), rows, cols, rand);
                 // Pavimento fangoso: colora i tile empty verso ground2/ground0 (più scuri)
                 for (var y = 1; y < rows - 1; y++)
-                for (var x = 1; x < cols - 1; x++)
-                    if (map[y, x] == TileType.Empty && rand.Next(100) < 45)
-                        tileVariant[y, x] = rand.Next(2) == 0 ? "ground2" : "ground0";
+                    for (var x = 1; x < cols - 1; x++)
+                        if (map[y, x] == TileType.Empty && rand.Next(100) < 45)
+                            tileVariant[y, x] = rand.Next(2) == 0 ? "ground2" : "ground0";
                 break;
 
             case MapTheme.Ruins:
                 for (var y = 1; y < rows - 1; y++)
-                for (var x = 1; x < cols - 1; x++)
-                    if (map[y, x] == TileType.Empty && rand.Next(100) < 25 + intensity * 5)
-                        tileVariant[y, x] = "sand0";
+                    for (var x = 1; x < cols - 1; x++)
+                        if (map[y, x] == TileType.Empty && rand.Next(100) < 25 + intensity * 5)
+                            tileVariant[y, x] = "sand0";
                 for (var i = 0; i < rand.Next(3, 5 + intensity); i++)
                     AddRockCluster(rand.Next(1, rows - 1), rand.Next(1, cols - 1),
                         rand.Next(3, 6 + intensity), rows, cols, rand);
@@ -314,27 +314,27 @@ public class TileMap
         var gRows = rows / 6 + 2;
         var coarse = new float[gRows, gCols];
         for (var y = 0; y < gRows; y++)
-        for (var x = 0; x < gCols; x++)
-            coarse[y, x] = (float)rand.NextDouble();
+            for (var x = 0; x < gCols; x++)
+                coarse[y, x] = (float)rand.NextDouble();
 
         var result = new float[rows, cols];
         for (var y = 0; y < rows; y++)
-        for (var x = 0; x < cols; x++)
-        {
-            var gx = x / 6f;
-            var gy = y / 6f;
-            var x0 = (int)gx;
-            var y0 = (int)gy;
-            var x1 = Math.Min(x0 + 1, gCols - 1);
-            var y1 = Math.Min(y0 + 1, gRows - 1);
-            var tx = gx - x0;
-            var ty = gy - y0;
-            var v = coarse[y0, x0] * (1 - tx) * (1 - ty)
-                    + coarse[y0, x1] * tx * (1 - ty)
-                    + coarse[y1, x0] * (1 - tx) * ty
-                    + coarse[y1, x1] * tx * ty;
-            result[y, x] = v;
-        }
+            for (var x = 0; x < cols; x++)
+            {
+                var gx = x / 6f;
+                var gy = y / 6f;
+                var x0 = (int)gx;
+                var y0 = (int)gy;
+                var x1 = Math.Min(x0 + 1, gCols - 1);
+                var y1 = Math.Min(y0 + 1, gRows - 1);
+                var tx = gx - x0;
+                var ty = gy - y0;
+                var v = coarse[y0, x0] * (1 - tx) * (1 - ty)
+                        + coarse[y0, x1] * tx * (1 - ty)
+                        + coarse[y1, x0] * (1 - tx) * ty
+                        + coarse[y1, x1] * tx * ty;
+                result[y, x] = v;
+            }
 
         return result;
     }
@@ -412,51 +412,51 @@ public class TileMap
     {
         var t = ThemeTiles[Theme];
         for (var dy = -radius; dy <= radius; dy++)
-        for (var dx = -radius; dx <= radius; dx++)
-        {
-            if (dy * dy + dx * dx > radius * radius) continue;
-            var y = cy + dy;
-            var x = cx + dx;
-            if (y <= 0 || y >= rows - 1 || x <= 0 || x >= cols - 1) continue;
-            if (y % 2 == 0 && x % 2 == 0) continue;
-            if (map[y, x] == TileType.Empty && rand.Next(100) < 60)
+            for (var dx = -radius; dx <= radius; dx++)
             {
-                map[y, x] = TileType.Breakable;
-                tileVariant[y, x] = t.breakable[rand.Next(t.breakable.Length)];
+                if (dy * dy + dx * dx > radius * radius) continue;
+                var y = cy + dy;
+                var x = cx + dx;
+                if (y <= 0 || y >= rows - 1 || x <= 0 || x >= cols - 1) continue;
+                if (y % 2 == 0 && x % 2 == 0) continue;
+                if (map[y, x] == TileType.Empty && rand.Next(100) < 60)
+                {
+                    map[y, x] = TileType.Breakable;
+                    tileVariant[y, x] = t.breakable[rand.Next(t.breakable.Length)];
+                }
+                else if (map[y, x] == TileType.Wall && IsHazardVariant(tileVariant[y, x]))
+                {
+                    // Never place breakable on liquid tiles
+                }
             }
-            else if (map[y, x] == TileType.Wall && IsHazardVariant(tileVariant[y, x]))
-            {
-                // Never place breakable on liquid tiles
-            }
-        }
     }
 
     private void CarveOpenArea(int cy, int cx, int radius, int rows, int cols, Random rand)
     {
         var t = ThemeTiles[Theme];
         for (var dy = -radius; dy <= radius; dy++)
-        for (var dx = -radius; dx <= radius; dx++)
-        {
-            if (dy * dy + dx * dx > radius * radius) continue;
-            var y = cy + dy;
-            var x = cx + dx;
-            if (y <= 0 || y >= rows - 1 || x <= 0 || x >= cols - 1) continue;
-            if (y % 2 == 0 && x % 2 == 0) continue;
-            if (map[y, x] == TileType.Breakable && rand.Next(100) < 70)
+            for (var dx = -radius; dx <= radius; dx++)
             {
-                map[y, x] = TileType.Empty;
-                tileVariant[y, x] = t.empty[rand.Next(t.empty.Length)];
+                if (dy * dy + dx * dx > radius * radius) continue;
+                var y = cy + dy;
+                var x = cx + dx;
+                if (y <= 0 || y >= rows - 1 || x <= 0 || x >= cols - 1) continue;
+                if (y % 2 == 0 && x % 2 == 0) continue;
+                if (map[y, x] == TileType.Breakable && rand.Next(100) < 70)
+                {
+                    map[y, x] = TileType.Empty;
+                    tileVariant[y, x] = t.empty[rand.Next(t.empty.Length)];
+                }
             }
-        }
     }
 
     private void AddSandNearLiquid(int rows, int cols, Random rand)
     {
         for (var y = 1; y < rows - 1; y++)
-        for (var x = 1; x < cols - 1; x++)
-            if (map[y, x] == TileType.Empty && HasAdjacentLiquid(y, x, rows, cols))
-                if (rand.Next(2) == 0)
-                    tileVariant[y, x] = "sand0";
+            for (var x = 1; x < cols - 1; x++)
+                if (map[y, x] == TileType.Empty && HasAdjacentLiquid(y, x, rows, cols))
+                    if (rand.Next(2) == 0)
+                        tileVariant[y, x] = "sand0";
     }
 
     private bool HasAdjacentLiquid(int y, int x, int rows, int cols)
@@ -512,14 +512,14 @@ public class TileMap
     {
         var candidates = new List<Point>();
         for (var y = 1; y < map.GetLength(0) - 1; y++)
-        for (var x = 1; x < map.GetLength(1) - 1; x++)
-        {
-            if (map[y, x] != TileType.Empty) continue;
-            var p = new Point(x, y);
-            var tooClose = SpawnCorners.Any(c =>
-                Math.Abs(c.X - x) + Math.Abs(c.Y - y) < minDistFromSpawn);
-            if (!tooClose) candidates.Add(p);
-        }
+            for (var x = 1; x < map.GetLength(1) - 1; x++)
+            {
+                if (map[y, x] != TileType.Empty) continue;
+                var p = new Point(x, y);
+                var tooClose = SpawnCorners.Any(c =>
+                    Math.Abs(c.X - x) + Math.Abs(c.Y - y) < minDistFromSpawn);
+                if (!tooClose) candidates.Add(p);
+            }
 
         if (candidates.Count == 0) return null;
         return candidates[rand.Next(candidates.Count)];
@@ -549,13 +549,13 @@ public class TileMap
     public void Draw(SpriteBatch spriteBatch)
     {
         for (var y = 0; y < map.GetLength(0); y++)
-        for (var x = 0; x < map.GetLength(1); x++)
-        {
-            var variant = AnimatedVariant(tileVariant[y, x]);
-            var sourceRect = atlas.GetTile(variant);
-            var destRect = new Rectangle(x * TileSize, y * TileSize, TileSize, TileSize);
-            spriteBatch.Draw(atlas.Texture, destRect, sourceRect, Color.White);
-        }
+            for (var x = 0; x < map.GetLength(1); x++)
+            {
+                var variant = AnimatedVariant(tileVariant[y, x]);
+                var sourceRect = atlas.GetTile(variant);
+                var destRect = new Rectangle(x * TileSize, y * TileSize, TileSize, TileSize);
+                spriteBatch.Draw(atlas.Texture, destRect, sourceRect, Color.White);
+            }
     }
 
     public bool IsWalkable(Point tile)

@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -7,6 +5,8 @@ using PoopMan.Scenes;
 using PoopManLibrary;
 using PoopManLibrary.Input;
 using PoopManLibrary.Scenes;
+using System;
+using System.Collections.Generic;
 
 namespace PoopMan.UI;
 

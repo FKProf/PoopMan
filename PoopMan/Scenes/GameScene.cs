@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Xml.Linq;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using PoopMan.GameObjects;
@@ -12,6 +7,11 @@ using PoopManLibrary;
 using PoopManLibrary.Input;
 using PoopManLibrary.Scenes;
 using PoopManLibrary.World;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Xml.Linq;
 
 namespace PoopMan.Scenes;
 
@@ -481,6 +481,13 @@ public class GameScene : Scene
                         _score += b.KillPoints;
                         b.Kill();
                     }
+                    else if (_miner.UpgradeInstantKill)
+                    {
+                        // Instant Kill: uccide istantaneamente qualsiasi bat con bomba piccola
+                        killed = true;
+                        _score += b.KillPoints;
+                        b.Kill();
+                    }
                     else
                     {
                         // Bomba normale: applica danno base + bonus ExplosionDamage upgrade
@@ -507,6 +514,18 @@ public class GameScene : Scene
                         if (_miner.UpgradeStunOnHit) b.ApplyStun(1.5f);
                         if (_miner.UpgradeSlowOnHit) b.ApplySlow(0.4f, 3.0f);
                     }
+
+                // Danno al miner dalla propria bomba (ignorato se ha Mythic Immortality)
+                if (!_miner.UpgradeMythicImmortality &&
+                    !_miner.IsDead && !_miner.IsInvincible &&
+                    explosionSet.Contains(_miner.VisualTilePosition))
+                {
+                    if (!_miner.TryAbsorbWithShield())
+                    {
+                        _miner.TriggerDashAfterHit();
+                        _miner.Kill();
+                    }
+                }
             } // fine foreach bomb
 
             // Bonus streak (2+ bat uccisi nella stessa esplosione)
@@ -698,7 +717,8 @@ public class GameScene : Scene
         _hud.Draw(_spriteBatch, _score, _miner.Lives, _miner.MaxLives, _miner.BigBombCount,
             _currentLevel, _hasKey, _currentLevel >= 5, _map.Theme,
             _miner.UpgradeShield, _miner.ShieldActive,
-            _miner.ExplosionDamageBonus, _miner.IsInvincible);
+            _miner.ExplosionDamageBonus, _miner.IsInvincible,
+            _miner.UpgradeMythicImmortality, _miner.UpgradeInstantKill);
         _spriteBatch.End();
     }
 
@@ -768,31 +788,31 @@ public class GameScene : Scene
         var hitTiles = new HashSet<Point>();
 
         for (var dy = -radius; dy <= radius; dy++)
-        for (var dx = -radius; dx <= radius; dx++)
-        {
-            Point t = new(origin.X + dx, origin.Y + dy);
-            if (!_map.IsInside(t)) continue;
-            var tt = _map.GetTile(t);
-            if (tt == TileType.Wall) continue; // muri indistruttibili: immuni
-
-            // La porta è sempre immune a qualsiasi esplosione
-            if (_droppedItems.TryGetValue(t, out var doorCheck) && doorCheck.Type == "door")
+            for (var dx = -radius; dx <= radius; dx++)
             {
-                hitTiles.Add(t); // la tile è colpita ma la porta non viene rimossa
-                continue;
+                Point t = new(origin.X + dx, origin.Y + dy);
+                if (!_map.IsInside(t)) continue;
+                var tt = _map.GetTile(t);
+                if (tt == TileType.Wall) continue; // muri indistruttibili: immuni
+
+                // La porta è sempre immune a qualsiasi esplosione
+                if (_droppedItems.TryGetValue(t, out var doorCheck) && doorCheck.Type == "door")
+                {
+                    hitTiles.Add(t); // la tile è colpita ma la porta non viene rimossa
+                    continue;
+                }
+
+                if (tt == TileType.Breakable)
+                    _map.BreakTile(t); // rompe il breakable
+
+                hitTiles.Add(t);
             }
 
-            if (tt == TileType.Breakable)
-                _map.BreakTile(t); // rompe il breakable
-
-            hitTiles.Add(t);
-        }
-
-        // ── Nuke: rimuove item droppati nell'area (la porta è sempre immune) ─
+        // ── Nuke: rimuove item droppati nell'area (porta e chiave sempre immuni) ─
         if (big)
             foreach (var t in hitTiles)
             {
-                if (_droppedItems.TryGetValue(t, out var di) && di.Type == "door") continue;
+                if (_droppedItems.TryGetValue(t, out var di) && (di.Type == "door" || di.Type == "key")) continue;
                 _droppedItems.Remove(t);
             }
 
@@ -1262,12 +1282,12 @@ public class GameScene : Scene
         var breakableTiles = new List<Point>();
 
         for (var y = 0; y < 23; y++)
-        for (var x = 0; x < 39; x++)
-        {
-            var t = new Point(x, y);
-            if (_map.GetTile(t) == TileType.Breakable)
-                breakableTiles.Add(t);
-        }
+            for (var x = 0; x < 39; x++)
+            {
+                var t = new Point(x, y);
+                if (_map.GetTile(t) == TileType.Breakable)
+                    breakableTiles.Add(t);
+            }
 
         breakableTiles = breakableTiles.OrderBy(_ => rand.Next()).ToList();
 
@@ -1281,15 +1301,15 @@ public class GameScene : Scene
             // Spawn chiave direttamente visibile su un tile calpestabile (lontano dal miner)
             var candidates = new List<Point>();
             for (var y = 1; y < 22; y++)
-            for (var x = 1; x < 38; x++)
-            {
-                var t = new Point(x, y);
-                if (!_map.IsWalkable(t)) continue;
-                if (_droppedItems.ContainsKey(t)) continue;
-                if (Vector2.Distance(new Vector2(x, y),
-                        new Vector2(_miner.TilePosition.X, _miner.TilePosition.Y)) < 12f) continue;
-                candidates.Add(t);
-            }
+                for (var x = 1; x < 38; x++)
+                {
+                    var t = new Point(x, y);
+                    if (!_map.IsWalkable(t)) continue;
+                    if (_droppedItems.ContainsKey(t)) continue;
+                    if (Vector2.Distance(new Vector2(x, y),
+                            new Vector2(_miner.TilePosition.X, _miner.TilePosition.Y)) < 12f) continue;
+                    candidates.Add(t);
+                }
 
             if (candidates.Count > 0)
             {
@@ -1305,14 +1325,14 @@ public class GameScene : Scene
     {
         var candidates = new List<Point>();
         for (var y = 1; y < 22; y++)
-        for (var x = 1; x < 38; x++)
-        {
-            var t = new Point(x, y);
-            if (!_map.IsWalkable(t)) continue;
-            if (Vector2.Distance(new Vector2(t.X, t.Y),
-                    new Vector2(_miner.TilePosition.X, _miner.TilePosition.Y)) >= 12f)
-                candidates.Add(t);
-        }
+            for (var x = 1; x < 38; x++)
+            {
+                var t = new Point(x, y);
+                if (!_map.IsWalkable(t)) continue;
+                if (Vector2.Distance(new Vector2(t.X, t.Y),
+                        new Vector2(_miner.TilePosition.X, _miner.TilePosition.Y)) >= 12f)
+                    candidates.Add(t);
+            }
 
         if (candidates.Count == 0) return;
 

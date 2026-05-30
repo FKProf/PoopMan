@@ -1,14 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Xml.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using PoopMan.GameObjects;
 using PoopManLibrary.Input;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Xml.Linq;
+using static PoopMan.GameObjects.MinerUpgradeDescriptions;
 
 namespace PoopMan.UI;
 
@@ -27,7 +28,7 @@ public class BatEncyclopedia
     private const float AnimSpeed = 0.14f;
 
     // -- Tab -------------------------------------
-    private static readonly string[] TabNames = { "NEMICI", "UPGRADE", "BIOMI" };
+    private static readonly string[] TabNames = { "NEMICI", "UPGRADE", "BIOMI", "MYTHIC ✦" };
     private int _tab; // 0=Nemici, 1=Upgrade, 2=Biomi
 
     // --------------------------------------------------------------------
@@ -74,6 +75,7 @@ public class BatEncyclopedia
             new Color(255, 100, 0, 90),
             new[]
             {
+                "Ti rincorre e ti esplode addosso",
                 "Esplode alla morte: area 7x7 tile (raggio 3)",
                 "0.5 s di lampeggio prima della detonazione",
                 "Knockback forte su bat e Miner vicini",
@@ -153,81 +155,7 @@ public class BatEncyclopedia
         )
     };
 
-    // --------------------------------------------------------------------
-    // SEZIONE UPGRADE
-    // --------------------------------------------------------------------
-    private static readonly UpgradeEntry[] UpgradeEntries =
-    {
-        // -- Vita ------------------------------------
-        new("+1 VITA", "VITA", new Color(100, 220, 100), "PASSIVA",
-            "Guadagni subito una vita extra. Sempre disponibile se non sei al massimo.",
-            new[] { "Lv 1: +1 vita immediata" }, int.MaxValue),
-        new("VITA MAX+", "VITA", new Color(50, 200, 80), "PASSIVA",
-            $"Aumenta il limite massimo di vite e guadagni subito 1 vita extra. Max {UpgradeRegistry.MaxLifeSteps} lv.",
-            new[] { "Ogni lv: cap vite +1 e +1 vita immediata" }, UpgradeRegistry.MaxLifeSteps),
-        new("RIGENERAZIONE", "VITA", new Color(80, 240, 120), "PASSIVA",
-            "Recuperi automaticamente 1 vita ogni 5 livelli completati.",
-            new[] { "Lv 1: +1 vita ogni 5 livelli" }, 1),
-
-        // -- Offensivi -------------------------------
-        new("DANNO +", "OFFENSIVO", new Color(255, 80, 40), "BOMBA",
-            $"Aumenta il raggio esplosione di 1 tile in ogni direzione. Max {UpgradeRegistry.MaxExplosionRange} lv.",
-            new[] { "Ogni lv: raggio +1 tile" }, UpgradeRegistry.MaxExplosionRange),
-        new("POTENZA", "OFFENSIVO", new Color(255, 120, 0), "BOMBA",
-            $"Le bombe normali infliggono piu danni per colpo ai pipistrelli. Max {UpgradeRegistry.MaxExplosionDamageSteps} lv.",
-            new[] { "Ogni lv: +1 danno per esplosione" }, UpgradeRegistry.MaxExplosionDamageSteps),
-        new("MICCIA CORTA", "OFFENSIVO", new Color(255, 200, 0), "BOMBA",
-            $"Le bombe esplodono prima riducendo il tempo di attesa. Max {UpgradeRegistry.MaxFasterBombSteps} lv.",
-            new[] { "Ogni lv: -0.4 s timer bomba" }, UpgradeRegistry.MaxFasterBombSteps),
-        new("BOMBA +", "OFFENSIVO", new Color(255, 160, 0), "BOMBA",
-            $"Puoi posizionare una bomba in piu contemporaneamente. Max {UpgradeRegistry.MaxExtraBombs} lv.",
-            new[] { "Ogni lv: +1 bomba simultanea" }, UpgradeRegistry.MaxExtraBombs),
-        new("CATENA", "OFFENSIVO", new Color(255, 100, 80), "SPECIALE",
-            $"Ogni kill ha una probabilita di generare una mini-esplosione a catena. Max {UpgradeRegistry.MaxChainSteps} lv.",
-            new[] { "Ogni lv: +15% chance esplosione catena" }, UpgradeRegistry.MaxChainSteps),
-
-        // -- Movimento -------------------------------
-        new("VELOCITA'", "MOVIMENTO", new Color(80, 180, 255), "PASSIVA",
-            $"Il Miner si muove piu rapidamente sulla mappa. Max {UpgradeRegistry.MaxMoveSteps} lv.",
-            new[] { "Ogni lv: +20 px/s velocita" }, UpgradeRegistry.MaxMoveSteps),
-        new("ADRENALINA", "MOVIMENTO", new Color(100, 200, 255), "REATTIVA",
-            "Dopo aver subito un colpo la velocita aumenta temporaneamente.",
-            new[] { "Lv 1: velocita +40% per 3 s dopo danno subito" }, 1),
-
-        // -- Difensivi -------------------------------
-        new("RESISTENZA", "DIFENSIVO", new Color(180, 100, 255), "PASSIVA",
-            $"La durata dell'invincibilita dopo il respawn aumenta. Max cumulativo {UpgradeRegistry.MaxInvincibility} s.",
-            new[] { "Ogni lv: +1 s invincibilita dopo respawn" }, UpgradeRegistry.MaxInvincibility),
-        new("ARMATURA", "DIFENSIVO", new Color(100, 150, 255), "PASSIVA",
-            $"Riduce i danni ricevuti aumentando la finestra di invincibilita. Max cumulativo {UpgradeRegistry.MaxInvincibility} s.",
-            new[] { "Ogni lv: +0.5 s invincibilita dopo danno" }, UpgradeRegistry.MaxInvincibility),
-        new("SCUDO", "DIFENSIVO", new Color(200, 200, 200), "ATTIVA",
-            "Assorbe 1 colpo senza subire danni. Si ricarica ogni 3 livelli superati.",
-            new[] { "Lv 1: scudo attivo che assorbe 1 colpo" }, 1),
-
-        // -- Speciali --------------------------------
-        new("PASS-THROUGH", "SPECIALE", new Color(0, 220, 220), "BOMBA",
-            "Le esplosioni attraversano i blocchi distruttibili senza fermarsi.",
-            new[] { "Lv 1: esplosioni ignorano i blocchi breakable" }, 1),
-        new("CRITICO", "SPECIALE", new Color(255, 220, 0), "PASSIVA",
-            "Probabilita di uccidere istantaneamente un pipistrello al contatto.",
-            new[] { "Lv 1: 20% chance kill al contatto (doppi punti)" }, 1),
-        new("CALAMITA", "SPECIALE", new Color(255, 100, 200), "PASSIVA",
-            "Raccoglie automaticamente gli item nelle vicinanze senza doverci camminare sopra.",
-            new[] { "Lv 1: raccoglie item entro 3 tile automaticamente" }, 1),
-        new("SHOCKWAVE", "SPECIALE", new Color(220, 180, 0), "BOMBA",
-            "I pipistrelli vicini all'esplosione vengono storditi brevemente.",
-            new[] { "Lv 1: stordimento 1.5 s sui bat adiacenti all'area" }, 1),
-        new("RALLENTA", "SPECIALE", new Color(160, 80, 220), "BOMBA",
-            "I pipistrelli vicini all'esplosione vengono rallentati temporaneamente.",
-            new[] { "Lv 1: rallentamento 40% per 3 s sui bat adiacenti" }, 1),
-        new("FORTUNA", "SPECIALE", new Color(255, 215, 0), "LOOT",
-            $"Aumenta la probabilita di trovare bonus nelle casse distrutte. Max {UpgradeRegistry.MaxBonusLootSteps} lv.",
-            new[] { "Ogni lv: +15% chance item dalle casse" }, UpgradeRegistry.MaxBonusLootSteps),
-        new("BOTTINO", "SPECIALE", new Color(240, 240, 180), "LOOT",
-            $"I pipistrelli uccisi hanno una probabilita di lasciare un item. Max {UpgradeRegistry.MaxDoubleDropSteps} lv.",
-            new[] { "Ogni lv: +15% chance drop da kill" }, UpgradeRegistry.MaxDoubleDropSteps),
-    };
+    // Le descrizioni degli upgrade del Miner sono definite in MinerUpgradeDescriptions.cs
 
     // --------------------------------------------------------------------
     // SEZIONE BIOMI
@@ -309,8 +237,8 @@ public class BatEncyclopedia
     private float _pulse;
 
     // -- Scroll / selezione per sezione ----------
-    private readonly float[] _scrollOffsets = new float[3];
-    private readonly int[] _selectedCards = new int[3];
+    private readonly float[] _scrollOffsets = new float[4];
+    private readonly int[] _selectedCards = new int[4];
 
     public BatEncyclopedia(SpriteFont font, Texture2D pixel, ContentManager content)
     {
@@ -322,8 +250,9 @@ public class BatEncyclopedia
     private int CurrentCount => _tab switch
     {
         0 => BatEntries.Length,
-        1 => UpgradeEntries.Length,
-        _ => BiomeEntries.Length
+        1 => Standard.Length,
+        2 => BiomeEntries.Length,
+        _ => Mythic.Length
     };
 
     private int Selected
@@ -379,7 +308,7 @@ public class BatEncyclopedia
     public void Open()
     {
         _tab = 0;
-        for (var i = 0; i < 3; i++)
+        for (var i = 0; i < 4; i++)
         {
             _selectedCards[i] = 0;
             _scrollOffsets[i] = 0f;
@@ -522,8 +451,9 @@ public class BatEncyclopedia
             switch (_tab)
             {
                 case 0: DrawBatCard(sb, BatEntries[i], (int)cardX, cardY, isSel, isHov); break;
-                case 1: DrawUpgradeCard(sb, UpgradeEntries[i], (int)cardX, cardY, isSel, isHov); break;
+                case 1: DrawUpgradeCard(sb, Standard[i], (int)cardX, cardY, isSel, isHov); break;
                 case 2: DrawBiomeCard(sb, BiomeEntries[i], (int)cardX, cardY, isSel, isHov); break;
+                case 3: DrawMythicCard(sb, Mythic[i], (int)cardX, cardY, isSel, isHov); break;
             }
         }
 
@@ -578,7 +508,7 @@ public class BatEncyclopedia
         DrawWrappedText(sb, e.Tip, x + 10, iy, w - 20, new Color(255, 235, 120), 0.97f);
     }
 
-    private void DrawUpgradeCard(SpriteBatch sb, UpgradeEntry e, int x, int y, bool selected, bool hovered)
+    private void DrawUpgradeCard(SpriteBatch sb, MinerUpgradeEntry e, int x, int y, bool selected, bool hovered)
     {
         DrawCardBase(sb, x, y, (int)CardW, (int)CardH, selected, hovered, e.Color, Color.Transparent);
         var pulse = selected ? 0.85f + 0.15f * (float)Math.Sin(_pulse) : 1f;
@@ -610,6 +540,49 @@ public class BatEncyclopedia
         DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
         iy += 5;
         DrawTextCentered(sb, "EFFETTI", x + w / 2, iy + 8, e.Color, 0.95f);
+        iy += 20;
+        DrawBulletList(sb, e.Effects, x, iy, w, e.Color, new Color(220, 220, 180), 0.97f);
+    }
+
+    private void DrawMythicCard(SpriteBatch sb, MinerUpgradeEntry e, int x, int y, bool selected, bool hovered)
+    {
+        // Aura dorata/viola pulsante per le card Mythic
+        var aura = e.Color == new Color(220, 180, 30)
+            ? new Color(220, 180, 30, 90)
+            : new Color(255, 80, 80, 90);
+        DrawCardBase(sb, x, y, (int)CardW, (int)CardH, selected, hovered, e.Color, aura);
+
+        var pulse = selected ? 0.85f + 0.15f * (float)Math.Sin(_pulse) : 1f;
+        var shimmer = 0.6f + 0.4f * (float)Math.Sin(_pulse * 1.3f);
+        var w = (int)CardW;
+        var iy = y + 10;
+
+        // Icona grande con doppio bordo dorato/viola
+        var iconSz = 64;
+        var iconX = x + w / 2 - iconSz / 2;
+        DrawRect(sb, new Rectangle(iconX - 4, iy - 4, iconSz + 8, iconSz + 8), new Color(180, 80, 255) * shimmer);
+        DrawRect(sb, new Rectangle(iconX - 2, iy - 2, iconSz + 4, iconSz + 4), new Color(220, 180, 30) * shimmer);
+        DrawRect(sb, new Rectangle(iconX, iy, iconSz, iconSz), new Color(10, 6, 24));
+        DrawTextCentered(sb, "✦", x + w / 2, iy + iconSz / 2, e.Color * pulse, 2.5f);
+        iy += iconSz + 8;
+
+        // Tag MYTHIC con colore speciale
+        iy = DrawTag(sb, "MYTHIC ✦", e.Color, x, iy, w);
+        DrawTextCentered(sb, $"[{e.EffectType}]", x + w / 2, iy, new Color(180, 140, 220), 0.9f);
+        iy += 18;
+        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), e.Color * 0.8f);
+        iy += 5;
+        DrawTextCentered(sb, e.Name, x + w / 2, iy + 10, e.Color * pulse, 1.1f);
+        iy += 26;
+        DrawTextCentered(sb, "Rarita: MYTHIC  |  0,5% per slot", x + w / 2, iy, new Color(220, 180, 30) * shimmer, 0.92f);
+        iy += 20;
+        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(80, 50, 80));
+        iy += 6;
+        iy = DrawWrappedText(sb, e.Description, x + 10, iy, w - 20, Color.White, 0.97f);
+        iy += 6;
+        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(80, 50, 80));
+        iy += 5;
+        DrawTextCentered(sb, "EFFETTI & LIMITI", x + w / 2, iy + 8, e.Color, 0.95f);
         iy += 20;
         DrawBulletList(sb, e.Effects, x, iy, w, e.Color, new Color(220, 220, 180), 0.97f);
     }
@@ -813,9 +786,7 @@ public class BatEncyclopedia
         string Name, string UnlockInfo, Color PrimaryColor, Color AuraColor,
         string[] Abilities, string Tip, string Tag, Color TagColor);
 
-    private readonly record struct UpgradeEntry(
-        string Name, string Category, Color Color, string EffectType,
-        string Description, string[] Effects, int MaxLevel);
+    // UpgradeEntry is defined as MinerUpgradeEntry in MinerUpgradeDescriptions.cs
 
     private readonly record struct BiomeEntry(
         string Name, string LevelRange, Color PrimaryColor, Color AuraColor,

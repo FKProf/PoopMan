@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Xml.Linq;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using PoopManLibrary;
 using PoopManLibrary.World;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Xml.Linq;
 
 namespace PoopMan.GameObjects;
 
@@ -380,7 +380,7 @@ public class Bat
             case BatVariant.Splitter: _canSplit = true; break;
             case BatVariant.Nuke: BigExplosion = true; break;
             case BatVariant.Berserk: _canBerserk = true; break;
-            // Normal: nessun flag
+                // Normal: nessun flag
         }
     }
 
@@ -689,7 +689,7 @@ public class Bat
             }
         }
 
-        skip_movement:
+    skip_movement:
 
         if (isMoving)
         {

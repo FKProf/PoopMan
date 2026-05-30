@@ -1,8 +1,8 @@
-using System;
-using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using PoopManLibrary.World;
+using System;
+using System.Collections.Generic;
 
 namespace PoopMan.UI;
 
@@ -64,7 +64,8 @@ public class GameHud
     public void Draw(SpriteBatch sb, int score, int lives, int maxLives, int bigBombs,
         int level, bool hasKey, bool keyActive, TileMap.MapTheme theme,
         bool hasShield = false, bool shieldActive = false,
-        int explosionDmgBonus = 0, bool isInvincible = false)
+        int explosionDmgBonus = 0, bool isInvincible = false,
+        bool mythicImmortality = false, bool instantKill = false)
     {
         var cy = (Height - _font.LineSpacing) / 2f;
         var iconH = Height / 32f; // scala icone all'altezza HUD
@@ -89,6 +90,22 @@ public class GameHud
         lx += (int)_font.MeasureString("HP:").X + 6;
         var lifeIconScale = maxLives <= 5 ? iconH * 0.85f : iconH * (4.25f / maxLives);
         var iconStep = Math.Max(2, (int)(32 * lifeIconScale) + 2);
+
+        // Bordo dorato/viola attorno all'area vite se Mythic Immortality attivo
+        if (mythicImmortality)
+        {
+            var borderRect = new Rectangle(lx - 3, 1, maxLives * iconStep + 2, Height - 2);
+            var pulse = 0.6f + 0.4f * (float)Math.Sin(Environment.TickCount64 * 0.010);
+            sb.Draw(_pixel, new Rectangle(borderRect.X, borderRect.Y, borderRect.Width, 2),
+                new Color(220, 180, 30) * pulse);
+            sb.Draw(_pixel, new Rectangle(borderRect.X, borderRect.Bottom - 2, borderRect.Width, 2),
+                new Color(220, 180, 30) * pulse);
+            sb.Draw(_pixel, new Rectangle(borderRect.X, borderRect.Y, 2, borderRect.Height),
+                new Color(180, 80, 255) * pulse);
+            sb.Draw(_pixel, new Rectangle(borderRect.Right - 2, borderRect.Y, 2, borderRect.Height),
+                new Color(180, 80, 255) * pulse);
+        }
+
         for (var i = 0; i < maxLives; i++)
         {
             var lifeColor = i < lives ? Color.White : new Color(60, 20, 20) * 0.6f;
@@ -184,6 +201,24 @@ public class GameHud
             rx -= (int)_font.MeasureString(dmgStr).X;
             DrawS(sb, dmgStr, new Vector2(rx, cy), new Color(255, 160, 40));
             rx -= 8;
+        }
+
+        // ── DESTRA: Upgrade Mythic ─────────────────────────────────────────
+        if (instantKill)
+        {
+            var ikStr = "[☠IK]";
+            var ikPulse = 0.7f + 0.3f * (float)Math.Sin(Environment.TickCount64 * 0.009);
+            rx -= (int)_font.MeasureString(ikStr).X;
+            DrawS(sb, ikStr, new Vector2(rx, cy), new Color(255, 80, 80) * ikPulse);
+            rx -= 8;
+        }
+
+        if (mythicImmortality)
+        {
+            var miStr = "[✦IMM]";
+            var miPulse = 0.7f + 0.3f * (float)Math.Sin(Environment.TickCount64 * 0.008);
+            rx -= (int)_font.MeasureString(miStr).X;
+            DrawS(sb, miStr, new Vector2(rx, cy), new Color(220, 180, 30) * miPulse);
         }
     }
 
