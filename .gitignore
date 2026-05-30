@@ -96,6 +96,24 @@ TestResults/
 *.trx
 
 # ═══════════════════════════════════════════════════════════════════
+# UNIT TEST & CODE TESTING PROJECTS
+# ═══════════════════════════════════════════════════════════════════
+
+# Visual Studio unit test / code testing hidden folders
+.unitTests/
+.codetesting/
+
+# Test project folders (any folder ending with .Tests, .Test, .UnitTests, .IntegrationTests)
+*.Tests/
+*.Test/
+*.UnitTests/
+*.IntegrationTests/
+
+# dotnet-coverage output
+coverage.cobertura.xml
+*.cobertura.xml
+
+# ═══════════════════════════════════════════════════════════════════
 # OS GENERATED FILES
 # ═══════════════════════════════════════════════════════════════════
 
