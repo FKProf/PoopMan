@@ -775,16 +775,26 @@ public class GameScene : Scene
             var tt = _map.GetTile(t);
             if (tt == TileType.Wall) continue; // muri indistruttibili: immuni
 
+            // La porta è sempre immune a qualsiasi esplosione
+            if (_droppedItems.TryGetValue(t, out var doorCheck) && doorCheck.Type == "door")
+            {
+                hitTiles.Add(t); // la tile è colpita ma la porta non viene rimossa
+                continue;
+            }
+
             if (tt == TileType.Breakable)
                 _map.BreakTile(t); // rompe il breakable
 
             hitTiles.Add(t);
         }
 
-        // ── Nuke: rimuove item droppati nell'area ─────────────────────────
+        // ── Nuke: rimuove item droppati nell'area (la porta è sempre immune) ─
         if (big)
             foreach (var t in hitTiles)
+            {
+                if (_droppedItems.TryGetValue(t, out var di) && di.Type == "door") continue;
                 _droppedItems.Remove(t);
+            }
 
         // ── Danno ai bat (Nuke: instant kill; Walid: TakeDamage normale) ──
         var explosionPx = new Vector2(
@@ -818,7 +828,14 @@ public class GameScene : Scene
         }
 
         // ── Danno al miner ────────────────────────────────────────────────
-        if (!_miner.IsDead && !_miner.IsInvincible && hitTiles.Contains(_miner.VisualTilePosition)) _miner.Kill();
+        if (!_miner.IsDead && !_miner.IsInvincible && hitTiles.Contains(_miner.VisualTilePosition))
+        {
+            if (!_miner.TryAbsorbWithShield())
+            {
+                _miner.TriggerDashAfterHit();
+                _miner.Kill();
+            }
+        }
 
         // ── Audio ─────────────────────────────────────────────────────────
         AudioManager.PlayExplosion(big);
@@ -831,32 +848,59 @@ public class GameScene : Scene
 
         if (big)
         {
-            // ── NUKE: fungo atomico ───────────────────────────────────────
+            // ── NUKE: fungo atomico — copre l'intera area 13×13 ──────────
             float nukeR = radius * TileMap.TileSize;
 
-            // Layer 1: flash bianco iniziale (burst radiale densissimo)
-            var flashCount = 80;
-            for (var i = 0; i < flashCount; i++)
+            // Per ogni tile colpita: burst locale di particelle → copertura uniforme
+            foreach (var tile in hitTiles)
             {
-                var angle = Math.PI * 2 / flashCount * i;
-                var speed = (float)(rng.NextDouble() * 0.5 + 0.8) * 320f;
+                var tileCenter = new Vector2(
+                    tile.X * TileMap.TileSize + TileMap.TileSize * 0.5f,
+                    tile.Y * TileMap.TileSize + TileMap.TileSize * 0.5f);
+
+                for (var i = 0; i < 5; i++)
+                {
+                    var angle = rng.NextDouble() * Math.PI * 2;
+                    var speed = (float)(rng.NextDouble() * 0.6 + 0.3) * 180f;
+                    Color[] tilePal =
+                    {
+                        Color.White, new(255, 220, 80), new(255, 120, 20), new(255, 60, 0)
+                    };
+                    _batExplosionParticles.Add(new BatExplosionParticle
+                    {
+                        Position = tileCenter + new Vector2(
+                            (float)(rng.NextDouble() * 2 - 1) * TileMap.TileSize * 0.4f,
+                            (float)(rng.NextDouble() * 2 - 1) * TileMap.TileSize * 0.4f),
+                        Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
+                        Life = (float)(rng.NextDouble() * 0.5 + 0.5),
+                        MaxLife = 1.0f,
+                        Color = tilePal[rng.Next(tilePal.Length)],
+                        Size = (float)(rng.NextDouble() * 8 + 5)
+                    });
+                }
+            }
+
+            // Layer 1: flash bianco iniziale (burst radiale densissimo)
+            for (var i = 0; i < 120; i++)
+            {
+                var angle = Math.PI * 2 / 120 * i;
+                var speed = (float)(rng.NextDouble() * 0.5 + 0.8) * 400f;
                 _batExplosionParticles.Add(new BatExplosionParticle
                 {
                     Position = worldCenter,
                     Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
-                    Life = (float)(rng.NextDouble() * 0.15 + 0.15),
-                    MaxLife = 0.3f,
+                    Life = (float)(rng.NextDouble() * 0.15 + 0.2),
+                    MaxLife = 0.35f,
                     Color = Color.White,
-                    Size = (float)(rng.NextDouble() * 10 + 8)
+                    Size = (float)(rng.NextDouble() * 14 + 10)
                 });
             }
 
-            // Layer 2: shockwave ring (anello espanso a media altezza)
-            var ringCount = 64;
-            for (var i = 0; i < ringCount; i++)
+            // Layer 2: shockwave ring espanso
+            for (var i = 0; i < 80; i++)
             {
-                var angle = Math.PI * 2 / ringCount * i + rng.NextDouble() * 0.05;
-                var speed = (float)(rng.NextDouble() * 0.2 + 0.9) * 300f;
+                var angle = Math.PI * 2 / 80 * i + rng.NextDouble() * 0.05;
+                var speed = (float)(rng.NextDouble() * 0.2 + 0.9) * 380f;
                 var ringCol = i % 4 == 0 ? Color.White
                     : i % 4 == 1 ? new Color(255, 220, 80)
                     : i % 4 == 2 ? new Color(255, 100, 20)
@@ -864,141 +908,166 @@ public class GameScene : Scene
                 _batExplosionParticles.Add(new BatExplosionParticle
                 {
                     Position = worldCenter + new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle))
-                        * (float)(rng.NextDouble() * 0.3) * nukeR,
+                        * (float)(rng.NextDouble() * 0.4) * nukeR,
                     Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
-                    Life = (float)(rng.NextDouble() * 0.3 + 0.5),
-                    MaxLife = 0.8f,
+                    Life = (float)(rng.NextDouble() * 0.4 + 0.6),
+                    MaxLife = 1.0f,
                     Color = ringCol,
-                    Size = (float)(rng.NextDouble() * 7 + 5)
+                    Size = (float)(rng.NextDouble() * 10 + 7)
                 });
             }
 
-            // Layer 3: colonna di fuoco verso l'alto (fungo vero)
-            for (var i = 0; i < 60; i++)
+            // Layer 3: colonna di fuoco verso l'alto
+            for (var i = 0; i < 80; i++)
             {
-                var xOff = (float)(rng.NextDouble() * 2 - 1) * nukeR * 0.35f;
-                var yOff = (float)(rng.NextDouble() * 2 - 1) * nukeR * 0.2f;
-                var riseSpeed = (float)(rng.NextDouble() * 0.6 + 0.5) * 260f;
-                var lateralSpeed = (float)(rng.NextDouble() * 2 - 1) * 60f;
+                var xOff = (float)(rng.NextDouble() * 2 - 1) * nukeR * 0.4f;
+                var yOff = (float)(rng.NextDouble() * 2 - 1) * nukeR * 0.25f;
+                var riseSpeed = (float)(rng.NextDouble() * 0.6 + 0.5) * 320f;
+                var lateralSpeed = (float)(rng.NextDouble() * 2 - 1) * 80f;
                 Color[] stemPalette =
                 {
-                    Color.White, new(255, 220, 60),
-                    new(255, 130, 0), new(255, 60, 0)
+                    Color.White, new(255, 220, 60), new(255, 130, 0), new(255, 60, 0)
                 };
                 _batExplosionParticles.Add(new BatExplosionParticle
                 {
                     Position = worldCenter + new Vector2(xOff, yOff),
                     Velocity = new Vector2(lateralSpeed, -riseSpeed),
-                    Life = (float)(rng.NextDouble() * 0.5 + 0.7),
-                    MaxLife = 1.2f,
+                    Life = (float)(rng.NextDouble() * 0.6 + 0.8),
+                    MaxLife = 1.4f,
                     Color = stemPalette[rng.Next(stemPalette.Length)],
-                    Size = (float)(rng.NextDouble() * 9 + 5)
+                    Size = (float)(rng.NextDouble() * 12 + 7)
                 });
             }
 
-            // Layer 4: cappello del fungo (particelle che si espandono in arco verso l'alto)
-            for (var i = 0; i < 50; i++)
+            // Layer 4: cappello del fungo
+            for (var i = 0; i < 70; i++)
             {
-                var angle = rng.NextDouble() * Math.PI - Math.PI; // -PI..0 (arco superiore)
-                var speed = (float)(rng.NextDouble() * 0.5 + 0.6) * 200f;
-                var startR = (float)(rng.NextDouble() * 0.5 + 0.3) * nukeR;
+                var angle = rng.NextDouble() * Math.PI - Math.PI;
+                var speed = (float)(rng.NextDouble() * 0.5 + 0.6) * 260f;
+                var startR = (float)(rng.NextDouble() * 0.6 + 0.3) * nukeR;
                 Color[] capPalette =
                 {
-                    new(255, 80, 0), new(200, 0, 0),
-                    new(255, 160, 0), new(120, 0, 0)
+                    new(255, 80, 0), new(200, 0, 0), new(255, 160, 0), new(120, 0, 0)
                 };
                 _batExplosionParticles.Add(new BatExplosionParticle
                 {
                     Position = worldCenter + new Vector2((float)Math.Cos(angle) * startR,
-                        (float)Math.Sin(angle) * startR * 0.4f - nukeR * 0.3f),
-                    Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed * 0.3f - 40f),
-                    Life = (float)(rng.NextDouble() * 0.4 + 0.6),
-                    MaxLife = 1.0f,
+                        (float)Math.Sin(angle) * startR * 0.4f - nukeR * 0.35f),
+                    Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed * 0.3f - 50f),
+                    Life = (float)(rng.NextDouble() * 0.5 + 0.7),
+                    MaxLife = 1.2f,
                     Color = capPalette[rng.Next(capPalette.Length)],
-                    Size = (float)(rng.NextDouble() * 10 + 6)
+                    Size = (float)(rng.NextDouble() * 14 + 8)
                 });
             }
 
-            // Layer 5: detriti radioattivi (lenti, verdi, lunga durata)
-            for (var i = 0; i < 35; i++)
+            // Layer 5: detriti radioattivi lenti e duraturi
+            for (var i = 0; i < 60; i++)
             {
                 var angle = rng.NextDouble() * Math.PI * 2;
-                var speed = (float)(rng.NextDouble() * 0.3 + 0.05) * 90f;
+                var speed = (float)(rng.NextDouble() * 0.3 + 0.05) * 100f;
                 var spawnOff = new Vector2(
                     (float)(rng.NextDouble() * 2 - 1) * nukeR,
                     (float)(rng.NextDouble() * 2 - 1) * nukeR);
-                var radColor = rng.Next(3) == 0
-                    ? new Color(100, 255, 60)
-                    : rng.Next(2) == 0
-                        ? new Color(180, 255, 80)
-                        : new Color(60, 200, 30);
+                var radColor = rng.Next(3) == 0 ? new Color(100, 255, 60)
+                    : rng.Next(2) == 0 ? new Color(180, 255, 80)
+                    : new Color(60, 200, 30);
                 _batExplosionParticles.Add(new BatExplosionParticle
                 {
                     Position = worldCenter + spawnOff,
                     Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
-                    Life = (float)(rng.NextDouble() * 0.8 + 1.0),
-                    MaxLife = 1.8f,
+                    Life = (float)(rng.NextDouble() * 1.0 + 1.0),
+                    MaxLife = 2.0f,
                     Color = radColor,
-                    Size = (float)(rng.NextDouble() * 5 + 2)
+                    Size = (float)(rng.NextDouble() * 6 + 3)
                 });
             }
         }
         else
         {
-            // ── WALID: fire burst caldo e compatto ────────────────────────
-            // Layer 1: fiammate principali (esplosione rapida)
+            // ── WALID: fire burst — copre l'intera area 7×7 ──────────────
+
+            // Per ogni tile colpita: particelle locali → zero zone cieche
+            foreach (var tile in hitTiles)
+            {
+                var tileCenter = new Vector2(
+                    tile.X * TileMap.TileSize + TileMap.TileSize * 0.5f,
+                    tile.Y * TileMap.TileSize + TileMap.TileSize * 0.5f);
+
+                for (var i = 0; i < 4; i++)
+                {
+                    var angle = rng.NextDouble() * Math.PI * 2;
+                    var speed = (float)(rng.NextDouble() * 0.5 + 0.4) * 120f;
+                    Color[] tilePal =
+                    {
+                        new(255, 220, 60), new(255, 140, 0), new(255, 60, 0), Color.White
+                    };
+                    _batExplosionParticles.Add(new BatExplosionParticle
+                    {
+                        Position = tileCenter + new Vector2(
+                            (float)(rng.NextDouble() * 2 - 1) * TileMap.TileSize * 0.35f,
+                            (float)(rng.NextDouble() * 2 - 1) * TileMap.TileSize * 0.35f),
+                        Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
+                        Life = (float)(rng.NextDouble() * 0.3 + 0.35),
+                        MaxLife = 0.65f,
+                        Color = tilePal[rng.Next(tilePal.Length)],
+                        Size = (float)(rng.NextDouble() * 7 + 4)
+                    });
+                }
+            }
+
+            // Layer 1: fiammate principali dal centro
             Color[] walidCore =
             {
-                new(255, 220, 60), new(255, 140, 0),
-                new(255, 60, 0), Color.White
+                new(255, 220, 60), new(255, 140, 0), new(255, 60, 0), Color.White
             };
-            for (var i = 0; i < 36; i++)
+            for (var i = 0; i < 60; i++)
             {
                 var angle = rng.NextDouble() * Math.PI * 2;
-                var speed = (float)(rng.NextDouble() * 0.6 + 0.4) * 160f;
+                var speed = (float)(rng.NextDouble() * 0.6 + 0.4) * 220f;
                 _batExplosionParticles.Add(new BatExplosionParticle
                 {
                     Position = worldCenter,
                     Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
-                    Life = (float)(rng.NextDouble() * 0.25 + 0.35),
-                    MaxLife = 0.6f,
+                    Life = (float)(rng.NextDouble() * 0.3 + 0.4),
+                    MaxLife = 0.7f,
                     Color = walidCore[rng.Next(walidCore.Length)],
-                    Size = (float)(rng.NextDouble() * 7 + 4)
+                    Size = (float)(rng.NextDouble() * 10 + 6)
                 });
             }
 
-            // Layer 2: scintille veloci che si allontanano
-            for (var i = 0; i < 20; i++)
+            // Layer 2: scintille veloci
+            for (var i = 0; i < 40; i++)
             {
                 var angle = rng.NextDouble() * Math.PI * 2;
-                var speed = (float)(rng.NextDouble() * 0.5 + 0.5) * 220f;
+                var speed = (float)(rng.NextDouble() * 0.5 + 0.5) * 280f;
                 _batExplosionParticles.Add(new BatExplosionParticle
                 {
                     Position = worldCenter,
                     Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
-                    Life = (float)(rng.NextDouble() * 0.2 + 0.2),
-                    MaxLife = 0.4f,
+                    Life = (float)(rng.NextDouble() * 0.2 + 0.25),
+                    MaxLife = 0.45f,
                     Color = rng.Next(2) == 0 ? Color.Yellow : Color.White,
-                    Size = (float)(rng.NextDouble() * 3 + 1)
+                    Size = (float)(rng.NextDouble() * 5 + 2)
                 });
             }
 
-            // Layer 3: brace lenta ad alta durata
-            for (var i = 0; i < 10; i++)
+            // Layer 3: brace lenta ad alta durata (bordi dell'area)
+            for (var i = 0; i < 25; i++)
             {
                 var angle = rng.NextDouble() * Math.PI * 2;
-                var speed = (float)(rng.NextDouble() * 0.3 + 0.05) * 60f;
+                var speed = (float)(rng.NextDouble() * 0.3 + 0.05) * 80f;
                 var spawnOff = new Vector2(
-                    (float)(rng.NextDouble() * 2 - 1) * TileMap.TileSize * 0.5f,
-                    (float)(rng.NextDouble() * 2 - 1) * TileMap.TileSize * 0.5f);
+                    (float)(rng.NextDouble() * 2 - 1) * radius * TileMap.TileSize * 0.8f,
+                    (float)(rng.NextDouble() * 2 - 1) * radius * TileMap.TileSize * 0.8f);
                 _batExplosionParticles.Add(new BatExplosionParticle
                 {
                     Position = worldCenter + spawnOff,
                     Velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed),
-                    Life = (float)(rng.NextDouble() * 0.4 + 0.5),
-                    MaxLife = 0.9f,
-                    Color = new Color(255, (int)(rng.NextDouble() * 60 + 40), 0),
-                    Size = (float)(rng.NextDouble() * 3 + 2)
+                    Life = (float)(rng.NextDouble() * 0.5 + 0.5),
+                    MaxLife = 1.0f,
+                    Color = new Color(255, (int)(rng.NextDouble() * 80 + 40), 0),
+                    Size = (float)(rng.NextDouble() * 5 + 3)
                 });
             }
         }
@@ -1067,6 +1136,7 @@ public class GameScene : Scene
             if (spawned >= 2) break;
             Point tile = new(origin.X + d.X, origin.Y + d.Y);
             if (!_map.IsWalkable(tile)) continue;
+            if (_doorSpawned && tile == _doorPosition) continue;
             try
             {
                 var mini = new Bat(tile, batXml, Content, _map);
@@ -1076,6 +1146,7 @@ public class GameScene : Scene
                 mini.OnSplit += SpawnMiniBats; // non farà nulla (SetMini blocca CanSplit)
                 mini.OnDeathExplosion += TriggerBatExplosion;
                 mini.OnWalidDetonation += tile => TriggerBatExplosion(tile, false);
+                if (_doorSpawned) mini.SetPermanentBlockedTiles(DoorBlockedTiles());
                 _bats.Add(mini);
                 spawned++;
             }
@@ -1116,6 +1187,9 @@ public class GameScene : Scene
 
             if (!_map.IsWalkable(tile)) continue;
 
+            // Non spawnare sopra o adiacente alla porta
+            if (_doorSpawned && IsDoorArea(tile)) continue;
+
             var bat = new Bat(tile, batXml, Content, _map);
             bat.SetAggressionLevel(level);
 
@@ -1136,6 +1210,7 @@ public class GameScene : Scene
             bat.OnSplit += SpawnMiniBats;
             bat.OnDeathExplosion += TriggerBatExplosion;
             bat.OnWalidDetonation += tile => TriggerBatExplosion(tile, false);
+            if (_doorSpawned) bat.SetPermanentBlockedTiles(DoorBlockedTiles());
             _bats.Add(bat);
         }
     }
@@ -1161,7 +1236,7 @@ public class GameScene : Scene
                 new(tile.X, tile.Y + 1), new(tile.X, tile.Y - 1)
             };
             foreach (var n in neighbors)
-                if (_map.IsWalkable(n))
+                if (_map.IsWalkable(n) && !(n == _doorPosition))
                 {
                     try
                     {
@@ -1169,6 +1244,7 @@ public class GameScene : Scene
                         nb.SetInvincible(1.6f);
                         nb.SetAggressionLevel(_currentLevel);
                         nb.OnSplit += SpawnMiniBats;
+                        if (_doorSpawned) nb.SetPermanentBlockedTiles(DoorBlockedTiles());
                         _bats.Add(nb);
                     }
                     catch
@@ -1244,6 +1320,30 @@ public class GameScene : Scene
         _droppedItems[doorTile] = new DroppedItem { Type = "door", IsOpen = false, JustSpawned = false };
         _doorSpawned = true;
         _doorPosition = doorTile;
+
+        // Propaga la porta come blocco permanente ai bat già esistenti
+        var blocked = DoorBlockedTiles();
+        foreach (var b in _bats)
+            b.SetPermanentBlockedTiles(blocked);
+    }
+
+    /// <summary>Restituisce tutte le tile che i bat devono trattare come bloccate (porta + adiacenti immediati).</summary>
+    private IEnumerable<Point> DoorBlockedTiles()
+    {
+        if (!_doorSpawned) yield break;
+        var d = _doorPosition;
+        yield return d;
+        yield return new Point(d.X + 1, d.Y);
+        yield return new Point(d.X - 1, d.Y);
+        yield return new Point(d.X, d.Y + 1);
+        yield return new Point(d.X, d.Y - 1);
+    }
+
+    /// <summary>True se il tile rientra nell'area protetta della porta (tile porta + adiacenti).</summary>
+    private bool IsDoorArea(Point tile)
+    {
+        var d = _doorPosition;
+        return Math.Abs(tile.X - d.X) <= 1 && Math.Abs(tile.Y - d.Y) <= 1;
     }
 
     private void LoadItemAnimations()

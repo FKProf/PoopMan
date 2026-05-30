@@ -107,6 +107,9 @@ public class Bat
 
     // ── Bombe solide (non attraversabili) ─────────────────────────────────
     private HashSet<Point> _solidBombTiles = new();
+
+    // ── Tile bloccate permanentemente (es. porta di uscita) ───────────────
+    private HashSet<Point> _permanentBlockedTiles = new();
     private float _stunTimer;
 
     // ── Direzione wander corrente ─────────────────────────────────────────
@@ -272,10 +275,27 @@ public class Bat
         }
     }
 
-    /// <summary>True se il tile è bloccato da pericolo O da una bomba solida (Ghost bypassa le bombe).</summary>
+    /// <summary>
+    ///     Imposta tile bloccate permanentemente (es. porta di uscita).
+    ///     I bat le aggirano sempre nel pathfinding, indipendentemente dalla fase ghost.
+    /// </summary>
+    public void SetPermanentBlockedTiles(IEnumerable<Point> tiles)
+    {
+        var newSet = new HashSet<Point>(tiles);
+        if (!newSet.SetEquals(_permanentBlockedTiles))
+        {
+            _permanentBlockedTiles = newSet;
+            _pathCacheTime = PathCacheMax;
+            _path.Clear();
+        }
+    }
+
+    /// <summary>True se il tile è bloccato da pericolo, bomba solida, o tile permanente (porta).</summary>
     private bool IsBlocked(Point tile)
     {
-        return _dangerTiles.Contains(tile) || (!_isGhosting && _solidBombTiles.Contains(tile));
+        return _dangerTiles.Contains(tile)
+            || (!_isGhosting && _solidBombTiles.Contains(tile))
+            || _permanentBlockedTiles.Contains(tile);
     }
 
     /// <summary>Aumenta velocità e aggressione in base al livello.</summary>
