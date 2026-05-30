@@ -42,6 +42,22 @@ public class BatEncyclopedia
     private static readonly BatEntry[] BatEntries =
     {
         new(
+            "PIPISTRELLO NORMALE",
+            "Presente dal Livello 1",
+            new Color(140, 90, 200),
+            Color.Transparent,
+            new[]
+            {
+                "Insegue il Miner quando lo avvista",
+                "Velocita e HP crescono col livello",
+                "Dal lv 20: resistente (+1 HP ogni 5 lv, max 6)",
+                "Nessuna abilita speciale"
+            },
+            "Usaci una bomba. Ai livelli alti diventa piu duro!",
+            "BASE",
+            new Color(160, 120, 220)
+        ),
+        new(
             "BAT ROBUSTO",
             "Sblocca al Livello 20",
             new Color(255, 100, 100),
@@ -58,22 +74,6 @@ public class BatEncyclopedia
             "Usa upgrade Potenza o Danno+ per abbatterlo rapidamente!",
             "ROBUSTO",
             new Color(255, 100, 100)
-        ),
-        new(
-            "PIPISTRELLO NORMALE",
-            "Presente dal Livello 1",
-            new Color(140, 90, 200),
-            Color.Transparent,
-            new[]
-            {
-                "Insegue il Miner quando lo avvista",
-                "Velocita e HP crescono col livello",
-                "Dal lv 20: resistente (+1 HP ogni 5 lv, max 6)",
-                "Nessuna abilita speciale"
-            },
-            "Usaci una bomba. Ai livelli alti diventa piu duro!",
-            "BASE",
-            new Color(160, 120, 220)
         ),
         new(
             "DASHER",
