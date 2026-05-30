@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Xml.Linq;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using PoopManLibrary;
 using PoopManLibrary.World;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Xml.Linq;
 
 namespace PoopMan.GameObjects;
 
@@ -57,9 +57,12 @@ public class Bat
     private bool _canDash;
     private bool _canGhost;
     private bool _canSplit;
-    private bool _canWalid; // Walid: esplode alla morte con bomba piccola
+    private bool _canWalid; // Walid: esplode al contatto con il giocatore
+    private bool _walidDetonating; // sta per esplodere (fase di avvertimento)
+    private float _walidDetonationTimer; // tempo rimanente prima dell'esplosione
+    private const float WalidDetonationDelay = 0.5f; // mezzo secondo di avvertimento
 
-    // ── Parametri AI ──────────────────────────────────────────────────────
+    // ── Parametri AI ─────────────────────────────────────────────
     private float _chaseChance = 0.60f;
 
     // Dash
@@ -104,6 +107,9 @@ public class Bat
 
     // ── Bombe solide (non attraversabili) ─────────────────────────────────
     private HashSet<Point> _solidBombTiles = new();
+
+    // ── Tile bloccate permanentemente (es. porta di uscita) ───────────────
+    private HashSet<Point> _permanentBlockedTiles = new();
     private float _stunTimer;
 
     // ── Direzione wander corrente ─────────────────────────────────────────
@@ -153,11 +159,17 @@ public class Bat
     // Split (spawn mini-bat alla morte)
     public bool CanSplit => _canSplit && !_isMini;
 
-    /// <summary>Walid: il bat esplode alla morte con bomba piccola (livello 8+).</summary>
-    public bool ExplodesOnDeath => _canWalid || BigExplosion;
+    /// <summary>Nuke: il bat esplode alla morte con bomba grande.</summary>
+    public bool ExplodesOnDeath => BigExplosion;
+
+    /// <summary>True quando il Walid sta per esplodere (fase di avvertimento).</summary>
+    public bool WalidDetonating => _walidDetonating;
 
     /// <summary>Nuke: il bat esplode alla morte con bomba grande (livello 16+).</summary>
     public bool BigExplosion { get; private set; }
+
+    /// <summary>Evento: il Walid vuole esplodere sul giocatore (tile di origine).</summary>
+    public event Action<Point>? OnWalidDetonation;
 
     /// <summary>Punti base per uccidere questo bat (aumenta con i poteri).</summary>
     public int KillPoints
@@ -221,13 +233,19 @@ public class Bat
     }
 
     /// <summary>True se il bat ha l'aura pulsante.</summary>
-    public bool HasAura => _isBerserk || _isGhosting || _canWalid || BigExplosion;
+    public bool HasAura => _walidDetonating || _isBerserk || _isGhosting || _canWalid || BigExplosion;
 
     public Color AuraColor
     {
         get
         {
             var pulse = 0.55f + 0.45f * (float)Math.Sin(Environment.TickCount64 * 0.007);
+            if (_walidDetonating)
+            {
+                // Lampeggio rosso-arancione rapido per segnalare l'imminente esplosione
+                var fast = 0.5f + 0.5f * (float)Math.Sin(Environment.TickCount64 * 0.030);
+                return new Color(255, (int)(60 * fast), 0, (int)(220 * fast));
+            }
             if (_isBerserk) return new Color(255, 80, 255, (int)(140 * pulse));
             if (_isGhosting) return new Color(120, 255, 255, (int)(80 * pulse));
             if (BigExplosion) return new Color(255, 30, 30, (int)(160 * pulse)); // rosso vivace
@@ -257,10 +275,27 @@ public class Bat
         }
     }
 
-    /// <summary>True se il tile è bloccato da pericolo O da una bomba solida (Ghost bypassa le bombe).</summary>
+    /// <summary>
+    ///     Imposta tile bloccate permanentemente (es. porta di uscita).
+    ///     I bat le aggirano sempre nel pathfinding, indipendentemente dalla fase ghost.
+    /// </summary>
+    public void SetPermanentBlockedTiles(IEnumerable<Point> tiles)
+    {
+        var newSet = new HashSet<Point>(tiles);
+        if (!newSet.SetEquals(_permanentBlockedTiles))
+        {
+            _permanentBlockedTiles = newSet;
+            _pathCacheTime = PathCacheMax;
+            _path.Clear();
+        }
+    }
+
+    /// <summary>True se il tile è bloccato da pericolo, bomba solida, o tile permanente (porta).</summary>
     private bool IsBlocked(Point tile)
     {
-        return _dangerTiles.Contains(tile) || (!_isGhosting && _solidBombTiles.Contains(tile));
+        return _dangerTiles.Contains(tile)
+            || (!_isGhosting && _solidBombTiles.Contains(tile))
+            || _permanentBlockedTiles.Contains(tile);
     }
 
     /// <summary>Aumenta velocità e aggressione in base al livello.</summary>
@@ -345,7 +380,7 @@ public class Bat
             case BatVariant.Splitter: _canSplit = true; break;
             case BatVariant.Nuke: BigExplosion = true; break;
             case BatVariant.Berserk: _canBerserk = true; break;
-            // Normal: nessun flag
+                // Normal: nessun flag
         }
     }
 
@@ -353,8 +388,7 @@ public class Bat
     public event Action<Point>? OnSplit;
 
     /// <summary>
-    ///     Scattato quando il bat muore e deve esplodere.
-    ///     Argomento: true = Nuke (esplosione grande, livello 16+), false = Walid (piccola, livello 8+).
+    ///     Scattato quando il bat Nuke muore e deve esplodere (grande).
     /// </summary>
     public event Action<Point, bool>? OnDeathExplosion;
 
@@ -370,6 +404,17 @@ public class Bat
         if (IsDead) return;
         _slowFactor = 1f - factor; // es. 0.4 → _slowFactor = 0.6
         _slowTimer = duration;
+    }
+
+    /// <summary>
+    ///     Avvia la sequenza di detonazione Walid (avvertimento visivo poi esplosione).
+    ///     Chiamare quando il Walid raggiunge lo stesso tile del giocatore.
+    /// </summary>
+    public void TriggerWalidDetonation()
+    {
+        if (IsDead || _walidDetonating || !_canWalid) return;
+        _walidDetonating = true;
+        _walidDetonationTimer = WalidDetonationDelay;
     }
 
     /// <summary>
@@ -390,6 +435,8 @@ public class Bat
     public bool TakeDamage(int damage = 1)
     {
         if (IsDead) return false;
+        // Ghost: immune ai danni durante la fase di attraversamento
+        if (_isGhosting) return false;
         _hitPoints -= damage;
         if (_hitPoints > 0)
         {
@@ -486,9 +533,9 @@ public class Bat
         if (CanSplit)
             OnSplit?.Invoke(TilePosition);
 
-        // Walid (livello 8+) o Nuke (livello 16+): esplode alla morte
+        // Solo Nuke (livello 16+) esplode alla morte (Walid esplode al contatto)
         if (ExplodesOnDeath)
-            OnDeathExplosion?.Invoke(TilePosition, BigExplosion);
+            OnDeathExplosion?.Invoke(TilePosition, true);
 
         if (animations.ContainsKey("dead"))
         {
@@ -541,6 +588,24 @@ public class Bat
             Position += _knockbackVelocity * dt;
             _knockbackVelocity *= 0.80f; // attrito rapido
             if (_knockbackTimer <= 0f) _knockbackVelocity = Vector2.Zero;
+        }
+
+        // ── Walid: detonazione quando raggiunge il giocatore ──────────────
+        if (_canWalid && _walidDetonating)
+        {
+            _walidDetonationTimer -= dt;
+            if (_walidDetonationTimer <= 0f)
+            {
+                OnWalidDetonation?.Invoke(TilePosition);
+                Kill();
+                _allBatPositions.Remove(_registeredPos);
+                UpdateAnimation(gameTime);
+                return;
+            }
+            // Mentre sta per esplodere: ferma il movimento, aggiorna solo animazione
+            isMoving = false;
+            UpdateAnimation(gameTime);
+            return;
         }
 
         if (IsDead)
@@ -624,7 +689,7 @@ public class Bat
             }
         }
 
-        skip_movement:
+    skip_movement:
 
         if (isMoving)
         {

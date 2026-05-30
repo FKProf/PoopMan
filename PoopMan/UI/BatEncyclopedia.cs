@@ -1,32 +1,47 @@
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using PoopMan.GameObjects;
+using PoopManLibrary.Input;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using PoopManLibrary.Input;
+using static PoopMan.GameObjects.MinerUpgradeDescriptions;
 
 namespace PoopMan.UI;
 
 /// <summary>
-///     Enciclopedia dei pipistrelli speciali: mostra caratteristiche e abilità di ogni variante.
-///     Si apre dal menu pausa e si chiude con ESC o con il pulsante Chiudi.
+///     Enciclopedia di gioco con tre sezioni: Nemici, Upgrade, Biomi.
+///     Si apre dal menu pausa e si chiude con ESC o pulsante Chiudi.
 /// </summary>
 public class BatEncyclopedia
 {
-    private const float CardW = 320f;
-    private const float CardH = 470f;
-    private const float CardGap = 22f;
+    // -- Layout costanti -------------------------
+    private const float CardW = 310f;
+    private const float CardH = 490f;
+    private const float CardGap = 20f;
     private const float ScrollLerpSpeed = 0.18f;
-    private const float ScrollSettledThreshold = 2f; // px: sotto questo lo scroll è "fermo"
+    private const float ScrollSettledThreshold = 2f;
     private const float AnimSpeed = 0.14f;
 
-    private static readonly BatEntry[] Entries = new[]
+    // -- Tab layout
+    private const int TabBarY = 70;   // y-coordinate of the tab bar
+    private const int TabH = 32;
+    private const int TabW = 150;
+    private const int TabGap = 12;
+
+    private static readonly string[] TabNames = { "NEMICI", "UPGRADE", "BIOMI" };
+    private int _tab; // 0=Nemici, 1=Upgrade, 2=Biomi
+
+    // --------------------------------------------------------------------
+    // SEZIONE NEMICI
+    // --------------------------------------------------------------------
+    private static readonly BatEntry[] BatEntries =
     {
-        new BatEntry(
+        new(
             "PIPISTRELLO NORMALE",
             "Presente dal Livello 1",
             new Color(140, 90, 200),
@@ -35,28 +50,32 @@ public class BatEncyclopedia
             {
                 "Insegue il Miner quando lo avvista",
                 "Velocita e HP crescono col livello",
+                "Dal lv 20: resistente (+1 HP ogni 5 lv, max 6)",
                 "Nessuna abilita speciale"
             },
             "Usaci una bomba. Ai livelli alti diventa piu duro!",
             "BASE",
             new Color(160, 120, 220)
         ),
-        new BatEntry(
-            "ROBUSTO",
-            "Appare dal Livello 20",
+        new(
+            "BAT ROBUSTO",
+            "Sblocca al Livello 20",
             new Color(255, 100, 100),
             Color.Transparent,
             new[]
             {
-                "Piu punti vita del normale",
-                "2 HP al lv20, +1 ogni 5 lv (max 6)",
-                "Stesso comportamento AI del normale"
+                "Versione corazzata del pipistrello normale",
+                "Ha da 2 a 6 HP in base al livello (lv 20+)",
+                "Ogni 5 livelli oltre il 20 guadagna +1 HP (max 6 HP)",
+                "Velocita identica al bat normale ma piu resistente",
+                "Richiede piu bombe o esplosioni potenziate per essere eliminato",
+                "+75 punti al kill (base)"
             },
-            "Servono piu bombe! Tienilo lontano finche non esplode.",
-            "RESISTENTE",
+            "Usa upgrade Potenza o Danno+ per abbatterlo rapidamente!",
+            "ROBUSTO",
             new Color(255, 100, 100)
         ),
-        new BatEntry(
+        new(
             "DASHER",
             "Sblocca al Livello 5",
             new Color(80, 200, 255),
@@ -65,43 +84,49 @@ public class BatEncyclopedia
             {
                 "Puo eseguire uno scatto improvviso",
                 "Cooldown scatto: 3 secondi",
-                "25% chance di scattare ad ogni passo"
+                "25% chance di scattare ad ogni passo",
+                "+50 punti al kill"
             },
             "Allontanati dopo la bomba: lo scatto sorprende!",
             "VELOCE",
             new Color(80, 200, 255)
         ),
-        new BatEntry(
+        new(
             "WALID",
             "Sblocca al Livello 8",
             new Color(255, 140, 0),
             new Color(255, 100, 0, 90),
             new[]
             {
-                "Esplode alla morte con bomba piccola",
-                "Esplosione area 7x7 tile (raggio 3)",
-                "Knockback sulle unita adiacenti"
+                "Ti rincorre e ti esplode addosso",
+                "Esplode alla morte: area 7x7 tile (raggio 3)",
+                "0.5 s di lampeggio prima della detonazione",
+                "Knockback forte su bat e Miner vicini",
+                "Rispetta invincibilita e scudo del Miner",
+                "+125 punti al kill"
             },
-            "Attenzione alla detonazione! Stai lontano quando muore.",
+            "Lampeggia arancione prima di esplodere. Scappa subito!",
             "ESPLOSIVO",
             new Color(255, 160, 0)
         ),
-        new BatEntry(
-            "GHOST",
+        new(
+            "GHOST BAT",
             "Sblocca al Livello 10",
             new Color(200, 200, 255),
             new Color(180, 180, 255, 70),
             new[]
             {
-                "Puo attraversare le bombe solide",
-                "Fase fantasma per 2 secondi",
-                "Cooldown 8 secondi tra le fasi"
+                "Attraversa le bombe solide in fase fantasma",
+                "Durata fase: 2 secondi",
+                "Cooldown: 8 secondi tra le fasi",
+                "10% chance di attivare la fase ogni step",
+                "+100 punti al kill"
             },
             "In fase le bombe non lo bloccano. Usa esplosioni dirette!",
             "FANTASMA",
             new Color(180, 180, 255)
         ),
-        new BatEntry(
+        new(
             "SPLITTER",
             "Sblocca al Livello 15",
             new Color(100, 220, 100),
@@ -109,67 +134,175 @@ public class BatEncyclopedia
             new[]
             {
                 "Si divide in 2 mini-bat alla morte",
-                "I mini-bat sono piu veloci ma fragili",
-                "I mini-bat non si dividono piu"
+                "I mini-bat sono piu veloci ma fragili (1 HP)",
+                "I mini-bat NON si dividono ulteriormente",
+                "+150 punti al kill (50 per mini-bat)"
             },
-            "Elimina subito i mini-bat: sono veloci!",
+            "Elimina subito i mini-bat: sono veloci e imprevedibili!",
             "DIVISORE",
             new Color(100, 220, 100)
         ),
-        new BatEntry(
+        new(
             "BERSERK",
             "Sblocca al Livello 16",
             new Color(200, 0, 255),
             new Color(160, 0, 255, 130),
             new[]
             {
-                "Furia se il Miner e a 3 tile",
-                "Velocita x2.2 per 2 secondi",
-                "Aggressione massima da vicino"
+                "Furia quando il Miner e a 3 tile di distanza",
+                "Velocita x2.2 per 2 secondi in stato furioso",
+                "Insegue sempre il Miner da vicino",
+                "+250 punti al kill"
             },
-            "Non avvicinarti! Da vicino e letale.",
+            "Non avvicinarti! Da vicino e letale. Usa bombe a distanza.",
             "BERSERK",
             new Color(200, 80, 255)
         ),
-        new BatEntry(
+        new(
             "NUKE",
             "Sblocca al Livello 20",
             new Color(255, 60, 60),
             new Color(255, 40, 0, 130),
             new[]
             {
-                "Esplode alla morte con bomba NUKE",
-                "Area 13x13 tile (raggio 6)",
-                "Fungo atomico + detriti radioattivi",
-                "Instant kill e knockback estremo"
+                "Esplode alla morte: area 13x13 tile (raggio 6)",
+                "Instant kill su tutti i nemici nell'area",
+                "Fungo atomico + detriti radioattivi verdi",
+                "La porta e SEMPRE immune all'esplosione",
+                "Rispetta invincibilita e scudo del Miner",
+                "+200 punti al kill"
             },
-            "Il piu pericoloso! Eliminalo a distanza massima.",
+            "Il piu pericoloso! Eliminalo a distanza massima con big bomb.",
             "NUCLEARE",
             new Color(255, 80, 60)
         )
     };
 
-    // ── Dipendenze ────────────────────────────────────────────────────────
+    // Le descrizioni degli upgrade del Miner sono definite in MinerUpgradeDescriptions.cs
+    // Gli upgrade Mythic sono inclusi alla fine dell'array Standard con IsMythic=true
+
+    // --------------------------------------------------------------------
+    // SEZIONE BIOMI
+    // --------------------------------------------------------------------
+    private static readonly BiomeEntry[] BiomeEntries =
+    {
+        new("PRATERIA", "Livelli 0-3", new Color(80, 200, 80), new Color(60, 180, 60, 60),
+            "Il bioma di partenza. Terreno verde e luminoso, ideale per imparare le meccaniche di gioco.",
+            new[]
+            {
+                "Visibilita ottimale senza ostacoli visivi",
+                "Breakable distribuiti casualmente",
+                "Nessun pericolo ambientale aggiuntivo",
+                "Bat normali e Dasher come varianti principali"
+            },
+            "Impara i movimenti e la gestione delle bombe qui prima di avanzare.",
+            new Color(60, 200, 60)),
+
+        new("CAVERNA", "Livelli 4-7", new Color(180, 100, 255), new Color(160, 80, 255, 100),
+            "Grotte oscure e claustrofobiche. Il Dasher compare qui per la prima volta.",
+            new[]
+            {
+                "Sfondo viola scuro con elementi rocciosi",
+                "Dasher sblocca al livello 5",
+                "I bat normali diventano resistenti (multi-HP)",
+                "Varianti miste: piu bat speciali per ondata",
+                "La porta e SEMPRE immune alle esplosioni Nuke"
+            },
+            "Usa la big bomb per il Nuke ma solo da distanza di sicurezza!",
+            new Color(160, 100, 255)),
+
+        new("LAVA", "Livelli 8-11", new Color(255, 100, 20), new Color(255, 80, 0, 80),
+            "Zone vulcaniche con lava animata. L'ambiente rosso-arancione crea alta tensione.",
+            new[]
+            {
+                "Sfondo rosso-arancione con lava in movimento",
+                "Walid sblocca in questo bioma (lv 8)",
+                "Ghost Bat sblocca in questo bioma (lv 10)",
+                "Maggiore densita di blocchi breakable strategici",
+                "Il Ghost ignora le bombe solide: usa esplosioni dirette"
+            },
+            "Il Ghost Bat e imprevedibile: evita di usare solo bombe-blocco.",
+            new Color(255, 120, 0)),
+
+        new("GHIACCIO", "Livelli 12-15", new Color(140, 200, 255), new Color(100, 180, 255, 70),
+            "Ambiente innevato e gelido. Dal livello 5 la porta richiede la chiave per aprirsi.",
+            new[]
+            {
+                "DAL LV 5: serve la CHIAVE per aprire la porta",
+                "Sfondo bianco-azzurro con cristalli di ghiaccio",
+                "Splitter compare in questo bioma (lv 15)",
+                "Trova la chiave prima di avvicinarti all'uscita"
+            },
+            "Trova la chiave prima di cercare la porta! Walid esplode: stai lontano.",
+            new Color(120, 180, 255)),
+
+        new("PALUDE", "Livelli 16-19", new Color(80, 160, 80), new Color(60, 140, 60, 80),
+            "Terreno fangoso e cupo. I pipistrelli piu pericolosi iniziano a comparire.",
+            new[]
+            {
+                "Sfondo verde scuro con ambiance pesante",
+                "Berserk (lv 16) sbloccati",
+                "I mini-bat dello Splitter sono molto veloci",
+                "Il Berserk entra in furia a 3 tile di distanza"
+            },
+            "Non lasciare mai lo Splitter vicino a te quando esplode.",
+            new Color(80, 180, 80)),
+
+        new("RUNE", "Livello 20", new Color(255, 80, 80), new Color(255, 60, 60, 120),
+            "Il bioma finale. Il Nuke e il Bat Robusto raggiungono la loro massima pericolosita.",
+            new[]
+            {
+                "Nuke (lv 20) e Bat Robusto (lv 20+) sbloccati",
+                "Il Nuke ha un'area di esplosione enorme (raggio 6)",
+                "Il Bat Robusto puo avere fino a 6 HP al lv 50+",
+                "La porta e immune all'esplosione del Nuke: attenzione ai bat vicini!"
+            },
+            "Usa la big bomb per il Nuke ma stai lontano dall'area di esplosione!",
+            new Color(255, 100, 80))
+
+    };
+
+    // -- Dipendenze ------------------------------
     private readonly SpriteFont _font;
     private readonly Texture2D _pixel;
     private int _animFrame;
     private float _animTimer;
     private Dictionary<string, List<Rectangle>> _batAnimations = new();
-    private Texture2D _batTexture;
+    private Texture2D? _batTexture;
     private bool _closeHovered;
-    private int _hoveredArrow; // -1 = sinistra, 0 = nessuna, 1 = destra
-    private int _hoveredCard = -1; // solo per highlight visivo; non muta _selected
+    private int _hoveredArrow;
+    private int _hoveredCard = -1;
     private float _pulse;
-    private float _scrollOffset;
+    private int _prevTab = -1;  // detects tab switches to reset scroll instantly
 
-    // ── Stato UI ──────────────────────────────────────────────────────────
-    private int _selected;
+    // -- Scroll / selezione per sezione ----------
+    private readonly float[] _scrollOffsets = new float[3];
+    private readonly int[] _selectedCards = new int[3];
 
     public BatEncyclopedia(SpriteFont font, Texture2D pixel, ContentManager content)
     {
         _font = font;
         _pixel = pixel;
         LoadBatAnimations(content);
+    }
+
+    private int CurrentCount => _tab switch
+    {
+        0 => BatEntries.Length,
+        1 => Standard.Length,
+        _ => BiomeEntries.Length
+    };
+
+    private int Selected
+    {
+        get => _selectedCards[_tab];
+        set => _selectedCards[_tab] = value;
+    }
+
+    private float ScrollOffset
+    {
+        get => _scrollOffsets[_tab];
+        set => _scrollOffsets[_tab] = value;
     }
 
     private void LoadBatAnimations(ContentManager content)
@@ -199,7 +332,7 @@ public class BatEncyclopedia
                 var animName = fullName[..fs].TrimEnd('_', '-', ' ');
                 if (!int.TryParse(fullName[fs..], out var fnum)) continue;
 
-                if (!temp.ContainsKey(animName)) temp[animName] = new List<(int frame, Rectangle rect)>();
+                if (!temp.ContainsKey(animName)) temp[animName] = new List<(int, Rectangle)>();
                 temp[animName].Add((fnum, new Rectangle(rx, ry, rw, rh)));
             }
 
@@ -207,19 +340,22 @@ public class BatEncyclopedia
                 p => p.Key,
                 p => p.Value.OrderBy(f => f.frame).Select(f => f.rect).ToList());
         }
-        catch
-        {
-        }
+        catch { }
     }
 
     public void Open()
     {
-        _selected = 0;
+        _tab = 0;
+        for (var i = 0; i < 3; i++)
+        {
+            _selectedCards[i] = 0;
+            _scrollOffsets[i] = 0f;
+        }
+
         _hoveredCard = -1;
         _hoveredArrow = 0;
         _closeHovered = false;
         _pulse = 0f;
-        _scrollOffset = 0f;
         _animTimer = 0f;
         _animFrame = 0;
     }
@@ -230,98 +366,94 @@ public class BatEncyclopedia
         if (escPressed) return true;
 
         _pulse += (float)gameTime.ElapsedGameTime.TotalSeconds * 3f;
-
-        // Avanza frame animazione bat
         _animTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-        if (_animTimer >= AnimSpeed)
-        {
-            _animTimer = 0f;
-            _animFrame++;
-        }
+        if (_animTimer >= AnimSpeed) { _animTimer = 0f; _animFrame++; }
 
         var vw = gd.Viewport.Width;
         var vh = gd.Viewport.Height;
 
-        // ── Navigazione tastiera ──────────────────────────────────────────
-        var keyLeft = kb.WasKeyJustPressed(Keys.Left) ||
-                      kb.WasKeyJustPressed(Keys.A);
-        var keyRight = kb.WasKeyJustPressed(Keys.Right) ||
-                       kb.WasKeyJustPressed(Keys.D);
-        if (keyLeft) _selected = Math.Max(0, _selected - 1);
-        if (keyRight) _selected = Math.Min(Entries.Length - 1, _selected + 1);
+        // -- Navigazione tab -------------------------
+        if (kb.WasKeyJustPressed(Keys.Tab) || kb.WasKeyJustPressed(Keys.E))
+            _tab = (_tab + 1) % 3;
+        if (kb.WasKeyJustPressed(Keys.Q))
+            _tab = (_tab - 1 + 3) % 3;
 
-        // ── Scroll fluido verso la card selezionata ───────────────────────
-        var targetScroll = _selected * (CardW + CardGap) - vw / 2f + CardW / 2f;
-        var delta = targetScroll - _scrollOffset;
-        _scrollOffset += delta * ScrollLerpSpeed;
-        // Snap finale per evitare drift infinitesimale
-        if (Math.Abs(delta) < 0.5f) _scrollOffset = targetScroll;
+        // -- Navigazione card ------------------------
+        if (kb.WasKeyJustPressed(Keys.Left) || kb.WasKeyJustPressed(Keys.A))
+            Selected = Math.Max(0, Selected - 1);
+        if (kb.WasKeyJustPressed(Keys.Right) || kb.WasKeyJustPressed(Keys.D))
+            Selected = Math.Min(CurrentCount - 1, Selected + 1);
 
-        // Lo scroll è considerato "fermo" quando la differenza è piccola:
-        // solo in questo stato il mouse può cambiare la selezione tramite le card.
+        // -- Scroll fluido ---------------------------
+        // On tab switch, snap immediately to avoid mismatched offsets
+        if (_tab != _prevTab)
+        {
+            _prevTab = _tab;
+            var snapTotal = CurrentCount * (CardW + CardGap) - CardGap;
+            ScrollOffset = Selected * (CardW + CardGap) + CardW / 2f - snapTotal / 2f;
+        }
+
+        var total = CurrentCount * (CardW + CardGap) - CardGap;
+        var targetScroll = Selected * (CardW + CardGap) + CardW / 2f - total / 2f;
+        // Clamp so we never scroll into empty space
+        var minS = CardW / 2f - total / 2f;
+        var maxS = (CurrentCount - 1) * (CardW + CardGap) + CardW / 2f - total / 2f;
+        targetScroll = Math.Clamp(targetScroll, minS, maxS);
+        var delta = targetScroll - ScrollOffset;
+        ScrollOffset += delta * ScrollLerpSpeed;
+        if (Math.Abs(delta) < 0.5f) ScrollOffset = targetScroll;
         var scrollSettled = Math.Abs(delta) < ScrollSettledThreshold;
 
-        // ── Hit-test geometria (uguale a Draw per coerenza) ──────────────
-        var totalW = Entries.Length * (CardW + CardGap) - CardGap;
-        var startX = vw / 2f - totalW / 2f - _scrollOffset;
-        var cardY = vh / 2 - (int)CardH / 2 + 14;
-
+        // -- Hit-test --------------------------------
+        var startX = vw / 2f - (CurrentCount * (CardW + CardGap) - CardGap) / 2f - ScrollOffset;
+        var cardY = GetCardY(vh);
         var mp = mouse.Position;
 
-        // Reset hover state ogni frame prima di ricalcolare
         _hoveredCard = -1;
         _hoveredArrow = 0;
         _closeHovered = false;
 
-        // Hover card (non muta _selected — solo feedback visivo)
-        for (var i = 0; i < Entries.Length; i++)
+        for (var i = 0; i < CurrentCount; i++)
         {
-            var cx = startX + i * (CardW + CardGap);
-            if (cx + CardW < 0 || cx > vw) continue;
-            var r = new Rectangle((int)cx, cardY, (int)CardW, (int)CardH);
-            if (r.Contains(mp))
-            {
-                _hoveredCard = i;
-                break; // un solo hover per frame
-            }
+            var cx2 = startX + i * (CardW + CardGap);
+            if (cx2 + CardW < 0 || cx2 > vw) continue;
+            var r = new Rectangle((int)cx2, cardY, (int)CardW, (int)CardH);
+            if (r.Contains(mp)) { _hoveredCard = i; break; }
         }
 
-        // Hover frecce
-        var leftArrowRect = new Rectangle(8, vh / 2 - 20, 40, 40);
-        var rightArrowRect = new Rectangle(vw - 48, vh / 2 - 20, 40, 40);
-        if (_selected > 0 && leftArrowRect.Contains(mp)) _hoveredArrow = -1;
-        if (_selected < Entries.Length - 1 && rightArrowRect.Contains(mp)) _hoveredArrow = 1;
+        // Tab hit-test
+        var tabsStartX = vw / 2 - (3 * (TabW + TabGap) - TabGap) / 2;
+        for (var t = 0; t < 3; t++)
+        {
+            var tr = new Rectangle(tabsStartX + t * (TabW + TabGap), TabBarY, TabW, TabH);
+            if (tr.Contains(mp) && mouse.WasButtonJustPressed(MouseButton.Left))
+                _tab = t;
+        }
 
-        // Hover pulsante chiudi
-        var closeRect = new Rectangle(vw / 2 - 80, vh - 52, 160, 34);
-        _closeHovered = closeRect.Contains(mp);
+        if (Selected > 0 && new Rectangle(8, vh / 2 - 20, 40, 40).Contains(mp)) _hoveredArrow = -1;
+        if (Selected < CurrentCount - 1 && new Rectangle(vw - 48, vh / 2 - 20, 40, 40).Contains(mp)) _hoveredArrow = 1;
 
-        // ── Click mouse ───────────────────────────────────────────────────
+        _closeHovered = new Rectangle(vw / 2 - 80, vh - 48, 160, 34).Contains(mp);
+
         if (mouse.WasButtonJustPressed(MouseButton.Left))
         {
-            // Priorità 1: pulsante chiudi
             if (_closeHovered) return true;
-
-            // Priorità 2: frecce navigazione
-            if (_hoveredArrow == -1)
-                _selected = Math.Max(0, _selected - 1);
-            else if (_hoveredArrow == 1)
-                _selected = Math.Min(Entries.Length - 1, _selected + 1);
-            // Priorità 3: click su card — solo se lo scroll è fermo (evita click accidentali durante l'animazione)
-            else if (scrollSettled && _hoveredCard >= 0) _selected = _hoveredCard;
+            if (_hoveredArrow == -1) Selected = Math.Max(0, Selected - 1);
+            else if (_hoveredArrow == 1) Selected = Math.Min(CurrentCount - 1, Selected + 1);
+            else if (scrollSettled && _hoveredCard >= 0) Selected = _hoveredCard;
         }
 
-        // Scroll wheel per cambiare card rapidamente
         var scroll = mouse.ScrollWheelDelta;
-        if (scroll < 0) _selected = Math.Min(Entries.Length - 1, _selected + 1);
-        else if (scroll > 0) _selected = Math.Max(0, _selected - 1);
+        if (scroll < 0) Selected = Math.Min(CurrentCount - 1, Selected + 1);
+        else if (scroll > 0) Selected = Math.Max(0, Selected - 1);
 
-        if (kb.WasKeyJustPressed(Keys.Enter) ||
-            kb.WasKeyJustPressed(Keys.Escape))
+        if (kb.WasKeyJustPressed(Keys.Enter) || kb.WasKeyJustPressed(Keys.Escape))
             return true;
 
         return false;
     }
+
+    private int GetCardY(int vh) => TabBarY + TabH + 36;
 
     public void Draw(SpriteBatch sb)
     {
@@ -329,63 +461,231 @@ public class BatEncyclopedia
         var vh = sb.GraphicsDevice.Viewport.Height;
         var cx = vw / 2;
 
-        // Sfondo semitrasparente
-        DrawRect(sb, new Rectangle(0, 0, vw, vh), new Color(5, 5, 20, 230));
+        // Sfondo
+        DrawRect(sb, new Rectangle(0, 0, vw, vh), new Color(5, 5, 20, 235));
 
         // Titolo
-        DrawTextCentered(sb, "ENCICLOPEDIA DEI PIPISTRELLI", cx, 24, Color.Yellow, 1.6f);
-        DrawRect(sb, new Rectangle(cx - 260, 46, 520, 2), new Color(120, 90, 30));
+        DrawTextCentered(sb, "ENCICLOPEDIA", cx, 18, Color.Yellow, 1.6f);
+        DrawRect(sb, new Rectangle(cx - 240, 38, 480, 2), new Color(120, 90, 30));
 
-        // Sottotitolo navigazione
-        DrawTextCentered(sb, $"{_selected + 1} / {Entries.Length}", cx, 58, Color.Gray, 1.0f);
-
-        var totalW = Entries.Length * (CardW + CardGap) - CardGap;
-        var startX = cx - totalW / 2f - _scrollOffset;
-        var cardY = vh / 2 - (int)CardH / 2 + 14;
-
-        for (var i = 0; i < Entries.Length; i++)
+        // -- Tab -------------------------------------
+        var tabsStartX = cx - (3 * (TabW + TabGap) - TabGap) / 2;
+        for (var t = 0; t < 3; t++)
         {
-            var cardX = startX + i * (CardW + CardGap);
+            var tx = tabsStartX + t * (TabW + TabGap);
+            var isActive = t == _tab;
+            DrawRect(sb, new Rectangle(tx - 1, TabBarY - 1, TabW + 2, TabH + 2), isActive ? Color.Yellow : new Color(70, 60, 100));
+            DrawRect(sb, new Rectangle(tx, TabBarY, TabW, TabH), isActive ? new Color(60, 40, 130) : new Color(20, 14, 50));
+            DrawTextCentered(sb, TabNames[t], tx + TabW / 2, TabBarY + TabH / 2, isActive ? Color.Yellow : Color.Gray, 1.0f);
+        }
+
+        // Hint tab + counter
+        var hintY = TabBarY + TabH + 8;
+        DrawTextCentered(sb, "TAB/Q/E: cambia sezione", cx, hintY, new Color(80, 80, 120), 0.9f);
+        DrawTextCentered(sb, $"{Selected + 1} / {CurrentCount}", cx, hintY + 14, Color.Gray, 0.95f);
+
+        // -- Cards -----------------------------------
+        var totalW2 = CurrentCount * (CardW + CardGap) - CardGap;
+        // The scroll offset represents (selectedCard center) - (total cards center)
+        // so the first card starts at: cx - totalW2/2 - ScrollOffset + offset_of_card_0_center
+        // Simplified: first card left edge = cx - totalW2/2 - ScrollOffset
+        var startX2 = cx - totalW2 / 2f - ScrollOffset;
+        var cardY = GetCardY(vh);
+
+        for (var i = 0; i < CurrentCount; i++)
+        {
+            var cardX = startX2 + i * (CardW + CardGap);
             if (cardX + CardW < 0 || cardX > vw) continue;
-            // Una card è "evidenziata" solo se è sia selezionata sia hoveredCard
-            var isSelected = i == _selected;
-            var isHovered = i == _hoveredCard && !isSelected;
-            DrawCard(sb, Entries[i], (int)cardX, cardY, isSelected, isHovered);
+            var isSel = i == Selected;
+            var isHov = i == _hoveredCard && !isSel;
+            switch (_tab)
+            {
+                case 0: DrawBatCard(sb, BatEntries[i], (int)cardX, cardY, isSel, isHov); break;
+                case 1: DrawUpgradeCard(sb, Standard[i], (int)cardX, cardY, isSel, isHov); break;
+                case 2: DrawBiomeCard(sb, BiomeEntries[i], (int)cardX, cardY, isSel, isHov); break;
+            }
         }
 
-        // Frecce navigazione (bordi schermo)
-        if (_selected > 0)
+        // Frecce navigazione
+        if (Selected > 0)
         {
-            var arrowBg = _hoveredArrow == -1 ? new Color(80, 60, 160, 230) : new Color(30, 20, 70, 200);
-            var arrowFg = _hoveredArrow == -1 ? Color.White : new Color(255, 220, 80);
-            DrawRect(sb, new Rectangle(8, vh / 2 - 20, 40, 40), arrowBg);
-            DrawRect(sb, new Rectangle(9, vh / 2 - 19, 38, 38), new Color(80, 70, 120, 100));
-            DrawTextCentered(sb, "<", 28, vh / 2, arrowFg, 2.0f);
+            var bg = _hoveredArrow == -1 ? new Color(80, 60, 160, 230) : new Color(30, 20, 70, 200);
+            DrawRect(sb, new Rectangle(8, vh / 2 - 20, 40, 40), bg);
+            DrawTextCentered(sb, "<", 28, vh / 2, _hoveredArrow == -1 ? Color.White : new Color(255, 220, 80), 2.0f);
         }
-
-        if (_selected < Entries.Length - 1)
+        if (Selected < CurrentCount - 1)
         {
-            var arrowBg = _hoveredArrow == 1 ? new Color(80, 60, 160, 230) : new Color(30, 20, 70, 200);
-            var arrowFg = _hoveredArrow == 1 ? Color.White : new Color(255, 220, 80);
-            DrawRect(sb, new Rectangle(vw - 48, vh / 2 - 20, 40, 40), arrowBg);
-            DrawRect(sb, new Rectangle(vw - 47, vh / 2 - 19, 38, 38), new Color(80, 70, 120, 100));
-            DrawTextCentered(sb, ">", vw - 28, vh / 2, arrowFg, 2.0f);
+            var bg = _hoveredArrow == 1 ? new Color(80, 60, 160, 230) : new Color(30, 20, 70, 200);
+            DrawRect(sb, new Rectangle(vw - 48, vh / 2 - 20, 40, 40), bg);
+            DrawTextCentered(sb, ">", vw - 28, vh / 2, _hoveredArrow == 1 ? Color.White : new Color(255, 220, 80), 2.0f);
         }
 
-        // Hint tastiera
-        DrawTextCentered(sb, "< > / A D : sfoglia    scroll: scorre    ESC: chiudi", cx, vh - 68, Color.DimGray, 0.95f);
+        // Hint basso
+        DrawTextCentered(sb, "< > / A D : sfoglia    scroll: scorre    ESC: chiudi", cx, vh - 64, Color.DimGray, 0.9f);
 
         // Pulsante Chiudi
-        var closeBtnX = cx - 80;
-        var closeBtnY = vh - 52;
-        var closeBorder = _closeHovered ? Color.White : Color.Yellow;
-        var closeBg = _closeHovered ? new Color(60, 40, 120) : new Color(30, 20, 70);
-        DrawRect(sb, new Rectangle(closeBtnX - 1, closeBtnY - 1, 162, 36), closeBorder);
-        DrawRect(sb, new Rectangle(closeBtnX, closeBtnY, 160, 34), closeBg);
-        DrawTextCentered(sb, "CHIUDI", cx, closeBtnY + 17, closeBorder, 1.2f);
+        var cbx = cx - 80;
+        var cby = vh - 48;
+        DrawRect(sb, new Rectangle(cbx - 1, cby - 1, 162, 36), _closeHovered ? Color.White : Color.Yellow);
+        DrawRect(sb, new Rectangle(cbx, cby, 160, 34), _closeHovered ? new Color(60, 40, 120) : new Color(30, 20, 70));
+        DrawTextCentered(sb, "CHIUDI", cx, cby + 17, _closeHovered ? Color.White : Color.Yellow, 1.2f);
     }
 
-    private void DrawCard(SpriteBatch sb, BatEntry entry, int x, int y, bool selected, bool hovered)
+    // --------------------------------------------------------------------
+    private void DrawBatCard(SpriteBatch sb, BatEntry e, int x, int y, bool selected, bool hovered)
+    {
+        DrawCardBase(sb, x, y, (int)CardW, (int)CardH, selected, hovered, e.PrimaryColor, e.AuraColor);
+        var pulse = selected ? 0.85f + 0.15f * (float)Math.Sin(_pulse) : 1f;
+        var w = (int)CardW;
+        var iy = y + 10;
+
+        DrawBatSprite(sb, e, x + w / 2, iy + 36, 68, pulse);
+        iy += 78;
+        iy = DrawTag(sb, e.Tag, e.TagColor, x, iy, w);
+        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), e.PrimaryColor * 0.6f);
+        iy += 5;
+        DrawTextCentered(sb, e.Name, x + w / 2, iy + 9, e.PrimaryColor * pulse, 1.05f);
+        iy += 22;
+        DrawTextCentered(sb, e.UnlockInfo, x + w / 2, iy, new Color(160, 200, 160), 0.9f);
+        iy += 18;
+        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
+        iy += 5;
+        var yBotBat = y + (int)CardH - 36;
+        iy = DrawBulletList(sb, e.Abilities, x, iy, w, e.PrimaryColor, Color.White, 0.88f, yBotBat);
+        if (iy + 10 < yBotBat)
+        {
+            DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
+            iy += 5;
+            DrawWrappedText(sb, e.Tip, x + 10, iy, w - 20, new Color(255, 235, 120), 0.86f, yBotBat);
+        }
+    }
+
+    private void DrawUpgradeCard(SpriteBatch sb, MinerUpgradeEntry e, int x, int y, bool selected, bool hovered)
+    {
+        if (e.IsMythic)
+        {
+            DrawMythicCard(sb, e, x, y, selected, hovered);
+            return;
+        }
+
+        DrawCardBase(sb, x, y, (int)CardW, (int)CardH, selected, hovered, e.Color, Color.Transparent);
+        var pulse = selected ? 0.85f + 0.15f * (float)Math.Sin(_pulse) : 1f;
+        var w = (int)CardW;
+        var iy = y + 10;
+
+        // Icona
+        var iconSz = 60;
+        var iconX = x + w / 2 - iconSz / 2;
+        DrawRect(sb, new Rectangle(iconX - 2, iy - 2, iconSz + 4, iconSz + 4), e.Color * (0.35f + 0.15f * (float)Math.Sin(_pulse)));
+        DrawRect(sb, new Rectangle(iconX, iy, iconSz, iconSz), new Color(20, 14, 40));
+        DrawTextCentered(sb, GetUpgradeIcon(e.Category), x + w / 2, iy + iconSz / 2, e.Color * pulse, 2.0f);
+        iy += iconSz + 6;
+
+        iy = DrawTag(sb, e.Category, e.Color, x, iy, w);
+        DrawTextCentered(sb, $"[{e.EffectType}]", x + w / 2, iy, new Color(140, 140, 180), 0.85f);
+        iy += 16;
+        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), e.Color * 0.6f);
+        iy += 5;
+        DrawTextCentered(sb, e.Name, x + w / 2, iy + 9, e.Color * pulse, 1.05f);
+        iy += 22;
+        var maxStr = e.MaxLevel == int.MaxValue ? "illimitato" : $"{e.MaxLevel}";
+        DrawTextCentered(sb, $"Max livello: {maxStr}", x + w / 2, iy, new Color(160, 200, 160), 0.87f);
+        iy += 18;
+        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
+        iy += 5;
+        var yBotUpg = y + (int)CardH - 10;
+        iy = DrawWrappedText(sb, e.Description, x + 10, iy, w - 20, Color.White, 0.88f, yBotUpg);
+        iy += 5;
+        DrawRect(sb, new Rectangle(x + 10, Math.Min(iy, yBotUpg - 1), w - 20, 1), new Color(50, 50, 80));
+        iy += 5;
+        DrawTextCentered(sb, "EFFETTI", x + w / 2, iy + 6, e.Color, 0.90f);
+        iy += 18;
+        DrawBulletList(sb, e.Effects, x, iy, w, e.Color, new Color(220, 220, 180), 0.86f, yBotUpg);
+    }
+
+    private void DrawMythicCard(SpriteBatch sb, MinerUpgradeEntry e, int x, int y, bool selected, bool hovered)
+    {
+        // Aura dorata/rossa pulsante per le card Mythic
+        var aura = e.Color.R > 200 && e.Color.G > 140
+            ? new Color(220, 180, 30, 90)
+            : new Color(255, 80, 80, 90);
+        DrawCardBase(sb, x, y, (int)CardW, (int)CardH, selected, hovered, e.Color, aura);
+
+        var pulse = selected ? 0.85f + 0.15f * (float)Math.Sin(_pulse) : 1f;
+        var shimmer = 0.6f + 0.4f * (float)Math.Sin(_pulse * 1.3f);
+        var w = (int)CardW;
+        var iy = y + 10;
+
+        // Icona grande con doppio bordo dorato/viola
+        var iconSz = 64;
+        var iconX = x + w / 2 - iconSz / 2;
+        DrawRect(sb, new Rectangle(iconX - 4, iy - 4, iconSz + 8, iconSz + 8), new Color(180, 80, 255) * shimmer);
+        DrawRect(sb, new Rectangle(iconX - 2, iy - 2, iconSz + 4, iconSz + 4), new Color(220, 180, 30) * shimmer);
+        DrawRect(sb, new Rectangle(iconX, iy, iconSz, iconSz), new Color(10, 6, 24));
+        DrawTextCentered(sb, "*", x + w / 2, iy + iconSz / 2, e.Color * pulse, 2.5f);
+        iy += iconSz + 8;
+
+        // Tag MYTHIC con colore speciale
+        iy = DrawTag(sb, "MYTHIC", e.Color, x, iy, w);
+        DrawTextCentered(sb, $"[{e.EffectType}]  |  0.5% per slot", x + w / 2, iy, new Color(220, 180, 30) * shimmer, 0.83f);
+        iy += 16;
+        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), e.Color * 0.8f);
+        iy += 5;
+        DrawTextCentered(sb, e.Name, x + w / 2, iy + 9, e.Color * pulse, 1.05f);
+        iy += 22;
+        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(80, 50, 80));
+        iy += 5;
+        var yBotMyt = y + (int)CardH - 10;
+        iy = DrawWrappedText(sb, e.Description, x + 10, iy, w - 20, Color.White, 0.88f, yBotMyt);
+        iy += 5;
+        DrawRect(sb, new Rectangle(x + 10, Math.Min(iy, yBotMyt - 1), w - 20, 1), new Color(80, 50, 80));
+        iy += 5;
+        DrawTextCentered(sb, "EFFETTI E LIMITI", x + w / 2, iy + 6, e.Color, 0.90f);
+        iy += 18;
+        DrawBulletList(sb, e.Effects, x, iy, w, e.Color, new Color(220, 220, 180), 0.86f, yBotMyt);
+    }
+
+    private void DrawBiomeCard(SpriteBatch sb, BiomeEntry e, int x, int y, bool selected, bool hovered)
+    {
+        DrawCardBase(sb, x, y, (int)CardW, (int)CardH, selected, hovered, e.PrimaryColor, e.AuraColor);
+        var pulse = selected ? 0.85f + 0.15f * (float)Math.Sin(_pulse) : 1f;
+        var w = (int)CardW;
+        var iy = y + 10;
+
+        var iconSz = 64;
+        var iconX = x + w / 2 - iconSz / 2;
+        DrawRect(sb, new Rectangle(iconX - 2, iy - 2, iconSz + 4, iconSz + 4), e.PrimaryColor * (0.4f + 0.15f * (float)Math.Sin(_pulse)));
+        DrawRect(sb, new Rectangle(iconX, iy, iconSz, iconSz), new Color(15, 12, 30));
+        DrawTextCentered(sb, GetBiomeIcon(e.Name), x + w / 2, iy + iconSz / 2, e.PrimaryColor * pulse, 2.5f);
+        iy += iconSz + 8;
+
+        iy = DrawTag(sb, e.LevelRange, e.PrimaryColor, x, iy, w);
+        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), e.PrimaryColor * 0.6f);
+        iy += 5;
+        DrawTextCentered(sb, e.Name, x + w / 2, iy + 9, e.PrimaryColor * pulse, 1.1f);
+        iy += 24;
+        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
+        iy += 5;
+        var yBotBio = y + (int)CardH - 36;
+        iy = DrawWrappedText(sb, e.Description, x + 10, iy, w - 20, Color.White, 0.88f, yBotBio);
+        iy += 5;
+        DrawRect(sb, new Rectangle(x + 10, Math.Min(iy, yBotBio - 1), w - 20, 1), new Color(50, 50, 80));
+        iy += 5;
+        iy = DrawBulletList(sb, e.Features, x, iy, w, e.PrimaryColor, Color.White, 0.88f, yBotBio);
+        if (iy + 10 < yBotBio)
+        {
+            DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
+            iy += 5;
+            DrawWrappedText(sb, e.Tip, x + 10, iy, w - 20, new Color(255, 235, 120), 0.86f, yBotBio);
+        }
+    }
+
+    // --------------------------------------------------------------------
+    // Shared helpers
+    // --------------------------------------------------------------------
+
+    private void DrawCardBase(SpriteBatch sb, int x, int y, int w, int h,
+        bool selected, bool hovered, Color primary, Color aura)
     {
         var pulse = selected ? 0.85f + 0.15f * (float)Math.Sin(_pulse) : 1f;
         var borderColor = selected ? Color.Yellow
@@ -394,99 +694,66 @@ public class BatEncyclopedia
         var bgColor = selected ? new Color(30, 20, 70, 245)
             : hovered ? new Color(22, 16, 52, 235)
             : new Color(15, 12, 35, 220);
-        var w = (int)CardW;
-        var h = (int)CardH;
 
-        // Aura glow dietro la card selezionata
-        if (selected && entry.AuraColor != Color.Transparent)
+        if (selected && aura != Color.Transparent)
         {
-            var glow = 8;
+            const int glow = 8;
             DrawRect(sb, new Rectangle(x - glow, y - glow, w + glow * 2, h + glow * 2),
-                entry.AuraColor * (0.3f + 0.1f * (float)Math.Sin(_pulse)));
+                aura * (0.3f + 0.1f * (float)Math.Sin(_pulse)));
         }
 
-        // Sfondo e bordo
         DrawRect(sb, new Rectangle(x - 2, y - 2, w + 4, h + 4), borderColor * pulse);
         DrawRect(sb, new Rectangle(x, y, w, h), bgColor);
+    }
 
-        var iy = y + 10;
-
-        // Sprite bat reale (animato, tintato con il colore della variante)
-        var spriteSize = 80;
-        var spriteCX = x + w / 2;
-        var spriteCY = iy + spriteSize / 2;
-        DrawBatSprite(sb, entry, spriteCX, spriteCY, spriteSize, pulse);
-        iy += spriteSize + 4;
-
-        // Badge tag variante
-        var tagSz = _font.MeasureString(entry.Tag) * 0.95f;
+    private int DrawTag(SpriteBatch sb, string tag, Color tagColor, int x, int iy, int w)
+    {
+        var tagSz = _font.MeasureString(tag) * 0.95f;
         var tagW = (int)tagSz.X + 12;
         var tagX = x + w / 2 - tagW / 2;
-        DrawRect(sb, new Rectangle(tagX - 1, iy - 1, tagW + 2, (int)tagSz.Y + 4), entry.TagColor * 0.6f);
-        DrawRect(sb, new Rectangle(tagX, iy, tagW, (int)tagSz.Y + 2), entry.TagColor * 0.25f);
-        sb.DrawString(_font, entry.Tag, new Vector2(tagX + 6 + 1, iy + 1 + 1), Color.Black * 0.85f, 0f, Vector2.Zero,
-            0.95f, SpriteEffects.None, 0f);
-        sb.DrawString(_font, entry.Tag, new Vector2(tagX + 6, iy + 1), entry.TagColor, 0f, Vector2.Zero, 0.95f,
-            SpriteEffects.None, 0f);
-        iy += (int)tagSz.Y + 10;
+        DrawRect(sb, new Rectangle(tagX - 1, iy - 1, tagW + 2, (int)tagSz.Y + 4), tagColor * 0.6f);
+        DrawRect(sb, new Rectangle(tagX, iy, tagW, (int)tagSz.Y + 2), tagColor * 0.25f);
+        sb.DrawString(_font, tag, new Vector2(tagX + 7, iy + 1), Color.Black * 0.85f, 0f, Vector2.Zero, 0.95f, SpriteEffects.None, 0f);
+        sb.DrawString(_font, tag, new Vector2(tagX + 6, iy), tagColor, 0f, Vector2.Zero, 0.95f, SpriteEffects.None, 0f);
+        return iy + (int)tagSz.Y + 10;
+    }
 
-        // Separatore
-        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), entry.PrimaryColor * 0.6f);
-        iy += 5;
-
-        // Nome
-        DrawTextCentered(sb, entry.Name, x + w / 2, iy + 10, entry.PrimaryColor * pulse, 1.15f);
-        iy += 26;
-
-        // Unlock info
-        DrawTextCentered(sb, entry.UnlockInfo, x + w / 2, iy, new Color(160, 200, 160), 1.05f);
-        iy += 22;
-
-        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
-        iy += 6;
-
-        // Abilità
-        foreach (var ab in entry.Abilities)
+    private int DrawBulletList(SpriteBatch sb, string[] items, int x, int iy, int w,
+        Color bulletColor, Color textColor, float scale, int yMax = int.MaxValue)
+    {
+        foreach (var ab in items)
         {
-            var sc = 1.0f;
-            var abLines = WrapText(ab, w - 30, sc);
-            var firstLine = true;
-            foreach (var abLine in abLines)
+            if (iy >= yMax) break;
+            var lines = WrapText(ab, w - 30, scale);
+            var first = true;
+            foreach (var line in lines)
             {
-                var sz = _font.MeasureString(abLine) * sc;
-                if (firstLine)
+                if (iy >= yMax) break;
+                var sz = _font.MeasureString(line) * scale;
+                if (first)
                 {
-                    // Pallino solo sulla prima riga
-                    DrawRect(sb, new Rectangle(x + 10, iy + (int)(sz.Y / 2), 5, 5), entry.PrimaryColor * 0.8f);
-                    firstLine = false;
+                    DrawRect(sb, new Rectangle(x + 10, iy + (int)(sz.Y / 2), 5, 5), bulletColor * 0.8f);
+                    first = false;
                 }
-
-                var lineX = firstLine ? 20 : 20; // indent uniforme
-                sb.DrawString(_font, abLine, new Vector2(x + 21, iy + 1), Color.Black * 0.85f, 0f, Vector2.Zero, sc,
-                    SpriteEffects.None, 0f);
-                sb.DrawString(_font, abLine, new Vector2(x + 20, iy), Color.White, 0f, Vector2.Zero, sc,
-                    SpriteEffects.None, 0f);
+                sb.DrawString(_font, line, new Vector2(x + 21, iy + 1), Color.Black * 0.85f, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+                sb.DrawString(_font, line, new Vector2(x + 20, iy), textColor, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
                 iy += (int)sz.Y + 2;
             }
-
-            iy += 1; // piccolo spazio tra le abilità
+            iy += 1;
         }
+        return iy;
+    }
 
-        iy += 4;
-        DrawRect(sb, new Rectangle(x + 10, iy, w - 20, 1), new Color(50, 50, 80));
-        iy += 5;
-
-        // Tip
-        var tip = entry.Tip;
-        var tipLines = WrapText(tip, w - 20, 0.97f);
-        foreach (var line in tipLines)
+    private int DrawWrappedText(SpriteBatch sb, string text, int x, int iy, int maxW, Color color, float scale, int yMax = int.MaxValue)
+    {
+        foreach (var line in WrapText(text, maxW, scale))
         {
-            sb.DrawString(_font, line, new Vector2(x + 11, iy + 1), Color.Black * 0.85f, 0f, Vector2.Zero, 0.97f,
-                SpriteEffects.None, 0f);
-            sb.DrawString(_font, line, new Vector2(x + 10, iy), new Color(255, 235, 120), 0f, Vector2.Zero, 0.97f,
-                SpriteEffects.None, 0f);
-            iy += (int)(_font.MeasureString(line).Y * 0.97f) + 2;
+            if (iy >= yMax) break;
+            sb.DrawString(_font, line, new Vector2(x + 1, iy + 1), Color.Black * 0.85f, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            sb.DrawString(_font, line, new Vector2(x, iy), color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            iy += (int)(_font.MeasureString(line).Y * scale) + 2;
         }
+        return iy;
     }
 
     private string[] WrapText(string text, int maxPx, float scale)
@@ -507,29 +774,25 @@ public class BatEncyclopedia
                 current = test;
             }
         }
-
         if (current.Length > 0) lines.Add(current);
         return lines.ToArray();
     }
 
     private void DrawBatSprite(SpriteBatch sb, BatEntry entry, int cx, int cy, int size, float pulse)
     {
-        // Aura glow
         if (entry.AuraColor != Color.Transparent)
         {
-            var glowSize = size + 14;
-            DrawRect(sb, new Rectangle(cx - glowSize / 2, cy - glowSize / 2, glowSize, glowSize),
+            var gs = size + 14;
+            DrawRect(sb, new Rectangle(cx - gs / 2, cy - gs / 2, gs, gs),
                 entry.AuraColor * (0.35f + 0.15f * (float)Math.Sin(_pulse)));
         }
 
         if (_batTexture != null)
         {
-            // Cerca il frame "fly_front" o fallback
             string[] candidates = { "fly_front", "fly", "idle", "walk" };
             List<Rectangle>? frames = null;
             foreach (var c in candidates)
-                if (_batAnimations.TryGetValue(c, out frames))
-                    break;
+                if (_batAnimations.TryGetValue(c, out frames)) break;
 
             if (frames != null && frames.Count > 0)
             {
@@ -537,59 +800,60 @@ public class BatEncyclopedia
                 var src = frames[frame];
                 var scale = (float)size / Math.Max(src.Width, src.Height);
                 var origin = new Vector2(src.Width * 0.5f, src.Height * 0.5f);
-                // Ombra
-                sb.Draw(_batTexture, new Vector2(cx + 2, cy + 2), src, Color.Black * 0.4f,
-                    0f, origin, scale, SpriteEffects.None, 0f);
-                // Sprite colorato
-                sb.Draw(_batTexture, new Vector2(cx, cy), src, entry.PrimaryColor * pulse,
-                    0f, origin, scale, SpriteEffects.None, 0f);
+                sb.Draw(_batTexture, new Vector2(cx + 2, cy + 2), src, Color.Black * 0.4f, 0f, origin, scale, SpriteEffects.None, 0f);
+                sb.Draw(_batTexture, new Vector2(cx, cy), src, entry.PrimaryColor * pulse, 0f, origin, scale, SpriteEffects.None, 0f);
                 return;
             }
         }
 
-        // Fallback: cerchio colorato se la texture non e disponibile
         var r = size / 2;
         DrawRect(sb, new Rectangle(cx - r, cy - r, size, size), entry.PrimaryColor * 0.8f);
         DrawRect(sb, new Rectangle(cx - r + 3, cy - r + 3, size - 6, size - 6), entry.PrimaryColor);
     }
 
-    private void DrawFilledCircle(SpriteBatch sb, int cx, int cy, int r, Color color)
+    private static string GetUpgradeIcon(string category) => category switch
     {
-        for (var dy = -r; dy <= r; dy++)
-        for (var dx = -r; dx <= r; dx++)
-            if (dx * dx + dy * dy <= r * r)
-                DrawRect(sb, new Rectangle(cx + dx, cy + dy, 1, 1), color);
-    }
+        "VITA" => "+",
+        "OFFENSIVO" => "!",
+        "MOVIMENTO" => ">",
+        "DIFENSIVO" => "O",
+        "MYTHIC" => "*",
+        _ => "*"
+    };
+
+    private static string GetBiomeIcon(string name) => name switch
+    {
+        "PRATERIA" => "~",
+        "GHIACCIO" => "*",
+        "LAVA" => "^",
+        "PALUDE" => "%",
+        _ => "#"
+    };
 
     private void DrawRect(SpriteBatch sb, Rectangle r, Color c)
-    {
-        sb.Draw(_pixel, r, c);
-    }
+        => sb.Draw(_pixel, r, c);
 
     private void DrawTextCentered(SpriteBatch sb, string text, int cx, int cy, Color color, float scale)
     {
         var origin = _font.MeasureString(text) * 0.5f;
         var pos = new Vector2(cx, cy);
-        var outline = Color.Black * 0.92f;
         var d = Math.Max(1f, scale * 1.5f);
+        var outline = Color.Black * 0.92f;
         sb.DrawString(_font, text, pos + new Vector2(-d, -d), outline, 0f, origin, scale, SpriteEffects.None, 0f);
         sb.DrawString(_font, text, pos + new Vector2(d, -d), outline, 0f, origin, scale, SpriteEffects.None, 0f);
         sb.DrawString(_font, text, pos + new Vector2(-d, d), outline, 0f, origin, scale, SpriteEffects.None, 0f);
         sb.DrawString(_font, text, pos + new Vector2(d, d), outline, 0f, origin, scale, SpriteEffects.None, 0f);
-        sb.DrawString(_font, text, pos + new Vector2(d + 1f, d + 1f), Color.Black * 0.5f, 0f, origin, scale,
-            SpriteEffects.None, 0f);
         sb.DrawString(_font, text, pos, color, 0f, origin, scale, SpriteEffects.None, 0f);
     }
 
-    // ── Dati statici dei pipistrelli ──────────────────────────────────────
+    // -- Record types ----------------------------
     private readonly record struct BatEntry(
-        string Name,
-        string UnlockInfo,
-        Color PrimaryColor,
-        Color AuraColor,
-        string[] Abilities,
-        string Tip,
-        string Tag,
-        Color TagColor
-    );
+        string Name, string UnlockInfo, Color PrimaryColor, Color AuraColor,
+        string[] Abilities, string Tip, string Tag, Color TagColor);
+
+    // UpgradeEntry is defined as MinerUpgradeEntry in MinerUpgradeDescriptions.cs
+
+    private readonly record struct BiomeEntry(
+        string Name, string LevelRange, Color PrimaryColor, Color AuraColor,
+        string Description, string[] Features, string Tip, Color TagColor);
 }

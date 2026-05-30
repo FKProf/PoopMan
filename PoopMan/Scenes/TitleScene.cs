@@ -1,11 +1,11 @@
-﻿using System;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using PoopMan.UI;
 using PoopManLibrary;
 using PoopManLibrary.Input;
 using PoopManLibrary.Scenes;
+using System;
 
 namespace PoopMan.Scenes;
 
@@ -184,7 +184,7 @@ public class TitleScene : Scene
                 break;
         }
 
-        _sb.DrawString(_font, "PoopMan v1.0.1", new Vector2(8, H - 18), Color.DarkGray * 0.7f);
+        _sb.DrawString(_font, "PoopMan v1.1.0", new Vector2(8, H - 18), Color.DarkGray * 0.7f);
         _sb.End();
     }
 

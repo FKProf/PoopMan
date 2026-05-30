@@ -1,13 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Xml.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using PoopManLibrary;
 using PoopManLibrary.World;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Xml.Linq;
 
 namespace PoopMan.GameObjects;
 
@@ -31,92 +31,92 @@ public class Miner
     private readonly Dictionary<string, List<Rectangle>> _explosionAnimations = new();
     private readonly Queue<Vector2> _inputBuffer = new(MAX_BUFFER_SIZE);
     private readonly Dictionary<string, List<Rectangle>> _itemAnimations = new();
+    // ═══════════════════════════════════════════════════════════════════
+    // ANIMAZIONI
+    // ═══════════════════════════════════════════════════════════════════
+
     private float _animTimer;
+    private string _currentAnimation = "idle_front";
+    private int _currentFrame;
+    private List<Rectangle> _currentFrames;
+    private Texture2D _texture;
+    private Texture2D _explosionTexture;
+    private Texture2D _itemTexture;
+
+    // ═══════════════════════════════════════════════════════════════════
+    // POSIZIONE E MOVIMENTO
+    // ═══════════════════════════════════════════════════════════════════
+
+    public Vector2 Position;
+    public Point TilePosition;
 
     // Tile occupate dai bat (aggiornate da GameScene prima di Update)
     private HashSet<Point> _batBlockedTiles = new();
+    private Vector2 _currentDirection = Vector2.UnitX;
+    private float _movementProgress;
+    private float _moveSpeed = 160f;
+    private Vector2 _targetPosition;
+    private float _dashSpeedBonus;
+    private float _dashTimer;
 
     // ═══════════════════════════════════════════════════════════════════
     // BOMBE
     // ═══════════════════════════════════════════════════════════════════
 
+    private float _bombTimerBonus;
+    private int _extraBombSteps;
+    private int _fasterBombSteps;
+
+    // ═══════════════════════════════════════════════════════════════════
+    // VITE E MORTE
+    // ═══════════════════════════════════════════════════════════════════
+
+    private int _maxLifeSteps;
+    private int _extraLifeThreshold = ExtraLifeEvery;
     private float _blinkTimer;
     private bool _blinkVisible = true;
-    private float _bombTimerBonus;
+
+    // ═══════════════════════════════════════════════════════════════════
+    // INVINCIBILITÀ (attiva solo dopo aver perso una vita)
+    // ═══════════════════════════════════════════════════════════════════
+
+    private float _invincibilityDuration = 3f;
+    private float _invincibilityTimer;
 
     // ═══════════════════════════════════════════════════════════════════
     // UPGRADE – OFFENSIVI
     // ═══════════════════════════════════════════════════════════════════
 
     private int _chainSteps;
-    private string _currentAnimation = "idle_front";
-    private Vector2 _currentDirection = Vector2.UnitX;
-    private int _currentFrame;
-    private List<Rectangle> _currentFrames;
-    private int _damageReductionSteps;
-    private float _dashSpeedBonus;
-    private float _dashTimer;
     private int _doubleDropSteps;
     private int _explosionDamageSteps;
     private int _explosionRangeSteps;
+
+    // ═══════════════════════════════════════════════════════════════════
+    // UPGRADE – DIFENSIVI
+    // ═══════════════════════════════════════════════════════════════════
+
+    private int _damageReductionSteps;
     private int _explosionResistanceSteps;
-    private Texture2D _explosionTexture;
-    private int _extraBombSteps;
-    private int _extraLifeThreshold = ExtraLifeEvery;
-    private int _fasterBombSteps;
-    private float _invincibilityDuration = 3f;
-    private float _invincibilityTimer;
-
-    // ═══════════════════════════════════════════════════════════════════
-    // MORTE
-    // ═══════════════════════════════════════════════════════════════════
-
-    // ═══════════════════════════════════════════════════════════════════
-    // INVINCIBILITÀ (attiva solo dopo aver perso una vita)
-    // ═══════════════════════════════════════════════════════════════════
-
-    private Texture2D _itemTexture;
-
-    // ═══════════════════════════════════════════════════════════════════
-    // VITE
-    // ═══════════════════════════════════════════════════════════════════
-
-    // ═══════════════════════════════════════════════════════════════════
-    // UPGRADE – SPECIALI
-    // ═══════════════════════════════════════════════════════════════════
-
-    private int _maxLifeSteps;
-    private float _movementProgress;
-    private float _moveSpeed = 160f;
+    private int _shieldRechargeLevel;
 
     // ═══════════════════════════════════════════════════════════════════
     // UPGRADE – MOVIMENTO
     // ═══════════════════════════════════════════════════════════════════
 
     private int _moveSteps;
+
+    // ═══════════════════════════════════════════════════════════════════
+    // UPGRADE – SPECIALI
+    // ═══════════════════════════════════════════════════════════════════
+
     private int _regenLevelsAccum;
 
     // ═══════════════════════════════════════════════════════════════════
-    // UPGRADE – DIFENSIVI
+    // STATO
     // ═══════════════════════════════════════════════════════════════════
 
-    private int _shieldRechargeLevel;
     private MinerState _state = MinerState.IdleFront;
-
-    private Vector2 _targetPosition;
-
-    // ═══════════════════════════════════════════════════════════════════
-    // ANIMAZIONI
-    // ═══════════════════════════════════════════════════════════════════
-
-    private Texture2D _texture;
-
-    public Vector2 Position;
-    // ═══════════════════════════════════════════════════════════════════
-    // POSIZIONE E MOVIMENTO
-    // ═══════════════════════════════════════════════════════════════════
-
-    public Point TilePosition;
 
     // ═══════════════════════════════════════════════════════════════════
     // COSTRUTTORE
@@ -185,8 +185,8 @@ public class Miner
     public bool UpgradeMultiHit { get; private set; }
     public bool UpgradeCritical { get; private set; }
 
-    /// <summary>Danno aggiuntivo inflitto dalle bombe normali (1 extra ogni 2 livelli upgrade).</summary>
-    public int ExplosionDamageBonus => _explosionDamageSteps / 2;
+    /// <summary>Danno aggiuntivo inflitto dalle bombe normali (1 extra per ogni livello upgrade).</summary>
+    public int ExplosionDamageBonus => _explosionDamageSteps;
 
     public bool UpgradeDashAfterHit { get; private set; }
 
@@ -199,6 +199,13 @@ public class Miner
     public float DoubleDropChance { get; private set; }
     public float BonusLootChance { get; private set; }
     public bool SlowRegenActive { get; private set; }
+
+    // ── Mythic ──────────────────────────────────────────────────
+    /// <summary>Se attivo, il Miner non subisce danni dalle proprie esplosioni.</summary>
+    public bool UpgradeMythicImmortality { get; private set; }
+
+    /// <summary>Se attivo, le bombe piccole del Miner uccidono istantaneamente qualsiasi bat.</summary>
+    public bool UpgradeInstantKill { get; private set; }
 
     // ═══════════════════════════════════════════════════════════════════
     // PROPRIETÀ DERIVATE
@@ -279,6 +286,8 @@ public class Miner
             UpgradeType.StunOnHit => UpgradeStunOnHit ? 1 : 0,
             UpgradeType.SlowOnHit => UpgradeSlowOnHit ? 1 : 0,
             UpgradeType.SlowRegen => SlowRegenActive ? 1 : 0,
+            UpgradeType.MythicImmortality => UpgradeMythicImmortality ? 1 : 0,
+            UpgradeType.InstantKill => UpgradeInstantKill ? 1 : 0,
             _ => 0
         };
     }
@@ -799,6 +808,15 @@ public class Miner
                 }
 
                 break;
+
+            // ── Mythic ───────────────────────────────────────────────
+            case UpgradeType.MythicImmortality:
+                UpgradeMythicImmortality = true;
+                break;
+
+            case UpgradeType.InstantKill:
+                UpgradeInstantKill = true;
+                break;
         }
     }
 
@@ -838,7 +856,18 @@ public class Miner
         if (!ShieldActive) return false;
         ShieldActive = false;
         _shieldRechargeLevel = 0;
+        // Breve invincibilità dopo assorbimento scudo
+        StartInvincibility(_invincibilityDuration);
         return true;
+    }
+
+    /// <summary>Avvia il periodo di invincibilità per la durata corrente configurata.</summary>
+    public void StartInvincibility(float duration)
+    {
+        IsInvincible = true;
+        _invincibilityTimer = duration;
+        _blinkTimer = BlinkInterval;
+        _blinkVisible = true;
     }
 
     /// <summary>Attiva il boost di velocità post-danno se l'upgrade DashAfterHit è presente.</summary>

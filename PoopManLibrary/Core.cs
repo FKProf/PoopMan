@@ -1,10 +1,10 @@
-﻿using System;
-using System.Runtime.InteropServices;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using PoopManLibrary.Input;
 using PoopManLibrary.Scenes;
+using System;
+using System.Runtime.InteropServices;
 
 namespace PoopManLibrary;
 

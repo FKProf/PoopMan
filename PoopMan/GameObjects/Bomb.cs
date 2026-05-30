@@ -1,8 +1,8 @@
-using System;
-using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using PoopManLibrary.World;
+using System;
+using System.Collections.Generic;
 
 namespace PoopMan.GameObjects;
 
@@ -150,23 +150,23 @@ internal class Bomb
         int[] dy = { -1, 1, 0, 0 };
 
         for (var dir = 0; dir < 4; dir++)
-        for (var step = 1; step <= range; step++)
-        {
-            Point t = new(center.X + dx[dir] * step,
-                center.Y + dy[dir] * step);
-
-            if (!map.IsInside(t)) break;
-            if (map.GetTile(t) == TileType.Wall) break;
-
-            if (map.GetTile(t) == TileType.Breakable)
+            for (var step = 1; step <= range; step++)
             {
-                map.BreakTile(t);
-                if (!_multiHit) break; // MultiHit: continua oltre i breakable
-                continue;
-            }
+                Point t = new(center.X + dx[dir] * step,
+                    center.Y + dy[dir] * step);
 
-            ExplosionTiles.Add(t);
-        }
+                if (!map.IsInside(t)) break;
+                if (map.GetTile(t) == TileType.Wall) break;
+
+                if (map.GetTile(t) == TileType.Breakable)
+                {
+                    map.BreakTile(t);
+                    if (!_multiHit) break; // MultiHit: continua oltre i breakable
+                    continue;
+                }
+
+                ExplosionTiles.Add(t);
+            }
     }
 
     // ═══════════════════════════════════════════════════════════════════

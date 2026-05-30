@@ -1,10 +1,10 @@
-﻿using System;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using PoopMan.Scenes;
 using PoopMan.UI;
 using PoopManLibrary;
 using PoopManLibrary.World;
+using System;
 
 namespace PoopMan;
 

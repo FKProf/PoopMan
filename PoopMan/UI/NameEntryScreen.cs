@@ -1,9 +1,9 @@
-using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using PoopManLibrary;
 using PoopManLibrary.Scenes;
+using System;
 
 namespace PoopMan.UI;
 

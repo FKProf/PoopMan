@@ -1,1 +1,6 @@
 Source File,Dest File,Processor Type,Content Type,Source File Size,Dest File Size,Build Seconds
+"C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/character/miner_animation.xml","C:\Users\fkpro\source\repos\PoopMan\PoopMan\Content\bin\Windows\Content\image/character/miner_animation.xml","CopyItem","File",3067,3067,10001
+"C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/enemies/bat.xml","C:\Users\fkpro\source\repos\PoopMan\PoopMan\Content\bin\Windows\Content\image/enemies/bat.xml","CopyItem","File",1851,1851,4373
+"C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/fxs/fsx.xml","C:\Users\fkpro\source\repos\PoopMan\PoopMan\Content\bin\Windows\Content\image/fxs/fsx.xml","CopyItem","File",719,719,4627
+"C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/items/items.xml","C:\Users\fkpro\source\repos\PoopMan\PoopMan\Content\bin\Windows\Content\image/items/items.xml","CopyItem","File",3275,3275,4071
+"C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/Tile/TilesetAtlas.xml","C:\Users\fkpro\source\repos\PoopMan\PoopMan\Content\bin\Windows\Content\image/Tile/TilesetAtlas.xml","CopyItem","File",2503,2503,4136

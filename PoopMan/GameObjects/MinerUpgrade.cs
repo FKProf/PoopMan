@@ -1,7 +1,7 @@
+using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Xna.Framework;
 
 namespace PoopMan.GameObjects;
 
@@ -15,7 +15,7 @@ public enum UpgradeType
 
     // ── Offensivi ─────────────────────────────────────────────────────────
     IncreasedDamage, // raggio esplosione +1 tile (max 4)
-    ExplosionDamage, // danno esplosioni: 1 colpo extra ogni 2 livelli upgrade (max 6)
+    ExplosionDamage, // danno esplosioni: +1 danno per ogni livello upgrade (max 5)
     FasterBomb, // timer bomba -0.4 s (max 4 livelli)
     ExtraBomb, // +1 bomba simultanea (max 3 livelli)
     ChainExplosion, // esplosioni a catena tra nemici uccisi (max 4)
@@ -27,7 +27,7 @@ public enum UpgradeType
     // ── Difensivi ────────────────────────────────────────────────────────
     ExplosionResistance, // invincibilità dopo respawn +1 s (max cumulativo)
     DamageReduction, // +0.5 s invincibilità (max cumulativo)
-    Shield, // assorbe 1 colpo ogni N livelli (1 livello)
+    Shield, // assorbe 1 colpo ogni 3 livelli (1 livello)
 
     // ── Speciali ─────────────────────────────────────────────────────────
     MultiHit, // esplosioni ignorano i breakable (1 livello)
@@ -36,7 +36,11 @@ public enum UpgradeType
     StunOnHit, // bat storditi vicino all'esplosione (1 livello)
     SlowOnHit, // bat rallentati vicino all'esplosione (1 livello)
     BonusLoot, // +15% probabilità bonus casse (max 4)
-    DoubleDrop // bat uccisi lasciano sempre item (max 4)
+    DoubleDrop, // bat uccisi lasciano sempre item (max 4)
+
+    // ── Mythic ────────────────────────────────────────────────────────────
+    MythicImmortality, // immunità totale alle esplosioni delle proprie bombe (0,5%)
+    InstantKill // bombe piccole uccidono istantaneamente qualsiasi bat (0,5%)
 }
 
 /// <summary>Dati di presentazione di un upgrade.</summary>
@@ -64,7 +68,7 @@ public static class UpgradeRegistry
 
     // ── Limiti massimi per upgrade cumulativi ─────────────────────────────
     public const int MaxExplosionRange = 4;
-    public const int MaxExplosionDamageSteps = 6;
+    public const int MaxExplosionDamageSteps = 5;
     public const int MaxExtraBombs = 3;
     public const int MaxFasterBombSteps = 4;
     public const int MaxMoveSteps = 6;
@@ -100,7 +104,7 @@ public static class UpgradeRegistry
 
         new(UpgradeType.ExplosionDamage,
             "POTENZA",
-            $"Le bombe normali fanno piu' danni.\n+1 danno ogni 2 livelli (max {MaxExplosionDamageSteps} lv).",
+            $"Le bombe normali fanno piu' danni.\n+1 danno per ogni lv (max {MaxExplosionDamageSteps} lv).",
             new Color(255, 90, 0)),
 
         new(UpgradeType.FasterBomb,
@@ -142,7 +146,7 @@ public static class UpgradeRegistry
 
         new(UpgradeType.Shield,
             "SCUDO",
-            "Assorbe 1 colpo senza danni.\nSi ricarica ogni 5 livelli.",
+            "Assorbe 1 colpo senza danni.\nSi ricarica ogni 3 livelli.",
             Color.Silver),
 
         // ── Speciali ──────────────────────────────────────────────────────
@@ -179,7 +183,18 @@ public static class UpgradeRegistry
         new(UpgradeType.DoubleDrop,
             "BOTTINO",
             $"+15% probabilita' che un bat ucciso\nlasci un item. Max {MaxDoubleDropSteps} lv.",
-            Color.LightYellow)
+            Color.LightYellow),
+
+        // ── Mythic ─────────────────────────────────────────────────────
+        new(UpgradeType.MythicImmortality,
+            "IMMORTALITA' MISTICA",
+            "[MYTHIC] Immunit\u00e0 totale alle\nesplosioni delle proprie bombe.",
+            new Color(220, 180, 30)),
+
+        new(UpgradeType.InstantKill,
+            "KILL ISTANTANEO",
+            "[MYTHIC] Le bombe piccole eliminano\nistantaneamente qualsiasi pipistrello.",
+            new Color(255, 80, 80))
     };
 
     /// <summary>
@@ -210,9 +225,15 @@ public static class UpgradeRegistry
             UpgradeType.SlowOnHit => 1,
             UpgradeType.BonusLoot => MaxBonusLootSteps,
             UpgradeType.DoubleDrop => MaxDoubleDropSteps,
+            UpgradeType.MythicImmortality => 1,
+            UpgradeType.InstantKill => 1,
             _ => 1
         };
     }
+
+    /// <summary>Restituisce true se l'upgrade è di rarità Mythic.</summary>
+    public static bool IsMythic(UpgradeType type) =>
+        type is UpgradeType.MythicImmortality or UpgradeType.InstantKill;
 
     /// <summary>
     ///     Restituisce <paramref name="count" /> upgrade casuali distinti,
@@ -224,17 +245,49 @@ public static class UpgradeRegistry
         IReadOnlyDictionary<UpgradeType, int> currentLevels)
     {
         var rng = new Random();
-        var available = All
+
+        // Separa pool normale e Mythic
+        var normalPool = All
+            .Where(def => !IsMythic(def.Type))
             .Where(def =>
             {
                 var cur = currentLevels.TryGetValue(def.Type, out var v) ? v : 0;
-                var max = MaxLevel(def.Type);
-                return cur < max;
+                return cur < MaxLevel(def.Type);
             })
             .OrderBy(_ => rng.Next())
-            .Take(Math.Min(count, All.Length))
             .ToList();
-        return available;
+
+        var mythicPool = All
+            .Where(def => IsMythic(def.Type))
+            .Where(def =>
+            {
+                var cur = currentLevels.TryGetValue(def.Type, out var v) ? v : 0;
+                return cur < MaxLevel(def.Type);
+            })
+            .ToList();
+
+        var result = new List<UpgradeDef>();
+        var normalIndex = 0;
+
+        for (var i = 0; i < count && result.Count < count; i++)
+        {
+            // Tenta slot Mythic con probabilita' 0,5%
+            if (mythicPool.Count > 0 && rng.NextDouble() < 0.005)
+            {
+                var mythic = mythicPool[rng.Next(mythicPool.Count)];
+                if (!result.Contains(mythic))
+                {
+                    result.Add(mythic);
+                    continue;
+                }
+            }
+
+            // Slot normale
+            if (normalIndex < normalPool.Count)
+                result.Add(normalPool[normalIndex++]);
+        }
+
+        return result;
     }
 
     /// <summary>Overload senza livelli (retrocompatibilità): considera tutti disponibili.</summary>

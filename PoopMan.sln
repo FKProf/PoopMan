@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36915.13
+# Visual Studio Version 18
+VisualStudioVersion = 18.6.11822.322 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoopMan", "PoopMan\PoopMan.csproj", "{27556F98-B2E9-4489-9C87-607DB58537BF}"
 EndProject
@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoopMan.UnitTests", "PoopMan.UnitTests\PoopMan.UnitTests.csproj", "{3AFA901E-3A09-42A0-92A0-C4AABAF3255F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,6 +28,10 @@ Global
 		{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5B6B1CE2-EA92-4DC5-9BDB-5C5FC87792DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3AFA901E-3A09-42A0-92A0-C4AABAF3255F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3AFA901E-3A09-42A0-92A0-C4AABAF3255F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3AFA901E-3A09-42A0-92A0-C4AABAF3255F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3AFA901E-3A09-42A0-92A0-C4AABAF3255F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
