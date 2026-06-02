@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SharpDX.Text;
 
 namespace PoopMan.GameObjects;
 
@@ -12,6 +13,7 @@ public enum UpgradeType
     ExtraLife, // +1 vita immediata (sempre disponibile se vite < max)
     MaxLifeUp, // aumenta il cap max delle vite
     SlowRegen, // recupera 1 vita ogni 5 livelli
+    
 
     // ── Offensivi ─────────────────────────────────────────────────────────
     IncreasedDamage, // raggio esplosione +1 tile (max 4)
@@ -188,7 +190,7 @@ public static class UpgradeRegistry
         // ── Mythic ─────────────────────────────────────────────────────
         new(UpgradeType.MythicImmortality,
             "IMMORTALITA' MISTICA",
-            "[MYTHIC] Immunit\u00e0 totale alle\nesplosioni delle proprie bombe.",
+            "[MYTHIC] Immunita' totale alle\nesplosioni delle proprie bombe.",
             new Color(220, 180, 30)),
 
         new(UpgradeType.InstantKill,
