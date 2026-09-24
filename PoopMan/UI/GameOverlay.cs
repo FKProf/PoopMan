@@ -4,6 +4,7 @@ using PoopMan.GameObjects;
 using PoopManLibrary.World;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace PoopMan.UI;
@@ -51,7 +52,7 @@ public class GameOverlay
         DrawTextCentered(sb, "PUNTEGGIO FINALE", cx, boxY + boxH / 5 + 62, Color.White, 1.1f);
         DrawTextCentered(sb, $"{score}", cx, boxY + boxH / 5 + 92, Color.Gold, 2.0f);
         DrawTextCentered(sb, "---------------------", cx, cy + 20, Color.DarkRed * 1.5f, 1f);
-        DrawTextCentered(sb, "R  /  ENTER  /  Click  per riavviare", cx, cy + 50, Color.LightGray, 1f);
+        DrawTextCentered(sb, "R  /  ENTER  /  Click  per continuare", cx, cy + 50, Color.LightGray, 1f);
         DrawTextCentered(sb, "ESC  per uscire", cx, cy + 76, Color.Gray * 0.9f, 0.85f);
     }
 
@@ -180,51 +181,34 @@ public class GameOverlay
         // Sfondo
         DrawRect(sb, new Rectangle(0, 0, vw, vh), Color.Black * 0.82f);
 
-        // ── Titolo ────────────────────────────────────────────────────────
-        // Abbassato: almeno 12% dall'alto (min 28px) così non tocca il bordo
-        var titleY = Math.Max(28, (int)(vh * 0.12f));
+        if (options.Count == 0) return;
+
+        // ── Titolo ──
+        var titleY = UpgradeTitleY(vh);
         DrawTextCentered(sb, "SCEGLI UN POTENZIAMENTO", cx, titleY, Color.Gold, 2.0f);
         var subtitleScale = vw < 900 ? 0.85f : 1.0f;
         DrawTextCentered(sb, "Frecce / A-D  |  ENTER  |  Click",
             cx, titleY + 46, new Color(170, 170, 170), subtitleScale);
 
-        // ── Layout card adattivo ──────────────────────────────────────────
-        var padding = 14;
-        var gap = Math.Max(10, vw / 80);
-        var cardW = Math.Min(340, (vw - gap * (options.Count + 1)) / options.Count);
-        cardW = Math.Max(cardW, 200);
-
+        // ── Layout card adattivo (condiviso con l'hit-test del mouse) ──
+        var layout = ComputeUpgradeLayout(vw, vh, options, getLevelInfo != null);
+        var padding = UpgradeCardPadding;
+        var cardW = layout.CardW;
+        var cardH = layout.CardH;
+        var cardY = layout.CardY;
         var nameScale = cardW < 260 ? 1.3f : 1.6f;
-        var descScale = cardW < 260 ? 0.85f : 1.0f;
-        var lineH = (int)(_font.MeasureString("A").Y * descScale) + 6;
-
-        var maxDescLines = 0;
-        foreach (var opt in options)
-        {
-            var lc = opt.Description.Split('\n').Length;
-            if (opt.Type == UpgradeType.ExplosionDamage && getLevelInfo != null) lc++;
-            if (lc > maxDescLines) maxDescLines = lc;
-        }
-
-        var headerH = 70;
-        var sepH = 10;
-        var descH = maxDescLines * lineH + 8;
-        var footerH = 36;
-        var badgeH = 30;
-        var cardH = badgeH + headerH + sepH + descH + footerH + padding * 2;
-        cardH = Math.Max(cardH, 220);
-
-        var totalW = options.Count * cardW + (options.Count - 1) * gap;
-        var startX = cx - totalW / 2;
-        var topReserved = titleY + 66;
-        var availableH = vh - topReserved - 20;
-        var cardY = topReserved + Math.Max(0, (availableH - cardH) / 2);
+        var descScale = layout.DescScale;
+        var lineH = layout.LineH;
+        const int headerH = 70;
+        const int sepH = 10;
+        const int footerH = 36;
+        const int badgeH = 30;
 
         for (var i = 0; i < options.Count; i++)
         {
             var opt = options[i];
             var sel = i == selected;
-            var x = startX + i * (cardW + gap);
+            var x = layout.Cards[i].X;
             var nameCx = x + cardW / 2;
             var pulseMul = sel ? 0.88f + 0.12f * pulse : 1f;
 
@@ -320,7 +304,7 @@ public class GameOverlay
             if (opt.Type == UpgradeType.ExplosionDamage && getLevelInfo != null)
             {
                 var (cur, max) = getLevelInfo(opt.Type);
-                var bonusDmg = cur / 2;
+                var bonusDmg = cur; // +1 danno per livello (vedi Miner.ExplosionDamageBonus)
                 var bonusLine = bonusDmg > 0
                     ? $"+{bonusDmg} danno  (Lv {cur}/{max})"
                     : $"Nessun bonus  (Lv {cur}/{max})";
@@ -333,6 +317,77 @@ public class GameOverlay
                 DrawTextCentered(sb, "[ SELEZIONATO ]", nameCx, cardY + cardH - footerH / 2 - bw,
                     opt.Color * pulseMul, 1.0f);
         }
+    }
+
+    // ── Layout menu upgrade ──
+    private const int UpgradeCardPadding = 14;
+
+    private static int UpgradeTitleY(int vh)
+    {
+        // Almeno 12% dall'alto (min 28px) così non tocca il bordo
+        return Math.Max(28, (int)(vh * 0.12f));
+    }
+
+    public readonly struct UpgradeLayout
+    {
+        public readonly Rectangle[] Cards;
+        public readonly int CardW, CardH, CardY, LineH;
+        public readonly float DescScale;
+
+        public UpgradeLayout(Rectangle[] cards, int cardW, int cardH, int cardY, int lineH, float descScale)
+        {
+            Cards = cards;
+            CardW = cardW;
+            CardH = cardH;
+            CardY = cardY;
+            LineH = lineH;
+            DescScale = descScale;
+        }
+    }
+
+    /// <summary>
+    ///     Calcola la posizione delle card del menu upgrade. Usata sia per il disegno
+    ///     sia per l'hit-test del mouse in GameScene, così il click corrisponde sempre
+    ///     alla card visibile.
+    /// </summary>
+    public UpgradeLayout ComputeUpgradeLayout(int vw, int vh, IReadOnlyList<UpgradeDef> options,
+        bool showLevelInfo = true)
+    {
+        var count = Math.Max(1, options.Count);
+        var cx = vw / 2;
+        var gap = Math.Max(10, vw / 80);
+        var cardW = Math.Min(340, (vw - gap * (count + 1)) / count);
+        cardW = Math.Max(cardW, 200);
+
+        var descScale = cardW < 260 ? 0.85f : 1.0f;
+        var lineH = (int)(_font.MeasureString("A").Y * descScale) + 6;
+        var maxTextW = cardW - UpgradeCardPadding * 2;
+        var maxDescLines = 0;
+        foreach (var opt in options)
+        {
+            // Conta le righe reali dopo il word-wrap (evita testo che esce dalla card)
+            var lc = 0;
+            foreach (var raw in opt.Description.Split('\n'))
+                lc += WrapText(raw, descScale, maxTextW).Count();
+            if (opt.Type == UpgradeType.ExplosionDamage && showLevelInfo) lc++;
+            if (lc > maxDescLines) maxDescLines = lc;
+        }
+
+        const int headerH = 70, sepH = 10, footerH = 36, badgeH = 30;
+        var descH = maxDescLines * lineH + 8;
+        var cardH = Math.Max(badgeH + headerH + sepH + descH + footerH + UpgradeCardPadding * 2, 220);
+
+        var totalW = count * cardW + (count - 1) * gap;
+        var startX = cx - totalW / 2;
+        var topReserved = UpgradeTitleY(vh) + 66;
+        var availableH = vh - topReserved - 20;
+        var cardY = topReserved + Math.Max(0, (availableH - cardH) / 2);
+
+        var cards = new Rectangle[options.Count];
+        for (var i = 0; i < options.Count; i++)
+            cards[i] = new Rectangle(startX + i * (cardW + gap), cardY, cardW, cardH);
+
+        return new UpgradeLayout(cards, cardW, cardH, cardY, lineH, descScale);
     }
 
     // ── Word-wrap helper ──────────────────────────────────────────────────

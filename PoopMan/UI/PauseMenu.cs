@@ -44,6 +44,9 @@ public class PauseMenu
         _encyclopedia = new BatEncyclopedia(font, pixel, content);
     }
 
+    /// <summary>True se è visibile il menu principale (non Audio / Enciclopedia).</summary>
+    public bool IsOnMainMenu => _screen == Screen.Menu;
+
     // ── Reset (chiamato quando si apre la pausa) ──────────────────────────
     public void Open()
     {
@@ -77,13 +80,13 @@ public class PauseMenu
         }
 
         // ── Navigazione tastiera ──────────────────────────────────────────
-        if (kb.WasKeyJustPressed(Keys.Up))
+        if (GameController.MenuUp())
         {
             _selected = (_selected - 1 + Items.Length) % Items.Length;
             AudioManager.PlayUIHover();
         }
 
-        if (kb.WasKeyJustPressed(Keys.Down))
+        if (GameController.MenuDown())
         {
             _selected = (_selected + 1) % Items.Length;
             AudioManager.PlayUIHover();
@@ -103,7 +106,9 @@ public class PauseMenu
         {
             var btnY = menuStartY + i * (BtnH + BtnGap);
             var rect = new Rectangle(cx - BtnW / 2, btnY, BtnW, BtnH);
-            if (rect.Contains(mp))
+            // L'hover conta solo se il mouse si muove (o clicca): un cursore fermo
+            // sopra un pulsante non deve sovrascrivere la selezione da tastiera
+            if (rect.Contains(mp) && (mouse.WasMoved || mouse.WasButtonJustPressed(MouseButton.Left)))
             {
                 if (_selected != i)
                 {
@@ -120,7 +125,7 @@ public class PauseMenu
         }
 
         // ── Conferma tastiera ─────────────────────────────────────────────
-        if (kb.WasKeyJustPressed(Keys.Enter))
+        if (GameController.Confirm())
         {
             AudioManager.PlayUIClick();
             return ExecuteItem(_selected);
@@ -250,7 +255,7 @@ public class PauseMenu
         var hintControlY = boxY + headerH + rowsH + 18;
         var hintEscY = boxY + headerH + rowsH + 42;
         DrawTextCentered(sb, "< > volume    ^ v seleziona    M = mute    scroll/click barra",
-            cx, hintControlY, new Color(100, 100, 130), 0.90f);
+            cx, hintControlY, new Color(100, 100, 130), 0.78f);
         DrawTextCentered(sb, "ESC: indietro", cx, hintEscY, Color.DarkGray, 0.95f);
     }
 

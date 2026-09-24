@@ -70,6 +70,14 @@ public sealed class NameEntryScreen : Scene
 
         var shift = kb.IsKeyDown(Keys.LeftShift) || kb.IsKeyDown(Keys.RightShift);
 
+        // Gamepad: Start conferma (A è riservato per non confermare per sbaglio)
+        if (Core.Input.GamePad.WasButtonJustPressed(Buttons.Start))
+        {
+            Confirm();
+            _prevKb = kb;
+            return;
+        }
+
         foreach (var key in pressed)
             if (WasJustPressed(key, kb))
             {

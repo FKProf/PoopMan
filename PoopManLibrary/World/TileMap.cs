@@ -506,6 +506,42 @@ public class TileMap
     }
 
     // -------------------------------------------------------------------------
+    // Restituisce tutte le tile raggiungibili da <start> camminando sulle tile
+    // Empty e (opzionalmente) attraversando i Breakable, che il giocatore può
+    // distruggere con le bombe. I Wall (bordi, pilastri, acqua, lava) bloccano.
+    // Usato per garantire che porta e chiave non finiscano in zone isolate.
+    // -------------------------------------------------------------------------
+    public HashSet<Point> GetReachableTiles(Point start, bool throughBreakables = true)
+    {
+        var visited = new HashSet<Point>();
+        if (!IsInside(start) || map[start.Y, start.X] == TileType.Wall) return visited;
+
+        var queue = new Queue<Point>();
+        queue.Enqueue(start);
+        visited.Add(start);
+
+        int[] dy = { -1, 1, 0, 0 };
+        int[] dx = { 0, 0, -1, 1 };
+
+        while (queue.Count > 0)
+        {
+            var p = queue.Dequeue();
+            for (var i = 0; i < 4; i++)
+            {
+                var next = new Point(p.X + dx[i], p.Y + dy[i]);
+                if (visited.Contains(next) || !IsInside(next)) continue;
+                var tt = map[next.Y, next.X];
+                if (tt == TileType.Wall) continue;
+                if (tt == TileType.Breakable && !throughBreakables) continue;
+                visited.Add(next);
+                queue.Enqueue(next);
+            }
+        }
+
+        return visited;
+    }
+
+    // -------------------------------------------------------------------------
     // Restituisce un tile Empty casuale lontano dagli spawn.
     // -------------------------------------------------------------------------
     public Point? GetRandomWalkableTile(Random rand, int minDistFromSpawn = 4)

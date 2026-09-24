@@ -116,9 +116,23 @@ internal class Bomb
         }
     }
 
+    /// <summary>Tile su cui si trova la bomba.</summary>
+    public Point Tile => new((int)(_position.X / TileMap.TileSize), (int)(_position.Y / TileMap.TileSize));
+
     // ═══════════════════════════════════════════════════════════════════
     // ESPLOSIONE
     // ═══════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    ///     Fa esplodere subito la bomba (reazione a catena o detonatore remoto).
+    ///     Restituisce true se la bomba non era ancora esplosa.
+    /// </summary>
+    public bool Detonate(TileMap map)
+    {
+        if (IsExploding || IsFinished) return false;
+        Explode(map);
+        return true;
+    }
 
     /// <summary>
     ///     Calcola i tile colpiti dall'esplosione e rompe i breakable.

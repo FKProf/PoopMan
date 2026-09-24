@@ -19,6 +19,15 @@ public class GameScene : Scene
 {
     private const float ExtraLifeFlashDuration = 1.5f;
 
+    // Numero massimo di bat per ondata: oltre questa soglia la difficoltà cresce
+    // tramite HP, velocità e varianti speciali, non tramite il numero.
+    private const int MaxBatsPerWave = 28;
+
+    // Upgrade CRITICO: probabilità di uccidere il bat al contatto
+    private const float CriticalChance = 0.20f;
+
+    private static readonly Random _rng = new();
+
     // ── Costanti angoli spawn ─────────────────────────────────────────────
     private static readonly Point[] Corners =
     {
@@ -85,8 +94,15 @@ public class GameScene : Scene
     private SpriteBatch _spriteBatch;
     private List<UpgradeDef> _upgradeOptions = new();
     private float _upgradePulse;
+    private float _upgradeMenuTimer;
+    private const float UpgradeMenuInputDelay = 0.4f;
     private int _upgradeSelected;
     private VisualEffectSystem _vfx;
+
+    // ── Screen shake (solo mappa, l'HUD resta fermo) ──────────────────────
+    private float _shakeDuration;
+    private float _shakeIntensity;
+    private float _shakeTimer;
 
     // ─────────────────────────────────────────────────────────────────────
     public override void Initialize()
@@ -162,6 +178,14 @@ public class GameScene : Scene
         AudioManager.StartGameAudio((int)_map.Theme);
     }
 
+    public override void UnloadContent()
+    {
+        _vfx?.Dispose();
+        _pixel?.Dispose();
+        _spriteBatch?.Dispose();
+        base.UnloadContent();
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     public override void Update(GameTime gameTime)
     {
@@ -171,6 +195,10 @@ public class GameScene : Scene
         }
 
         var pausePressed = GameController.Pause();
+
+        // Screen shake: decade sempre (anche con miner morto / game over)
+        if (_shakeTimer > 0f)
+            _shakeTimer = Math.Max(0f, _shakeTimer - (float)gameTime.ElapsedGameTime.TotalSeconds);
 
         if (_showGameOver)
         {
@@ -195,41 +223,42 @@ public class GameScene : Scene
             var kb = Core.Input.Keyboard;
             var mouse = Core.Input.Mouse;
 
-            if (kb.WasKeyJustPressed(Keys.Left) ||
-                kb.WasKeyJustPressed(Keys.A))
+            _upgradeMenuTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (GameController.MenuLeft())
                 _upgradeSelected = (_upgradeSelected - 1 + _upgradeOptions.Count) % _upgradeOptions.Count;
 
-            if (kb.WasKeyJustPressed(Keys.Right) ||
-                kb.WasKeyJustPressed(Keys.D))
+            if (GameController.MenuRight())
                 _upgradeSelected = (_upgradeSelected + 1) % _upgradeOptions.Count;
 
-            // Mouse: hover selects card, click confirms
+            // Breve ritardo prima di accettare la conferma: evita di scegliere per sbaglio
+            // la prima card premendo A/ENTER mentre si stava ancora giocando.
+            var canConfirm = _upgradeMenuTimer >= UpgradeMenuInputDelay;
+
+            // Mouse: hover selects card, click confirms (stesso layout usato per il disegno)
             {
-                var vw = Core.GraphicsDevice.Viewport.Width;
-                var vh = Core.GraphicsDevice.Viewport.Height;
-                var cardW = Math.Min(320, vw / _upgradeOptions.Count - 20);
-                var cardH = 220;
-                var gap = 18;
-                var totalW = _upgradeOptions.Count * cardW + (_upgradeOptions.Count - 1) * gap;
-                var startX = vw / 2 - totalW / 2;
-                var cardY = vh / 2 - cardH / 2 + 20;
+                var layout = _overlay.ComputeUpgradeLayout(
+                    Core.GraphicsDevice.Viewport.Width, Core.GraphicsDevice.Viewport.Height,
+                    _upgradeOptions);
                 var mp = mouse.Position;
                 for (var i = 0; i < _upgradeOptions.Count; i++)
                 {
-                    var cardRect = new Rectangle(startX + i * (cardW + gap), cardY, cardW, cardH);
-                    if (cardRect.Contains(mp))
+                    var cardRect = layout.Cards[i];
+                    if (cardRect.Contains(mp) &&
+                        (mouse.WasMoved || mouse.WasButtonJustPressed(MouseButton.Left)))
                     {
                         _upgradeSelected = i;
-                        if (mouse.WasButtonJustPressed(MouseButton.Left))
+                        if (canConfirm && mouse.WasButtonJustPressed(MouseButton.Left))
                         {
                             _miner.ApplyUpgrade(_upgradeOptions[_upgradeSelected].Type);
                             _showUpgradeMenu = false;
+                            return;
                         }
                     }
                 }
             }
 
-            if (kb.WasKeyJustPressed(Keys.Enter))
+            if (canConfirm && GameController.Confirm())
             {
                 _miner.ApplyUpgrade(_upgradeOptions[_upgradeSelected].Type);
                 _showUpgradeMenu = false;
@@ -245,10 +274,10 @@ public class GameScene : Scene
                 _isPaused = true;
                 _pauseMenu.Open();
             }
-            else
+            else if (_pauseMenu.IsOnMainMenu)
             {
-                // ESC mentre pausa è aperta: PauseMenu gestisce il back interno,
-                // qui lo trattiamo come "riprendi" se è già nel menu principale
+                // ESC nel menu principale della pausa = riprendi.
+                // Nei sotto-menu (Audio, Enciclopedia) ESC torna indietro: lo gestisce PauseMenu.
                 _isPaused = false;
             }
         }
@@ -279,6 +308,17 @@ public class GameScene : Scene
             {
                 if (bat.IsDead) continue;
                 if (bat.VisualTilePosition != _miner.TilePosition) continue;
+
+                // CRITICO: 20% di probabilità di uccidere il bat al contatto (punti doppi).
+                // Il tiro avviene una sola volta per contatto: se fallisce il miner
+                // viene colpito e diventa invincibile.
+                if (_miner.UpgradeCritical && !bat.WalidDetonating && !bat.IsInvincible &&
+                    _rng.NextDouble() < CriticalChance)
+                {
+                    _score += bat.KillPoints * 2;
+                    bat.Kill();
+                    break;
+                }
 
                 // Walid: avvia la sequenza di detonazione, non danno diretto
                 if (bat.WalidDetonating == false)
@@ -407,6 +447,9 @@ public class GameScene : Scene
 
                 // ── Particelle esplosione bomba (visivamente distinte per big bomb) ───
                 SpawnBombParticles(bomb);
+                AddExplosionFeedback(
+                    new Vector2(bomb.Position.X + TileMap.TileSize * 0.5f, bomb.Position.Y + TileMap.TileSize * 0.5f),
+                    bomb.BigBomb ? VisualEffectSystem.ExplosionType.Big : VisualEffectSystem.ExplosionType.Normal);
 
                 var explosionSet = bomb.ExplosionTiles.ToHashSet();
 
@@ -637,6 +680,14 @@ public class GameScene : Scene
         // ── Mappa + entità → cattura nel render target VFX ───────────────
         var hudScreenH = GameHud.ScreenHeight(Core.GraphicsDevice);
         var transform = Game1.GetMapScaleMatrix(hudScreenH);
+        if (_shakeTimer > 0f && _shakeDuration > 0f && !_isPaused && !_showUpgradeMenu)
+        {
+            var k = _shakeTimer / _shakeDuration; // si smorza nel tempo
+            var amp = _shakeIntensity * k * k;
+            transform *= Matrix.CreateTranslation(
+                (float)(_rng.NextDouble() * 2 - 1) * amp,
+                (float)(_rng.NextDouble() * 2 - 1) * amp, 0f);
+        }
 
         if (_vfx != null)
             _vfx.BeginWorldCapture(_map.BackgroundColor);
@@ -729,7 +780,8 @@ public class GameScene : Scene
             _currentLevel, _hasKey, _currentLevel >= 5, _map.Theme,
             _miner.UpgradeShield, _miner.ShieldActive,
             _miner.ExplosionDamageBonus, _miner.IsInvincible,
-            _miner.UpgradeMythicImmortality, _miner.UpgradeInstantKill);
+            _miner.UpgradeMythicImmortality, _miner.UpgradeInstantKill,
+            _miner.UpgradeRemoteDetonator);
         _spriteBatch.End();
     }
 
@@ -739,6 +791,29 @@ public class GameScene : Scene
     private Point GetRandomCornerSpawn()
     {
         return Corners[new Random().Next(Corners.Length)];
+    }
+
+    /// <summary>Flash/onda d'urto VFX + screen shake proporzionati al tipo di esplosione.</summary>
+    private void AddExplosionFeedback(Vector2 worldCenter, VisualEffectSystem.ExplosionType type)
+    {
+        var transform = Game1.GetMapScaleMatrix(GameHud.ScreenHeight(Core.GraphicsDevice));
+        _vfx?.AddExplosionEffect(worldCenter, transform, type);
+
+        var (intensity, duration) = type switch
+        {
+            VisualEffectSystem.ExplosionType.Nuke => (12f, 0.65f),
+            VisualEffectSystem.ExplosionType.Walid => (7f, 0.40f),
+            VisualEffectSystem.ExplosionType.Big => (5f, 0.30f),
+            _ => (2f, 0.15f)
+        };
+        // Non sovrascrive uno shake più forte ancora in corso
+        var currentAmp = _shakeDuration > 0f ? _shakeIntensity * (_shakeTimer / _shakeDuration) : 0f;
+        if (intensity >= currentAmp)
+        {
+            _shakeIntensity = intensity;
+            _shakeDuration = duration;
+            _shakeTimer = duration;
+        }
     }
 
     /// <summary>
@@ -868,8 +943,15 @@ public class GameScene : Scene
             }
         }
 
+        // ── Le fiamme innescano le bombe del miner presenti nell'area ─────
+        _miner.DetonateBombsInArea(hitTiles, _map);
+
         // ── Audio ─────────────────────────────────────────────────────────
         AudioManager.PlayExplosion(big);
+        AddExplosionFeedback(
+            new Vector2(origin.X * TileMap.TileSize + TileMap.TileSize * 0.5f,
+                origin.Y * TileMap.TileSize + TileMap.TileSize * 0.5f),
+            big ? VisualEffectSystem.ExplosionType.Nuke : VisualEffectSystem.ExplosionType.Walid);
 
         // ── Effetto visivo particelle ─────────────────────────────────────
         var rng = new Random();
@@ -1146,14 +1228,22 @@ public class GameScene : Scene
             hitTiles.Add(t);
         }
 
-        foreach (var b in _bats)
+        _miner.DetonateBombsInArea(hitTiles, _map);
+
+        // Copia della lista: un Splitter ucciso aggiunge mini-bat a _bats durante l'iterazione
+        foreach (var b in _bats.ToList())
             if (!b.IsDead && !b.IsInvincible && hitTiles.Contains(b.VisualTilePosition))
                 if (b.TakeDamage())
                     _score += b.KillPoints;
 
-        if (!_miner.IsDead && !_miner.IsInvincible && hitTiles.Contains(_miner.VisualTilePosition))
+        // La catena nasce dalle bombe del miner: Mythic Immortality la rende innocua
+        if (!_miner.UpgradeMythicImmortality &&
+            !_miner.IsDead && !_miner.IsInvincible && hitTiles.Contains(_miner.VisualTilePosition))
             if (!_miner.TryAbsorbWithShield())
+            {
+                _miner.TriggerDashAfterHit();
                 _miner.Kill();
+            }
     }
 
     private void SpawnMiniBats(Point origin)
@@ -1190,7 +1280,8 @@ public class GameScene : Scene
     private void SpawnBats(int level)
     {
         _bats = new List<Bat>();
-        var count = 1 + level;
+        Bat.ResetSeparationRegistry();
+        var count = Math.Min(1 + level, MaxBatsPerWave);
         var batXml = Path.Combine(Content.RootDirectory, "image", "enemies", "bat.xml");
         var rand = new Random();
         var attempts = 0;
@@ -1310,44 +1401,44 @@ public class GameScene : Scene
         {
             _hasKey = false;
             // Spawn chiave direttamente visibile su un tile calpestabile (lontano dal miner)
-            var candidates = new List<Point>();
-            for (var y = 1; y < 22; y++)
-                for (var x = 1; x < 38; x++)
-                {
-                    var t = new Point(x, y);
-                    if (!_map.IsWalkable(t)) continue;
-                    if (_droppedItems.ContainsKey(t)) continue;
-                    if (Vector2.Distance(new Vector2(x, y),
-                            new Vector2(_miner.TilePosition.X, _miner.TilePosition.Y)) < 12f) continue;
-                    candidates.Add(t);
-                }
-
-            if (candidates.Count > 0)
-            {
-                var keyTile = candidates[rand.Next(candidates.Count)];
-                _droppedItems[keyTile] = new DroppedItem { Type = "key", IsOpen = false, JustSpawned = false };
-            }
+            // e raggiungibile dal miner (eventualmente rompendo blocchi).
+            var keyTile = PickReachableTile(12f, t => !_droppedItems.ContainsKey(t));
+            if (keyTile.HasValue)
+                _droppedItems[keyTile.Value] = new DroppedItem { Type = "key", IsOpen = false, JustSpawned = false };
         }
 
         SpawnDoor();
     }
 
+    /// <summary>
+    ///     Sceglie un tile calpestabile, raggiungibile dal miner (attraversando i blocchi
+    ///     distruttibili) e distante almeno <paramref name="minDistance" /> tile.
+    ///     Se nessun tile soddisfa la distanza, usa il più lontano tra quelli raggiungibili.
+    ///     Evita livelli impossibili con porta/chiave circondate da acqua o lava.
+    /// </summary>
+    private Point? PickReachableTile(float minDistance, Func<Point, bool> extraFilter = null)
+    {
+        var reachable = _map.GetReachableTiles(_miner.TilePosition);
+        var minerPos = new Vector2(_miner.TilePosition.X, _miner.TilePosition.Y);
+
+        var valid = reachable
+            .Where(t => _map.IsWalkable(t) && t != _miner.TilePosition)
+            .Where(t => extraFilter == null || extraFilter(t))
+            .ToList();
+        if (valid.Count == 0) return null;
+
+        var far = valid.Where(t => Vector2.Distance(new Vector2(t.X, t.Y), minerPos) >= minDistance).ToList();
+        if (far.Count > 0) return far[_rng.Next(far.Count)];
+
+        return valid.OrderByDescending(t => Vector2.Distance(new Vector2(t.X, t.Y), minerPos)).First();
+    }
+
     private void SpawnDoor()
     {
-        var candidates = new List<Point>();
-        for (var y = 1; y < 22; y++)
-            for (var x = 1; x < 38; x++)
-            {
-                var t = new Point(x, y);
-                if (!_map.IsWalkable(t)) continue;
-                if (Vector2.Distance(new Vector2(t.X, t.Y),
-                        new Vector2(_miner.TilePosition.X, _miner.TilePosition.Y)) >= 12f)
-                    candidates.Add(t);
-            }
+        var picked = PickReachableTile(12f, t => !_droppedItems.ContainsKey(t));
+        if (!picked.HasValue) return;
 
-        if (candidates.Count == 0) return;
-
-        var doorTile = candidates[new Random().Next(candidates.Count)];
+        var doorTile = picked.Value;
         _droppedItems[doorTile] = new DroppedItem { Type = "door", IsOpen = false, JustSpawned = false };
         _doorSpawned = true;
         _doorPosition = doorTile;
@@ -1433,12 +1524,17 @@ public class GameScene : Scene
             && _currentLevel % UpgradeRegistry.EveryNLevels == 0)
         {
             // Costruisce il dizionario livelli correnti interrogando il miner
+            // Gli upgrade che non avrebbero effetto (es. +1 vita a vite piene,
+            // invincibilità già al massimo) sono trattati come "al massimo" ed esclusi.
             var currentLevels = Enum.GetValues<UpgradeType>()
-                .ToDictionary(t => t, t => _miner.GetUpgradeLevel(t));
+                .ToDictionary(t => t, t => _miner.IsUpgradeUseless(t)
+                    ? UpgradeRegistry.MaxLevel(t)
+                    : _miner.GetUpgradeLevel(t));
             _upgradeOptions = UpgradeRegistry.PickRandom(3, currentLevels);
             _upgradeSelected = 0;
             _upgradePulse = 0f;
-            _showUpgradeMenu = true;
+            _upgradeMenuTimer = 0f;
+            _showUpgradeMenu = _upgradeOptions.Count > 0;
         }
     }
 

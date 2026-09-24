@@ -2,7 +2,6 @@ using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using SharpDX.Text;
 
 namespace PoopMan.GameObjects;
 
@@ -35,6 +34,7 @@ public enum UpgradeType
     MultiHit, // esplosioni ignorano i breakable (1 livello)
     CriticalChance, // 20% critico al contatto (1 livello)
     Magnet, // raccoglie item entro 3 tile (1 livello)
+    RemoteDetonator, // C / gamepad Y fa esplodere subito le proprie bombe (1 livello)
     StunOnHit, // bat storditi vicino all'esplosione (1 livello)
     SlowOnHit, // bat rallentati vicino all'esplosione (1 livello)
     BonusLoot, // +15% probabilità bonus casse (max 4)
@@ -167,6 +167,11 @@ public static class UpgradeRegistry
             "Raccoglie item entro 3 tile\nautomaticamente.",
             Color.HotPink),
 
+        new(UpgradeType.RemoteDetonator,
+            "DETONATORE",
+            "Premi C (gamepad Y) per far\nesplodere subito le tue bombe.",
+            Color.Tomato),
+
         new(UpgradeType.StunOnHit,
             "SHOCKWAVE",
             "Pipistrelli vicini all'esplosione\nsono storditi per 1.5 s.",
@@ -223,6 +228,7 @@ public static class UpgradeRegistry
             UpgradeType.MultiHit => 1,
             UpgradeType.CriticalChance => 1,
             UpgradeType.Magnet => 1,
+            UpgradeType.RemoteDetonator => 1,
             UpgradeType.StunOnHit => 1,
             UpgradeType.SlowOnHit => 1,
             UpgradeType.BonusLoot => MaxBonusLootSteps,
