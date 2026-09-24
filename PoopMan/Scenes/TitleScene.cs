@@ -75,7 +75,7 @@ public class TitleScene : Scene
         if (_screen == MenuScreen.Audio)
         {
             _audioPanel.Update(gameTime);
-            if (kb.WasKeyJustPressed(Keys.Escape) || kb.WasKeyJustPressed(Keys.Back))
+            if (kb.WasKeyJustPressed(Keys.Back) || GameController.Pause())
                 _screen = MenuScreen.Main;
             return;
         }
@@ -83,17 +83,17 @@ public class TitleScene : Scene
         // ── Pannello istruzioni ───────────────────────────────────────
         if (_screen == MenuScreen.Istruzioni)
         {
-            if (kb.WasKeyJustPressed(Keys.Escape) || kb.WasKeyJustPressed(Keys.Back) ||
-                kb.WasKeyJustPressed(Keys.Enter) ||
+            if (kb.WasKeyJustPressed(Keys.Back) || GameController.Pause() ||
+                GameController.Confirm() ||
                 mouse.WasButtonJustPressed(MouseButton.Left))
                 _screen = MenuScreen.Main;
             return;
         }
 
         // ── Menu principale ───────────────────────────────────────────
-        if (kb.WasKeyJustPressed(Keys.Up))
+        if (GameController.MenuUp())
             _selectedItem = (_selectedItem - 1 + MenuItems.Length) % MenuItems.Length;
-        if (kb.WasKeyJustPressed(Keys.Down))
+        if (GameController.MenuDown())
             _selectedItem = (_selectedItem + 1) % MenuItems.Length;
 
         // Mouse: hover selects, click confirms (geometria identica a DrawMainMenu)
@@ -110,7 +110,10 @@ public class TitleScene : Scene
                 var btnRect = new Rectangle(cx - BtnW / 2, btnY, BtnW, BtnH);
                 if (btnRect.Contains(mp))
                 {
-                    _selectedItem = i;
+                    // L'hover seleziona solo se il mouse si muove: un cursore fermo
+                    // sopra un pulsante non deve bloccare la navigazione da tastiera
+                    if (mouse.WasMoved || mouse.WasButtonJustPressed(MouseButton.Left))
+                        _selectedItem = i;
                     if (mouse.WasButtonJustPressed(MouseButton.Left))
                         switch (i)
                         {
@@ -126,7 +129,7 @@ public class TitleScene : Scene
             }
         }
 
-        if (kb.WasKeyJustPressed(Keys.Enter))
+        if (GameController.Confirm())
             switch (_selectedItem)
             {
                 case 0: // GIOCA
@@ -184,7 +187,7 @@ public class TitleScene : Scene
                 break;
         }
 
-        _sb.DrawString(_font, "PoopMan v1.1.1", new Vector2(8, H - 18), Color.DarkGray * 0.7f);
+        _sb.DrawString(_font, "PoopMan v1.2.0", new Vector2(8, H - 18), Color.DarkGray * 0.7f);
         _sb.End();
     }
 
@@ -256,7 +259,7 @@ public class TitleScene : Scene
         var hintControlY = boxY + headerH + rowsH + 18;
         var hintEscY = boxY + headerH + rowsH + 42;
         DrawTextCentered("< > volume    ^ v seleziona    M = mute    scroll/click barra",
-            cx, hintControlY, new Color(100, 100, 130), 0.90f);
+            cx, hintControlY, new Color(100, 100, 130), 0.78f);
         DrawTextCentered("ESC: indietro", cx, hintEscY, Color.DarkGray, 0.95f);
     }
 
@@ -264,7 +267,7 @@ public class TitleScene : Scene
     private void DrawIstruzioniOverlay(int W, int H)
     {
         var boxW = 520;
-        var boxH = 260;
+        var boxH = 300;
         var boxX = W / 2 - boxW / 2;
         var boxY = H / 2 - boxH / 2;
         var cx = W / 2;
@@ -289,8 +292,10 @@ public class TitleScene : Scene
         Line("X              :  piazza bomba grande", Color.LightGray);
         Line("ESC            :  pausa / menu", Color.LightGray);
         Line("F11            :  schermo intero", Color.LightGray);
-        Line("Raccogli chiave, apri porta, avanza!", new Color(180, 255, 160), 0.85f);
-        Line("Guadagna vite extra ogni 500 punti.", new Color(255, 220, 80), 0.80f);
+        Line("C              :  detonatore (se sbloccato)", Color.LightGray);
+        Line("Dal livello 5 serve la chiave per aprire la porta!", new Color(180, 255, 160), 0.85f);
+        Line("Le bombe esplodono a catena. Vita extra ogni 1000 pt.", new Color(255, 220, 80), 0.80f);
+        Line("Supporta il gamepad (A bomba, B big bomb, Start pausa).", new Color(150, 200, 255), 0.80f);
 
         DrawTextCentered("ESC / ENTER: chiudi", cx, boxY + boxH - 18, Color.DarkGray, 0.75f);
     }

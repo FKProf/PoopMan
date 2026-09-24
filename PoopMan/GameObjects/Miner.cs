@@ -194,6 +194,7 @@ public class Miner
     public bool ShieldActive { get; private set; }
 
     public bool UpgradeMagnet { get; private set; }
+    public bool UpgradeRemoteDetonator { get; private set; }
     public bool UpgradeStunOnHit { get; private set; }
     public bool UpgradeSlowOnHit { get; private set; }
     public float DoubleDropChance { get; private set; }
@@ -283,12 +284,30 @@ public class Miner
             UpgradeType.MultiHit => UpgradeMultiHit ? 1 : 0,
             UpgradeType.CriticalChance => UpgradeCritical ? 1 : 0,
             UpgradeType.Magnet => UpgradeMagnet ? 1 : 0,
+            UpgradeType.RemoteDetonator => UpgradeRemoteDetonator ? 1 : 0,
             UpgradeType.StunOnHit => UpgradeStunOnHit ? 1 : 0,
             UpgradeType.SlowOnHit => UpgradeSlowOnHit ? 1 : 0,
             UpgradeType.SlowRegen => SlowRegenActive ? 1 : 0,
             UpgradeType.MythicImmortality => UpgradeMythicImmortality ? 1 : 0,
             UpgradeType.InstantKill => UpgradeInstantKill ? 1 : 0,
             _ => 0
+        };
+    }
+
+    /// <summary>
+    ///     True se scegliere ora questo upgrade non avrebbe alcun effetto
+    ///     (es. +1 vita con vite già al massimo, invincibilità già al cap).
+    ///     GameScene lo usa per non proporre scelte "sprecate" nel menu upgrade.
+    /// </summary>
+    public bool IsUpgradeUseless(UpgradeType type)
+    {
+        return type switch
+        {
+            UpgradeType.ExtraLife => Lives >= MaxLives,
+            UpgradeType.ExplosionResistance or UpgradeType.DamageReduction =>
+                _invincibilityDuration >= UpgradeRegistry.MaxInvincibility,
+            UpgradeType.BonusLoot => BonusLootChance >= 0.60f - 0.001f,
+            _ => false
         };
     }
 
@@ -308,6 +327,7 @@ public class Miner
         HandleInput();
         UpdateDash(gameTime);
         HandleBombPlacement(map);
+        HandleRemoteDetonation(map);
         UpdateBombs(gameTime, map);
         UpdateMovement(map, gameTime);
         UpdateAnimation(gameTime);
@@ -370,11 +390,56 @@ public class Miner
 
     private void UpdateBombs(GameTime gameTime, TileMap map)
     {
+        var wasExploding = _bombs.Where(b => b.IsExploding).ToHashSet();
+
         for (var i = _bombs.Count - 1; i >= 0; i--)
         {
             _bombs[i].Update(gameTime, map);
             if (_bombs[i].IsFinished) _bombs.RemoveAt(i);
         }
+
+        // Reazione a catena: le bombe esplose in questo frame innescano
+        // quelle raggiunte dalle loro fiamme (come nel Bomberman classico).
+        PropagateChainReaction(_bombs.Where(b => b.IsExploding && !wasExploding.Contains(b)), map);
+    }
+
+    /// <summary>
+    ///     Propaga la reazione a catena a partire dalle bombe indicate:
+    ///     ogni bomba non ancora esplosa che si trova nel raggio di un'esplosione
+    ///     detona immediatamente, e così via.
+    /// </summary>
+    private void PropagateChainReaction(IEnumerable<Bomb> sources, TileMap map)
+    {
+        var queue = new Queue<Bomb>(sources);
+        while (queue.Count > 0)
+        {
+            var src = queue.Dequeue();
+            var flames = src.ExplosionTiles.ToHashSet();
+            foreach (var other in _bombs)
+                if (!other.IsExploding && flames.Contains(other.Tile) && other.Detonate(map))
+                    queue.Enqueue(other);
+        }
+    }
+
+    /// <summary>
+    ///     Fa esplodere subito le bombe del miner che si trovano nelle tile indicate
+    ///     (es. esplosione di un Walid/Nuke o mini-esplosione a catena).
+    /// </summary>
+    public void DetonateBombsInArea(IEnumerable<Point> tiles, TileMap map)
+    {
+        var area = tiles.ToHashSet();
+        var detonated = _bombs.Where(b => !b.IsExploding && area.Contains(b.Tile)).ToList();
+        foreach (var b in detonated) b.Detonate(map);
+        PropagateChainReaction(detonated, map);
+    }
+
+    /// <summary>Upgrade DETONATORE: fa esplodere subito tutte le bombe piazzate.</summary>
+    private void HandleRemoteDetonation(TileMap map)
+    {
+        if (!UpgradeRemoteDetonator || !GameController.Detonate()) return;
+        var pending = _bombs.Where(b => !b.IsExploding && !b.IsFinished).ToList();
+        foreach (var b in pending) b.Detonate(map);
+        PropagateChainReaction(pending, map);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -793,6 +858,7 @@ public class Miner
             case UpgradeType.MultiHit: UpgradeMultiHit = true; break;
             case UpgradeType.CriticalChance: UpgradeCritical = true; break;
             case UpgradeType.Magnet: UpgradeMagnet = true; break;
+            case UpgradeType.RemoteDetonator: UpgradeRemoteDetonator = true; break;
             case UpgradeType.StunOnHit: UpgradeStunOnHit = true; break;
             case UpgradeType.SlowOnHit: UpgradeSlowOnHit = true; break;
 

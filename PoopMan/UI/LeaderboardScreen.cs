@@ -115,8 +115,15 @@ public sealed class LeaderboardScreen : Scene
                     HandleButton(_buttons[i].Id);
             }
 
-        // ESC → menu
+        // ESC → menu;  ENTER / R → riavvia (dopo un game over) oppure menu
         if (kb.WasKeyJustPressed(Keys.Escape))
+            GoToMenu();
+        else if (Core.Input.GamePad.WasButtonJustPressed(Buttons.B) ||
+                 Core.Input.GamePad.WasButtonJustPressed(Buttons.Back))
+            GoToMenu();
+        else if (_fromGameOver && (kb.WasKeyJustPressed(Keys.R) || GameController.Confirm()))
+            Core.ChangeScene(new GameScene());
+        else if (!_fromGameOver && GameController.Confirm())
             GoToMenu();
     }
 
@@ -245,8 +252,11 @@ public sealed class LeaderboardScreen : Scene
         }
 
         // ── Suggerimento scroll ───────────────────────────────────────────
-        if (_entries.Count > VisibleRows)
-            DrawTextCentered("W/S  /  rotella mouse per scorrere", cx, vh - 18, Color.Gray * 0.6f, 0.75f);
+        var keysHint = _fromGameOver ? "ENTER/R: riavvia   ESC: menu" : "ENTER/ESC: menu";
+        var hint = _entries.Count > VisibleRows
+            ? "W/S  /  rotella mouse per scorrere     " + keysHint
+            : keysHint;
+        DrawTextCentered(hint, cx, vh - 18, Color.Gray * 0.6f, 0.75f);
 
         _sb.End();
     }

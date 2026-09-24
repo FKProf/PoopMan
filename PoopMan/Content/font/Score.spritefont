@@ -6,6 +6,8 @@
 		<Spacing>1</Spacing>
 		<UseKerning>true</UseKerning>
 		<Style>Regular</Style>
+		<!-- Carattere usato al posto di quelli fuori range (evita crash di DrawString) -->
+		<DefaultCharacter>?</DefaultCharacter>
 		<CharacterRegions>
 			<CharacterRegion>
 				<Start>&#32;</Start>

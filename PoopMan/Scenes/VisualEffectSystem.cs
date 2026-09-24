@@ -82,6 +82,7 @@ internal sealed class VisualEffectSystem : IDisposable
     private int _mapH;
     private int _mapW;
     private Texture2D _pixel;
+    private Texture2D _glow; // sprite radiale morbido per i flash delle esplosioni
     private SpriteBatch _sb;
 
     // ── State ─────────────────────────────────────────────────────────────────
@@ -98,6 +99,7 @@ internal sealed class VisualEffectSystem : IDisposable
     public void Dispose()
     {
         _pixel?.Dispose();
+        _glow?.Dispose();
         _sb?.Dispose();
     }
 
@@ -109,6 +111,7 @@ internal sealed class VisualEffectSystem : IDisposable
         _sb = new SpriteBatch(_gd);
         _pixel = new Texture2D(_gd, 1, 1);
         _pixel.SetData(new[] { Color.White });
+        _glow = CreateRadialGlow(_gd, 64);
         _initialized = true;
     }
 
@@ -283,8 +286,9 @@ internal sealed class VisualEffectSystem : IDisposable
         var screen = Vector2.Transform(worldPos, worldTransform);
         Vector2 uv = new(screen.X / vw, screen.Y / vh);
 
-        // Shockwave ring (CPU-drawn circles later)
-        if (_shockwaves.Count < MaxShockwaves)
+        // Shockwave ring (CPU-drawn circles later) — solo per esplosioni grandi,
+        // le bombe piccole hanno solo il flash per non affollare lo schermo
+        if (type != ExplosionType.Normal && _shockwaves.Count < MaxShockwaves)
         {
             var tint = type switch
             {
@@ -368,24 +372,37 @@ internal sealed class VisualEffectSystem : IDisposable
     private void DrawFlashes(int vw, int vh)
     {
         if (_flashes.Count == 0) return;
-        _sb.Begin(samplerState: SamplerState.PointClamp, blendState: BlendState.Additive);
+        _sb.Begin(samplerState: SamplerState.LinearClamp, blendState: BlendState.Additive);
         foreach (var f in _flashes)
         {
-            var alpha = f.Life * f.Life * 0.50f;
-            var col = f.Col * alpha;
-            var radius = f.RadiusUV * MathF.Sqrt(vw * vw + vh * vh) * 0.5f;
-            for (var layer = 4; layer >= 1; layer--)
-            {
-                var r = radius * layer / 4f;
-                var a = 0.10f / layer;
-                var size = (int)(r * 2);
-                var x = (int)(f.OriginUV.X * vw - r);
-                var y = (int)(f.OriginUV.Y * vh - r);
-                _sb.Draw(_pixel, new Rectangle(x, y, size, size), col * a);
-            }
+            var alpha = f.Life * f.Life * 0.85f;
+            var radius = f.RadiusUV * MathF.Sqrt(vw * vw + vh * vh) * 0.5f * (1.15f - 0.15f * f.Life);
+            var size = (int)(radius * 2);
+            var x = (int)(f.OriginUV.X * vw - radius);
+            var y = (int)(f.OriginUV.Y * vh - radius);
+            _sb.Draw(_glow, new Rectangle(x, y, size, size), f.Col * alpha);
         }
 
         _sb.End();
+    }
+
+    /// <summary>Crea una texture circolare con sfumatura radiale (bianco al centro, trasparente al bordo).</summary>
+    private static Texture2D CreateRadialGlow(GraphicsDevice gd, int size)
+    {
+        var tex = new Texture2D(gd, size, size);
+        var data = new Color[size * size];
+        var c = (size - 1) / 2f;
+        for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var d = MathF.Sqrt((x - c) * (x - c) + (y - c) * (y - c)) / c;
+                var a = Math.Clamp(1f - d, 0f, 1f);
+                a *= a; // falloff morbido
+                data[y * size + x] = Color.White * a;
+            }
+
+        tex.SetData(data);
+        return tex;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

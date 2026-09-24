@@ -65,7 +65,8 @@ public class GameHud
         int level, bool hasKey, bool keyActive, TileMap.MapTheme theme,
         bool hasShield = false, bool shieldActive = false,
         int explosionDmgBonus = 0, bool isInvincible = false,
-        bool mythicImmortality = false, bool instantKill = false)
+        bool mythicImmortality = false, bool instantKill = false,
+        bool hasDetonator = false)
     {
         var cy = (Height - _font.LineSpacing) / 2f;
         var iconH = Height / 32f; // scala icone all'altezza HUD
@@ -191,6 +192,15 @@ public class GameHud
             var shStr = shieldActive ? "[SH]" : "[sh]";
             rx -= (int)_font.MeasureString(shStr).X;
             DrawS(sb, shStr, new Vector2(rx, cy), shColor);
+            rx -= 8;
+        }
+
+        // Detonatore remoto
+        if (hasDetonator)
+        {
+            var detStr = "[DET]";
+            rx -= (int)_font.MeasureString(detStr).X;
+            DrawS(sb, detStr, new Vector2(rx, cy), new Color(255, 99, 71));
             rx -= 8;
         }
 

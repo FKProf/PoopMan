@@ -48,6 +48,8 @@ public class Bat
     // ── Evasione bombe ────────────────────────────────────────────────────
     private readonly HashSet<Point> _dangerTiles = new();
 
+    // Pixel 1×1 bianco condiviso da tutti i bat (una texture per bat causava leak GPU)
+    private static Texture2D _sharedPixel;
     private readonly Texture2D _pixel;
     private readonly float _wanderChangeChance = 0.30f; // probabilità di cambiare direzione in wander
     private readonly float animationSpeed = 0.12f;
@@ -141,9 +143,15 @@ public class Bat
 
         LoadAnimationsFromXml(xmlPath, content);
 
-        // Pixel 1×1 bianco per occhi e aura
-        _pixel = new Texture2D(texture.GraphicsDevice, 1, 1);
-        _pixel.SetData(new[] { Color.White });
+        // Pixel 1×1 bianco per occhi e aura (condiviso)
+        if (_sharedPixel == null || _sharedPixel.IsDisposed ||
+            _sharedPixel.GraphicsDevice != texture.GraphicsDevice)
+        {
+            _sharedPixel = new Texture2D(texture.GraphicsDevice, 1, 1);
+            _sharedPixel.SetData(new[] { Color.White });
+        }
+
+        _pixel = _sharedPixel;
 
         TilePosition = startTile;
         Position = new Vector2(TilePosition.X * TileMap.TileSize,
@@ -252,6 +260,16 @@ public class Bat
             if (_canWalid) return new Color(255, 120, 0, (int)(120 * pulse)); // arancione
             return Color.Transparent;
         }
+    }
+
+    /// <summary>
+    ///     Svuota il registro statico delle posizioni dei bat usato per la separazione.
+    ///     Va chiamato quando si crea una nuova ondata (nuovo livello / nuova partita),
+    ///     altrimenti le posizioni dei bat del livello precedente restano "fantasma".
+    /// </summary>
+    public static void ResetSeparationRegistry()
+    {
+        _allBatPositions.Clear();
     }
 
     /// <summary>Aggiorna le tile pericolose (bombe + esplosioni previste).</summary>

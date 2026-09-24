@@ -36,6 +36,7 @@ Place bombs to destroy breakable tiles, eliminate bat enemies, collect power-ups
 - Biome-specific environment generation: water blobs, lava pools, swamp patches, ruins rubble
 - Tile types: `Wall` (indestructible), `Breakable` (destructible), `Empty` (walkable)
 - All four corners are always cleared for safe spawning
+- The exit door and the key are always placed on tiles **reachable** from the spawn (possibly by breaking blocks) — no more levels sealed off by water or lava
 - Atlas-driven tile rendering via `terrain.png` + `TilesetAtlas.xml`
 
 ### Player (Miner)
@@ -50,6 +51,7 @@ Place bombs to destroy breakable tiles, eliminate bat enemies, collect power-ups
 - **Small bomb** (`Space`): fuse 2 s, base radius 1 tile
 - **Big bomb** (`X`): fuse 2 s, base radius 2 tiles
 - Explosions propagate orthogonally, break `Breakable` tiles, stop at `Wall` tiles
+- **Chain reactions**: an explosion that reaches another bomb detonates it instantly (Walid/Nuke blasts and chain mini-explosions trigger bombs too)
 - Big bombs can be collected as chest drops
 - Particle VFX on explosion (colour-coded by type)
 
@@ -69,6 +71,7 @@ Eight **bat variants**, each with a unique ability, unlocked progressively:
 | Nuke | Lv 20 | Explodes on death — 12×12 tile area (instant kill on all bats in range) |
 
 - Difficulty scales with level: speed, chase chance, sight range, and HP all increase
+- Bat count per wave is `1 + level`, capped at **28**; beyond that difficulty grows through HP, speed and special variants
 - From level 20 onward, multiple variants can appear in the same wave
 - **Robusto** HP progression: +1 HP every 5 levels past 20, cap 6 HP at lv 40+
 - The **exit door** and the **key** are always immune to Nuke explosions
@@ -85,6 +88,7 @@ Eight **bat variants**, each with a unique ability, unlocked progressively:
 
 An upgrade menu appears every **3 levels**, offering 3 random choices.  
 Each upgrade tracks its own level counter and is filtered from the pool when capped.
+Upgrades that would have no effect (e.g. *+1 Vita* with full lives, invincibility already at the 7 s cap) are not offered.
 
 **Vita:**
 | Upgrade | Effect |
@@ -121,6 +125,7 @@ Each upgrade tracks its own level counter and is filtered from the pool when cap
 | Pass-Through | Explosions ignore breakable tiles |
 | Critico | 20 % chance to instantly kill a bat on contact (double points) |
 | Calamita | Auto-collects items within 3 tiles |
+| Detonatore | Press `C` (gamepad `Y`) to detonate all your placed bombs instantly |
 | Shockwave | Nearby bats are stunned 1.5 s after an explosion |
 | Rallenta | Nearby bats slowed 40 % for 3 s after an explosion |
 | Fortuna | +15 % bonus loot chance from chests (max 4 lv) |
@@ -164,7 +169,8 @@ Each upgrade tracks its own level counter and is filtered from the pool when cap
 - Resizable window with **letterbox scaling** (fixed map-world aspect ratio)
 - `F11` toggles fullscreen
 - `SamplerState.PointClamp` throughout (pixel-perfect rendering)
-- Post-process VFX layer: heat distortion on Lava theme, shockwave ring on Nuke explosions
+- VFX overlay: biome vignette, ambient particles, soft radial flash on every explosion, shockwave ring on big bomb / Walid / Nuke explosions
+- Screen shake scaled by explosion size (map only — the HUD stays still)
 
 ## Controls
 
@@ -173,12 +179,26 @@ Each upgrade tracks its own level counter and is filtered from the pool when cap
 | `W` / `A` / `S` / `D` or Arrow keys | Move |
 | `Space` | Place small bomb |
 | `X` | Place big bomb (if available) |
+| `C` | Remote detonation (requires the *Detonatore* upgrade) |
 | `Esc` | Pause / back to title |
 | `Enter` | Confirm / start / restart |
 | `R` | Restart (game over screen) |
 | `F11` | Toggle fullscreen |
 
 > Movement is non-diagonal; input is buffered (up to 2 queued moves).
+
+### Gamepad
+
+| Button | Action |
+|--------|--------|
+| D-pad / left stick | Move / navigate menus |
+| `A` | Place small bomb / confirm |
+| `B` | Place big bomb |
+| `Y` | Remote detonation (*Detonatore*) |
+| `Start` | Pause / confirm |
+| `Back` | Pause / back |
+
+> Mouse hover only changes the selected menu item when the mouse moves, so a resting cursor never blocks keyboard/gamepad navigation.
 
 ## Assets
 
@@ -210,5 +230,4 @@ Each upgrade tracks its own level counter and is filtered from the pool when cap
 - Deterministic map seeds for reproducible levels
 - Win condition / ending screen beyond infinite level loop
 - Additional bat types and advanced pathfinding
-- Gamepad / controller support
 

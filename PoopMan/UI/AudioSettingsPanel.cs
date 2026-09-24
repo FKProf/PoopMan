@@ -81,7 +81,8 @@ public class AudioSettingsPanel
         for (var row = 0; row < 3; row++)
         {
             var rowCy = _lastCy + row * RowSpacing;
-            if (RowHitRect(_lastCx, rowCy).Contains(mp))
+            // Solo se il mouse si muove: un cursore fermo non blocca le frecce
+            if (mouse.WasMoved && RowHitRect(_lastCx, rowCy).Contains(mp))
                 _selectedRow = row;
         }
 
