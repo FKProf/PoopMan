@@ -1,0 +1,111 @@
+name: Release
+
+# Compila il gioco su Windows e pubblica una GitHub Release.
+#
+# Modi per avviarla:
+#  1. Aggiungere .github/release-notes/PoopMan_vX.Y.Z.md e unirlo su main:
+#     il workflow crea il tag PoopMan_vX.Y.Z sul commit e pubblica la release.
+#  2. Fare push di un tag "PoopMan_vX.Y.Z".
+#  3. Avvio manuale (Actions > Release > Run workflow) indicando il tag.
+#
+# Le note di rilascio vengono lette da .github/release-notes/<tag>.md.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/release-notes/PoopMan_v*.md"
+    tags:
+      - "PoopMan_v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag da pubblicare (es. PoopMan_v1.2.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag and version
+        id: meta
+        shell: pwsh
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          $tag = ""
+          if ($env:GITHUB_EVENT_NAME -eq "workflow_dispatch") {
+            $tag = $env:INPUT_TAG
+          } elseif ($env:GITHUB_REF_TYPE -eq "tag") {
+            $tag = $env:GITHUB_REF_NAME
+          } else {
+            # Push su main: usa il file di note di rilascio appena aggiunto
+            $added = git diff --name-only --diff-filter=A $env:BEFORE_SHA $env:GITHUB_SHA -- .github/release-notes/
+            $file = $added | Where-Object { $_ -match 'PoopMan_v[^/]+\.md$' } | Select-Object -Last 1
+            if ($file) { $tag = [IO.Path]::GetFileNameWithoutExtension($file) }
+          }
+          if (-not $tag) {
+            Write-Host "Nessuna nuova release da pubblicare."
+            "skip=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            exit 0
+          }
+          $version = $tag -replace '^PoopMan_v', ''
+          $notes = ".github/release-notes/$tag.md"
+          if (-not (Test-Path $notes)) { "Release $tag" | Out-File -FilePath $notes -Encoding utf8 }
+          "skip=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "notes=$notes" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Tag: $tag  Versione: $version"
+
+      - uses: actions/setup-dotnet@v4
+        if: steps.meta.outputs.skip != 'true'
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Clean content pipeline cache
+        if: steps.meta.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          # La cache MGCB committata nel repo potrebbe far saltare la compilazione degli asset
+          Remove-Item PoopMan/Content/obj, PoopMan/Content/bin -Recurse -Force -ErrorAction SilentlyContinue
+
+      - name: Build (Release, include content pipeline)
+        if: steps.meta.outputs.skip != 'true'
+        run: dotnet build PoopMan/PoopMan.csproj -c Release
+
+      - name: Package
+        if: steps.meta.outputs.skip != 'true'
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          $out = "PoopMan/bin/Release/net9.0-windows"
+          # Nessun salvataggio locale nel pacchetto: ogni giocatore parte con la classifica pulita
+          Remove-Item "$out/leaderboard.json" -ErrorAction SilentlyContinue
+          if (-not (Test-Path "$out/PoopMan.exe")) { throw "PoopMan.exe non trovato in $out" }
+          foreach ($f in "Content/font/Score.xnb", "Content/image/Tile/terrain.xnb", "Content/image/Tile/TilesetAtlas.xml",
+                         "Content/image/items/items.xml", "Content/Audio/BMG/hope.xnb", "Content/Audio/UISounds/UISound.xnb") {
+            if (-not (Test-Path "$out/$f")) { throw "Asset mancante nel pacchetto: $f" }
+          }
+          Compress-Archive -Path "$out/*" -DestinationPath "PoopMan.v$($env:VERSION).zip"
+          Get-Item "PoopMan.v$($env:VERSION).zip" | Format-List Name, Length
+
+      - name: Publish GitHub Release
+        if: steps.meta.outputs.skip != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: PoopMan v${{ steps.meta.outputs.version }}
+          body_path: ${{ steps.meta.outputs.notes }}
+          files: PoopMan.v${{ steps.meta.outputs.version }}.zip
