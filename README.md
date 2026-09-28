@@ -125,7 +125,7 @@ Upgrades that would have no effect (e.g. *+1 Vita* with full lives, invincibilit
 | Pass-Through | Explosions ignore breakable tiles |
 | Critico | 20 % chance to instantly kill a bat on contact (double points) |
 | Calamita | Auto-collects items within 3 tiles |
-| Detonatore | Press `C` (gamepad `Y`) to detonate all your placed bombs instantly |
+| Detonatore | Your bombs have no fuse: they stay armed until you press `C` (gamepad `Y`) — or another explosion sets them off |
 | Shockwave | Nearby bats are stunned 1.5 s after an explosion |
 | Rallenta | Nearby bats slowed 40 % for 3 s after an explosion |
 | Fortuna | +15 % bonus loot chance from chests (max 4 lv) |
@@ -151,7 +151,8 @@ Upgrades that would have no effect (e.g. *+1 Vita* with full lives, invincibilit
 
 ### HUD & UI
 
-- Top HUD bar: score, HP icons (with golden border when **Mythic Immortality** is active), big-bomb count, map theme, level, key indicator
+- Top HUD bar: score, HP icons (with golden border when **Mythic Immortality** is active), big-bomb count, map theme, level, **available small-bomb slots**, key indicator
+- Floating score popups (`+100`, `CRIT!`, `COMBO x3`), pickup texts (`CHIAVE!`, `+1 TNT`) and the name of the upgrade just chosen
 - Small-bomb icon pulses with a special effect when **Instant Kill** is active
 - Skull/explosion ability icon shown when a Mythic upgrade is held
 - **Pause menu** (`Esc`): Audio Settings and Bat Encyclopedia sub-pages
@@ -169,6 +170,12 @@ Upgrades that would have no effect (e.g. *+1 Vita* with full lives, invincibilit
 - Resizable window with **letterbox scaling** (fixed map-world aspect ratio)
 - `F11` toggles fullscreen
 - `SamplerState.PointClamp` throughout (pixel-perfect rendering)
+- **Dynamic 2D lighting** (no shaders): half-resolution light map multiplied over the world. Each biome has its own ambient light (dark caves, warm lava, bright forest); the miner carries a lantern, fuses, explosions, lava pools, keys, the door and bats emit coloured light
+- **Depth**: raised blocks cast soft shadows on the floor, with a highlight on top and a darker front face; soft elliptical shadows under the miner, bats, bombs and items
+- **Bomberman-style flame beams**: bright, emissive cross-shaped flames that connect the tiles of each explosion
+- **Particles**: block debris and dust, explosion smoke and sparks, fuse sparks, footstep dust, pickup bursts
+- Bombs "breathe" (squash & stretch) and blink faster as the fuse runs out; remote bombs pulse red. Bats hover, keys and chests float
+- Modern pixel-art UI: rounded panels with drop shadow and gradient, glowing selected buttons, title screen with floating logo and rising embers, fade-in on every level
 - VFX overlay: biome vignette, ambient particles, soft radial flash on every explosion, shockwave ring on big bomb / Walid / Nuke explosions
 - Screen shake scaled by explosion size (map only — the HUD stays still)
 
@@ -179,7 +186,7 @@ Upgrades that would have no effect (e.g. *+1 Vita* with full lives, invincibilit
 | `W` / `A` / `S` / `D` or Arrow keys | Move |
 | `Space` | Place small bomb |
 | `X` | Place big bomb (if available) |
-| `C` | Remote detonation (requires the *Detonatore* upgrade) |
+| `C` | Remote detonation (requires the *Detonatore* upgrade: with it bombs never explode on their own) |
 | `Esc` | Pause / back to title |
 | `Enter` | Confirm / start / restart |
 | `R` | Restart (game over screen) |

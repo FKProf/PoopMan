@@ -608,6 +608,29 @@ public class TileMap
                tile.Y >= 0 && tile.Y < map.GetLength(0);
     }
 
+    /// <summary>True per acqua / lava / palude (tile Wall ma "piatte": non proiettano ombra).</summary>
+    public bool IsLiquid(Point tile)
+    {
+        return IsInside(tile) && IsHazardVariant(tileVariant[tile.Y, tile.X]);
+    }
+
+    /// <summary>True se la tile è lava (sorgente di luce).</summary>
+    public bool IsLava(Point tile)
+    {
+        return IsInside(tile) && tileVariant[tile.Y, tile.X].StartsWith("lava");
+    }
+
+    /// <summary>
+    ///     True per le tile "alte" (muri, pilastri, blocchi distruttibili) che proiettano
+    ///     ombra sul pavimento. Liquidi e pavimento sono piatti.
+    /// </summary>
+    public bool IsRaised(Point tile)
+    {
+        if (!IsInside(tile)) return false;
+        var t = map[tile.Y, tile.X];
+        return t == TileType.Breakable || (t == TileType.Wall && !IsHazardVariant(tileVariant[tile.Y, tile.X]));
+    }
+
     public TileType GetTile(Point tile)
     {
         if (!IsInside(tile)) return TileType.Wall;

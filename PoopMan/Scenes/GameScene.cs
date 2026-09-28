@@ -99,6 +99,20 @@ public class GameScene : Scene
     private int _upgradeSelected;
     private VisualEffectSystem _vfx;
 
+    // ── Grafica "moderna": luci dinamiche, particelle, ombre ─────────────
+    private LightingSystem _lighting;
+    private ParticleSystem _particles;
+    private Texture2D _shadowTex; // ellisse morbida sotto entità
+    private Texture2D _fadeV; // ombra proiettata dai blocchi (verticale)
+    private Texture2D _fadeH; // ombra proiettata dai blocchi (laterale)
+    private readonly List<Point> _lavaTiles = new();
+    private readonly List<FlashLight> _flashLights = new();
+    private float _fxTime;
+    private float _footDustTimer;
+    private float _fuseSparkTimer;
+    private float _levelFadeTimer;
+    private const float LevelFadeDuration = 0.55f;
+
     // ── Screen shake (solo mappa, l'HUD resta fermo) ──────────────────────
     private float _shakeDuration;
     private float _shakeIntensity;
@@ -135,13 +149,19 @@ public class GameScene : Scene
         // ── TileMap ───────────────────────────────────────────────────────
         _spawnPoint = GetRandomCornerSpawn();
         _map = new TileMap(_atlas, 23, 39, _currentLevel, _spawnPoint);
-        _map.TileBroken += HandleChestDrop;
+        HookMap();
 
         // ── Miner ─────────────────────────────────────────────────────────
         var minerXml = Path.Combine(Content.RootDirectory, "image", "character", "miner_animation.xml");
         _miner = new Miner(_spawnPoint, minerXml, Content);
         _minerHudTexture = Content.Load<Texture2D>("image/character/miner");
-        _miner.NeedsRespawn += (s, e) => _miner.Respawn(_miner.TilePosition);
+        _miner.NeedsRespawn += (s, e) =>
+        {
+            var c = _miner.Position + new Vector2(TileMap.TileSize * 0.5f);
+            _particles?.Burst(c, new Color(255, 70, 70), 20, 140f);
+            _particles?.AddText(c - new Vector2(0, 14), "-1 VITA", new Color(255, 90, 90), 0.8f);
+            _miner.Respawn(_miner.TilePosition);
+        };
         _miner.DeathAnimationFinished += (s, e) => _showGameOver = true;
         _miner.ExtraLifeEarned += (s, e) =>
         {
@@ -173,6 +193,14 @@ public class GameScene : Scene
             TileMap.Cols * TileMap.TileSize,
             TileMap.Rows * TileMap.TileSize);
 
+        _lighting = new LightingSystem(Core.GraphicsDevice,
+            TileMap.Cols * TileMap.TileSize, TileMap.Rows * TileMap.TileSize);
+        _particles = new ParticleSystem(Core.GraphicsDevice);
+        _shadowTex = FxTextures.CreateEllipse(Core.GraphicsDevice, 24, 8);
+        _fadeV = FxTextures.CreateVerticalFade(Core.GraphicsDevice, 14);
+        _fadeH = FxTextures.CreateHorizontalFade(Core.GraphicsDevice, 8);
+        _levelFadeTimer = 0f;
+
         // ── Audio: avvia BGM per il tema corrente ─────────────────────────
         AudioManager.Load(Content); // no-op se già caricato
         AudioManager.StartGameAudio((int)_map.Theme);
@@ -181,6 +209,11 @@ public class GameScene : Scene
     public override void UnloadContent()
     {
         _vfx?.Dispose();
+        _lighting?.Dispose();
+        _particles?.Dispose();
+        _shadowTex?.Dispose();
+        _fadeV?.Dispose();
+        _fadeH?.Dispose();
         _pixel?.Dispose();
         _spriteBatch?.Dispose();
         base.UnloadContent();
@@ -250,8 +283,7 @@ public class GameScene : Scene
                         _upgradeSelected = i;
                         if (canConfirm && mouse.WasButtonJustPressed(MouseButton.Left))
                         {
-                            _miner.ApplyUpgrade(_upgradeOptions[_upgradeSelected].Type);
-                            _showUpgradeMenu = false;
+                            ApplyChosenUpgrade();
                             return;
                         }
                     }
@@ -259,10 +291,7 @@ public class GameScene : Scene
             }
 
             if (canConfirm && GameController.Confirm())
-            {
-                _miner.ApplyUpgrade(_upgradeOptions[_upgradeSelected].Type);
-                _showUpgradeMenu = false;
-            }
+                ApplyChosenUpgrade();
 
             return;
         }
@@ -315,7 +344,7 @@ public class GameScene : Scene
                 if (_miner.UpgradeCritical && !bat.WalidDetonating && !bat.IsInvincible &&
                     _rng.NextDouble() < CriticalChance)
                 {
-                    _score += bat.KillPoints * 2;
+                    AwardKill(bat, bat.KillPoints * 2, new Color(255, 90, 90), "CRIT! ");
                     bat.Kill();
                     break;
                 }
@@ -352,7 +381,9 @@ public class GameScene : Scene
                 }
 
         // ── Miner su item droppato ────────────────────────────────────────
-        if (!_miner.IsDead && !_miner.IsInvincible)
+        // (anche durante l'invincibilità post-colpo: prima chiave/casse/porta
+        //  venivano ignorate finché il miner lampeggiava)
+        if (!_miner.IsDead)
         {
             foreach (var it in _droppedItems.Values)
                 it.JustSpawned = false;
@@ -372,11 +403,13 @@ public class GameScene : Scene
                     {
                         _miner.AddBigBomb();
                         _droppedItems.Remove(t);
+                        PickupFeedback(t, "+1 TNT", new Color(255, 170, 60));
                     }
                     else if (it.Type == "key")
                     {
                         _hasKey = true;
                         _droppedItems.Remove(t);
+                        PickupFeedback(t, "CHIAVE!", new Color(255, 215, 60));
                     }
                 }
             }
@@ -394,12 +427,14 @@ public class GameScene : Scene
                     item.IsOpen = true;
                     _miner.AddBigBomb();
                     _droppedItems.Remove(_miner.TilePosition);
+                    PickupFeedback(_miner.TilePosition, "+1 TNT", new Color(255, 170, 60));
                 }
                 else if (item.Type == "key")
                 {
                     item.IsOpen = true;
                     _hasKey = true;
                     _droppedItems.Remove(_miner.TilePosition);
+                    PickupFeedback(_miner.TilePosition, "CHIAVE!", new Color(255, 215, 60));
                 }
             }
         }
@@ -447,6 +482,8 @@ public class GameScene : Scene
 
                 // ── Particelle esplosione bomba (visivamente distinte per big bomb) ───
                 SpawnBombParticles(bomb);
+                foreach (var et in bomb.ExplosionTiles)
+                    _particles?.ExplosionTile(TileCenter(et), bomb.BigBomb);
                 AddExplosionFeedback(
                     new Vector2(bomb.Position.X + TileMap.TileSize * 0.5f, bomb.Position.Y + TileMap.TileSize * 0.5f),
                     bomb.BigBomb ? VisualEffectSystem.ExplosionType.Big : VisualEffectSystem.ExplosionType.Normal);
@@ -521,14 +558,14 @@ public class GameScene : Scene
                     {
                         // Bomba grande: instant kill, ignora IsInvincible (Kill non lo controlla)
                         killed = true;
-                        _score += b.KillPoints;
+                        AwardKill(b, b.KillPoints);
                         b.Kill();
                     }
                     else if (_miner.UpgradeInstantKill)
                     {
                         // Instant Kill: uccide istantaneamente qualsiasi bat con bomba piccola
                         killed = true;
-                        _score += b.KillPoints;
+                        AwardKill(b, b.KillPoints);
                         b.Kill();
                     }
                     else
@@ -536,7 +573,7 @@ public class GameScene : Scene
                         // Bomba normale: applica danno base + bonus ExplosionDamage upgrade
                         var dmg = 1 + _miner.ExplosionDamageBonus;
                         killed = b.TakeDamage(dmg);
-                        if (killed) _score += b.KillPoints;
+                        if (killed) AwardKill(b, b.KillPoints);
                     }
 
                     if (killed)
@@ -572,7 +609,12 @@ public class GameScene : Scene
             } // fine foreach bomb
 
             // Bonus streak (2+ bat uccisi nella stessa esplosione)
-            if (_killStreak >= 2) _score += (_killStreak - 1) * 75;
+            if (_killStreak >= 2)
+            {
+                _score += (_killStreak - 1) * 75;
+                _particles?.AddText(_miner.Position + new Vector2(TileMap.TileSize * 0.5f, -10f),
+                    $"COMBO x{_killStreak}  +{(_killStreak - 1) * 75}", new Color(120, 230, 255), 0.85f);
+            }
             _miner.CheckExtraLife(_score);
         }
 
@@ -584,6 +626,9 @@ public class GameScene : Scene
 
         // ── Aggiorna entità ───────────────────────────────────────────────
         _miner.Update(_map, gameTime);
+
+        // Effetti grafici: continuano anche durante l'animazione di morte
+        UpdateWorldFx(gameTime);
 
         if (_miner.IsDead) return;
 
@@ -634,7 +679,7 @@ public class GameScene : Scene
                         var continuousDmg = 1 + _miner.ExplosionDamageBonus;
                         killed = bat.TakeDamage(continuousDmg);
                     }
-                    if (killed) _score += bat.KillPoints;
+                    if (killed) AwardKill(bat, bat.KillPoints);
                 }
         }
 
@@ -646,32 +691,6 @@ public class GameScene : Scene
             _itemAnimFrame++;
         }
 
-        // ── Aggiorna particelle esplosione bat ────────────────────────────
-        var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-        for (var i = _batExplosionParticles.Count - 1; i >= 0; i--)
-        {
-            var p = _batExplosionParticles[i];
-            p.Life -= dt;
-            if (p.Life <= 0f)
-            {
-                _batExplosionParticles.RemoveAt(i);
-                continue;
-            }
-
-            p.Position += p.Velocity * dt;
-            p.Velocity *= 0.88f; // attrito
-            _batExplosionParticles[i] = p;
-        }
-
-        // ── TileMap (animazione liquidi) ──────────────────────────────────
-        _map.Update(gameTime);
-
-        // ── VFX update ───────────────────────────────────────────────────
-        var mapTransform = Game1.GetMapScaleMatrix(GameHud.ScreenHeight(Core.GraphicsDevice));
-        _vfx?.Update(gameTime, _map.Theme,
-            TileMap.Cols * TileMap.TileSize,
-            TileMap.Rows * TileMap.TileSize,
-            () => Enumerable.Empty<(Vector2, Color, float)>());
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -689,50 +708,30 @@ public class GameScene : Scene
                 (float)(_rng.NextDouble() * 2 - 1) * amp, 0f);
         }
 
+        // ── Light map (va resa PRIMA di disegnare il mondo nel back buffer) ──
+        if (_lighting != null)
+        {
+            CollectLights();
+            _lighting.RenderLightMap();
+        }
+
         if (_vfx != null)
             _vfx.BeginWorldCapture(_map.BackgroundColor);
         else
             Core.GraphicsDevice.Clear(_map.BackgroundColor);
 
+        // ── Terreno + ombre proiettate dai blocchi ───────────────────────
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: transform);
-
         _map.Draw(_spriteBatch);
+        DrawTileDepth();
+        _spriteBatch.End();
 
-        // Item droppati
-        foreach (var item in _droppedItems)
-        {
-            string animKey;
-            var frame = 0;
-
-            if (item.Value.Type == "door")
-            {
-                var needsKey = _currentLevel >= 5;
-                if (item.Value.IsOpening)
-                    animKey = needsKey ? "door_key" : "door_opening";
-                else
-                    animKey = needsKey ? "door_key_closed" : "door_closed";
-                frame = item.Value.IsOpening ? item.Value.OpeningFrame : 0;
-            }
-            else if (item.Value.Type == "key")
-            {
-                animKey = "key";
-                frame = _itemAnimFrame % (_itemAnimations.ContainsKey("key") ? _itemAnimations["key"].Count : 1);
-            }
-            else
-            {
-                animKey = "chest";
-                frame = _itemAnimFrame % (_itemAnimations.ContainsKey("chest") ? _itemAnimations["chest"].Count : 1);
-            }
-
-            if (!_itemAnimations.TryGetValue(animKey, out var frames) || frames.Count == 0) continue;
-            frame = Math.Min(frame, frames.Count - 1);
-            var pos = new Vector2(item.Key.X * TileMap.TileSize,
-                item.Key.Y * TileMap.TileSize);
-            _spriteBatch.Draw(_itemTexture, pos, frames[frame], Color.White);
-        }
+        // ── Entità ───────────────────────────────────────────────────────
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: transform);
+        DrawEntityShadows();
+        DrawItems();
 
         _miner.Draw(_spriteBatch);
-
 
         foreach (var b in _bats) b.Draw(_spriteBatch);
 
@@ -747,17 +746,45 @@ public class GameScene : Scene
                     (int)(p.Position.Y - s / 2f), s, s), c);
         }
 
+        // Detriti e fumo
+        _particles?.DrawAlpha(_spriteBatch);
         _spriteBatch.End();
 
-        // ── Post-processing (compositing al back buffer con effetti) ─────
-        if (_vfx != null)
+        // ── Illuminazione: mondo × light map, poi aloni additivi ─────────
+        _lighting?.ApplyLightMap(transform);
+        if (_particles != null)
         {
-            _vfx.ApplyPostProcess(transform);
+            _spriteBatch.Begin(samplerState: SamplerState.LinearClamp, blendState: BlendState.Additive,
+                transformMatrix: transform);
+            _particles.DrawAdditive(_spriteBatch);
+            _spriteBatch.End();
         }
-        else
+
+        _lighting?.DrawGlow(transform);
+
+        // Fiamme delle esplosioni: emissive, sopra la luce
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: transform);
+        foreach (var b in _miner.Bombs) b.DrawFlame(_spriteBatch, _pixel, _fxTime);
+        _spriteBatch.End();
+
+        // ── Post-processing (vignetta, flash, onde d'urto, particelle ambientali) ──
+        _vfx?.ApplyPostProcess(transform);
+
+        // ── Testi fluttuanti (punteggio / raccolta) sopra luci ed effetti ──
+        if (_particles != null)
         {
-            Core.GraphicsDevice.Clear(_map.BackgroundColor);
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: transform);
+            _particles.DrawTexts(_spriteBatch, _scoreFont);
+            _spriteBatch.End();
+        }
+
+        // ── Dissolvenza d'ingresso nel livello ───────────────────────────
+        if (_levelFadeTimer < LevelFadeDuration)
+        {
+            var k = 1f - _levelFadeTimer / LevelFadeDuration;
+            _spriteBatch.Begin();
+            _spriteBatch.Draw(_pixel, new Rectangle(0, hudScreenH, Core.GraphicsDevice.Viewport.Width,
+                Core.GraphicsDevice.Viewport.Height - hudScreenH), Color.Black * (k * k));
             _spriteBatch.End();
         }
 
@@ -774,6 +801,8 @@ public class GameScene : Scene
         _spriteBatch.End();
 
         // ── HUD ridisegnato sopra gli overlay così è sempre visibile ─────
+        // (tranne sopra l'enciclopedia, che occupa tutto lo schermo e ha il titolo in alto)
+        if (_isPaused && _pauseMenu.IsFullScreen) return;
         var hudMatrix2 = GameHud.GetHudMatrix(Core.GraphicsDevice);
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: hudMatrix2);
         _hud.Draw(_spriteBatch, _score, _miner.Lives, _miner.MaxLives, _miner.BigBombCount,
@@ -781,8 +810,366 @@ public class GameScene : Scene
             _miner.UpgradeShield, _miner.ShieldActive,
             _miner.ExplosionDamageBonus, _miner.IsInvincible,
             _miner.UpgradeMythicImmortality, _miner.UpgradeInstantKill,
-            _miner.UpgradeRemoteDetonator);
+            _miner.UpgradeRemoteDetonator, _miner.BombsAvailable, _miner.BombCapacity);
         _spriteBatch.End();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Grafica: luci, ombre, particelle
+    // ─────────────────────────────────────────────────────────────────────
+
+    private static Vector2 TileCenter(Point t)
+    {
+        return new Vector2(t.X * TileMap.TileSize + TileMap.TileSize * 0.5f,
+            t.Y * TileMap.TileSize + TileMap.TileSize * 0.5f);
+    }
+
+    /// <summary>Collega gli eventi della mappa corrente e ricalcola le sorgenti di luce fisse.</summary>
+    private void HookMap()
+    {
+        _map.TileBroken += HandleChestDrop;
+        _map.TileBroken += SpawnBlockDebris;
+
+        _lavaTiles.Clear();
+        for (var y = 0; y < TileMap.Rows; y++)
+            for (var x = 0; x < TileMap.Cols; x++)
+                if (_map.IsLava(new Point(x, y)))
+                    _lavaTiles.Add(new Point(x, y));
+    }
+
+    private void SpawnBlockDebris(Point tile)
+    {
+        var (main, dark) = _map.Theme switch
+        {
+            TileMap.MapTheme.Cave or TileMap.MapTheme.Lava or TileMap.MapTheme.Ruins =>
+                (new Color(150, 150, 160), new Color(80, 80, 95)),
+            _ => (new Color(150, 95, 55), new Color(90, 55, 30))
+        };
+        _particles?.BlockDebris(TileCenter(tile), main, dark);
+    }
+
+    /// <summary>Aggiunge punti per un bat ucciso e mostra il testo "+N" sopra di lui.</summary>
+    private void AwardKill(Bat bat, int points, Color? color = null, string prefix = "")
+    {
+        _score += points;
+        var pos = bat.Position + new Vector2(TileMap.TileSize * 0.5f, 2f);
+        _particles?.AddText(pos, $"{prefix}+{points}", color ?? new Color(255, 236, 120), 0.75f);
+    }
+
+    private void PickupFeedback(Point tile, string text, Color color)
+    {
+        var c = TileCenter(tile);
+        _particles?.Burst(c, color, 18, 120f);
+        _particles?.AddText(c - new Vector2(0, 12), text, color, 0.85f);
+        _flashLights.Add(new FlashLight(c, 90f, color, 0.35f));
+    }
+
+    private void ApplyChosenUpgrade()
+    {
+        var def = _upgradeOptions[_upgradeSelected];
+        _miner.ApplyUpgrade(def.Type);
+        _showUpgradeMenu = false;
+
+        var c = _miner.Position + new Vector2(TileMap.TileSize * 0.5f);
+        _particles?.Burst(c, def.Color, 28, 160f);
+        _particles?.AddText(c - new Vector2(0, 16), def.Name.Replace("\n", " "), def.Color, 0.85f);
+    }
+
+    /// <summary>Aggiorna particelle, luci temporanee, animazioni della mappa e VFX.</summary>
+    private void UpdateWorldFx(GameTime gameTime)
+    {
+        var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        _fxTime += dt;
+        _levelFadeTimer += dt;
+
+        // ── Particelle esplosione bat ─────────────────────────────────────
+        for (var i = _batExplosionParticles.Count - 1; i >= 0; i--)
+        {
+            var p = _batExplosionParticles[i];
+            p.Life -= dt;
+            if (p.Life <= 0f)
+            {
+                _batExplosionParticles.RemoveAt(i);
+                continue;
+            }
+
+            p.Position += p.Velocity * dt;
+            p.Velocity *= 0.88f; // attrito
+            _batExplosionParticles[i] = p;
+        }
+
+        _particles?.Update(dt);
+
+        for (var i = _flashLights.Count - 1; i >= 0; i--)
+        {
+            var f = _flashLights[i];
+            f.Life -= dt;
+            if (f.Life <= 0f) _flashLights.RemoveAt(i);
+            else _flashLights[i] = f;
+        }
+
+        if (_particles != null && !_miner.IsDead)
+        {
+            // Scintille delle micce accese
+            _fuseSparkTimer += dt;
+            if (_fuseSparkTimer >= 0.045f)
+            {
+                _fuseSparkTimer = 0f;
+                foreach (var b in _miner.Bombs)
+                    if (!b.IsExploding && !b.IsFinished)
+                        _particles.FuseSpark(b.FusePosition, b.IsRemote);
+            }
+
+            // Polvere sotto i piedi mentre il miner cammina
+            if (_miner.IsMoving)
+            {
+                _footDustTimer += dt;
+                if (_footDustTimer >= 0.14f)
+                {
+                    _footDustTimer = 0f;
+                    var tint = _map.Theme switch
+                    {
+                        TileMap.MapTheme.Ice => new Color(220, 235, 255),
+                        TileMap.MapTheme.Lava => new Color(120, 90, 80),
+                        TileMap.MapTheme.Swamp => new Color(120, 140, 90),
+                        TileMap.MapTheme.Forest => new Color(170, 200, 130),
+                        _ => new Color(170, 160, 140)
+                    };
+                    _particles.FootDust(_miner.Position + new Vector2(16f, 29f), tint);
+                }
+            }
+        }
+
+        // ── TileMap (animazione liquidi) ──────────────────────────────────
+        _map.Update(gameTime);
+
+        // ── VFX update ───────────────────────────────────────────────────
+        _vfx?.Update(gameTime, _map.Theme,
+            TileMap.Cols * TileMap.TileSize,
+            TileMap.Rows * TileMap.TileSize,
+            () => Enumerable.Empty<(Vector2, Color, float)>());
+    }
+
+    /// <summary>Raccoglie le sorgenti di luce del frame per la light map.</summary>
+    private void CollectLights()
+    {
+        _lighting.Clear();
+        _lighting.Theme = _map.Theme;
+        var half = new Vector2(TileMap.TileSize * 0.5f);
+        var flicker = 1f + 0.05f * MathF.Sin(_fxTime * 13f) + 0.03f * MathF.Sin(_fxTime * 31f);
+
+        // Miner: "lanterna" calda che lo segue
+        if (!_miner.IsDead || !_miner.IsDeathAnimationFinished)
+        {
+            var r = _map.Theme == TileMap.MapTheme.Cave ? 190f : 165f;
+            _lighting.AddLight(_miner.Position + half, r * flicker, new Color(255, 236, 205), 0.95f);
+        }
+
+        // Bombe: bagliore della miccia / fiamme dell'esplosione
+        foreach (var b in _miner.Bombs)
+        {
+            if (b.IsFinished) continue;
+            if (b.IsExploding)
+            {
+                var k = 1f - b.ExplosionProgress;
+                foreach (var t in b.ExplosionTiles)
+                {
+                    var c = TileCenter(t);
+                    _lighting.AddLight(c, 78f, new Color(255, 190, 110), k);
+                    _lighting.AddGlow(c, 44f, new Color(255, 140, 50), 0.40f * k);
+                }
+            }
+            else
+            {
+                var col = b.IsRemote ? new Color(255, 70, 60) : new Color(255, 170, 70);
+                _lighting.AddLight(b.FusePosition, 52f * flicker, col, 0.85f);
+                _lighting.AddGlow(b.FusePosition, 14f * flicker, col, 0.55f);
+            }
+        }
+
+        // Lava: pozze luminose che pulsano lentamente
+        foreach (var t in _lavaTiles)
+        {
+            var c = TileCenter(t);
+            var pulse = 0.75f + 0.12f * MathF.Sin(_fxTime * 2.1f + t.X * 0.9f + t.Y * 1.7f);
+            _lighting.AddLight(c, 56f, new Color(255, 120, 45), pulse);
+            _lighting.AddGlow(c, 26f, new Color(255, 90, 20), 0.14f * pulse);
+        }
+
+        // Oggetti: porta, chiave, casse
+        foreach (var kv in _droppedItems)
+        {
+            var c = TileCenter(kv.Key);
+            var pulse = 0.8f + 0.2f * MathF.Sin(_fxTime * 3f + kv.Key.X);
+            switch (kv.Value.Type)
+            {
+                case "door":
+                    var open = !(_currentLevel >= 5 && !_hasKey);
+                    _lighting.AddLight(c, 70f, open ? new Color(255, 225, 150) : new Color(170, 170, 210), 0.7f * pulse);
+                    break;
+                case "key":
+                    _lighting.AddLight(c, 58f, new Color(255, 215, 90), 0.85f * pulse);
+                    _lighting.AddGlow(c, 22f, new Color(255, 200, 60), 0.30f * pulse);
+                    break;
+                default:
+                    _lighting.AddLight(c, 40f, new Color(255, 190, 120), 0.5f * pulse);
+                    break;
+            }
+        }
+
+        // Bat: piccolo alone del colore dell'aura / occhi (restano visibili al buio)
+        foreach (var bat in _bats)
+        {
+            if (bat.IsDead) continue;
+            var col = bat.HasAura ? bat.AuraColor : new Color(190, 170, 255);
+            col.A = 255;
+            _lighting.AddLight(bat.Position + half, 40f, col, 0.45f);
+        }
+
+        // Scintille: micro-luci (solo le più "vive", per non appesantire)
+        if (_particles != null)
+        {
+            var n = 0;
+            foreach (var (pos, col, life) in _particles.Sparks())
+            {
+                if (life < 0.4f) continue;
+                _lighting.AddLight(pos, 16f, col, 0.5f * life);
+                if (++n >= 80) break;
+            }
+        }
+
+        // Lampi temporanei (esplosioni, raccolta oggetti)
+        foreach (var f in _flashLights)
+        {
+            var k = f.Life / f.MaxLife;
+            _lighting.AddLight(f.Pos, f.Radius * (1.1f - 0.1f * k), f.Color, k);
+        }
+    }
+
+    /// <summary>
+    ///     Profondità del terreno: i blocchi alti proiettano un'ombra morbida sul
+    ///     pavimento sottostante e a destra; bordo chiaro in cima e faccia frontale
+    ///     più scura danno volume ai blocchi.
+    /// </summary>
+    private void DrawTileDepth()
+    {
+        var ts = TileMap.TileSize;
+        for (var y = 0; y < TileMap.Rows; y++)
+            for (var x = 0; x < TileMap.Cols; x++)
+            {
+                var p = new Point(x, y);
+                if (_map.IsRaised(p))
+                {
+                    // Luce dall'alto: bordo superiore chiaro, bordo inferiore scuro
+                    if (!_map.IsRaised(new Point(x, y - 1)))
+                        _spriteBatch.Draw(_pixel, new Rectangle(x * ts, y * ts, ts, 2), Color.White * 0.16f);
+                    if (!_map.IsRaised(new Point(x, y + 1)))
+                        _spriteBatch.Draw(_pixel, new Rectangle(x * ts, y * ts + ts - 4, ts, 4), Color.Black * 0.28f);
+                    continue;
+                }
+
+                // Pavimento / liquidi: ricevono l'ombra dei blocchi vicini
+                if (_map.IsRaised(new Point(x, y - 1)))
+                    _spriteBatch.Draw(_fadeV, new Rectangle(x * ts, y * ts, ts, 14), Color.Black * 0.42f);
+                if (_map.IsRaised(new Point(x - 1, y)))
+                    _spriteBatch.Draw(_fadeH, new Rectangle(x * ts, y * ts, 8, ts), Color.Black * 0.26f);
+            }
+    }
+
+    /// <summary>Ombre ellittiche sotto miner, bat, bombe e oggetti.</summary>
+    private void DrawEntityShadows()
+    {
+        void Shadow(Vector2 center, float w, float h, float alpha)
+        {
+            _spriteBatch.Draw(_shadowTex, new Rectangle((int)(center.X - w / 2f), (int)(center.Y - h / 2f),
+                (int)w, (int)h), Color.Black * alpha);
+        }
+
+        foreach (var kv in _droppedItems)
+        {
+            if (kv.Value.Type == "door") continue;
+            var c = new Vector2(kv.Key.X * TileMap.TileSize + 16f, kv.Key.Y * TileMap.TileSize + 28f);
+            var lift = ItemBob(kv.Key); // più l'oggetto sale, più l'ombra si stringe
+            Shadow(c, 20f + lift, 6f, 0.30f);
+        }
+
+        foreach (var b in _miner.Bombs)
+            if (!b.IsExploding && !b.IsFinished)
+                Shadow(b.Position + new Vector2(16f, 29f), 22f, 7f, 0.35f);
+
+        if (!_miner.IsDead)
+            Shadow(_miner.Position + new Vector2(16f, 29f), 22f, 7f, 0.38f);
+
+        foreach (var bat in _bats)
+        {
+            if (bat.IsDead) continue;
+            var sc = bat.DrawScale;
+            // Il bat vola: ombra più piccola e chiara, "respira" con il volo
+            var k = 1f - bat.HoverOffset * 0.05f;
+            Shadow(bat.Position + new Vector2(16f, 30f), 16f * sc * k, 5f * sc, 0.24f);
+        }
+    }
+
+    /// <summary>Oscillazione verticale degli oggetti raccoglibili (pixel, ≤ 0).</summary>
+    private float ItemBob(Point tile)
+    {
+        return MathF.Round(-2f - 2f * MathF.Sin(_fxTime * 3.2f + tile.X * 0.7f + tile.Y * 0.3f));
+    }
+
+    /// <summary>Porta, chiavi e casse (le ultime due fluttuano).</summary>
+    private void DrawItems()
+    {
+        foreach (var item in _droppedItems)
+        {
+            string animKey;
+            var frame = 0;
+            var bob = 0f;
+
+            if (item.Value.Type == "door")
+            {
+                var needsKey = _currentLevel >= 5;
+                if (item.Value.IsOpening)
+                    animKey = needsKey ? "door_key" : "door_opening";
+                else
+                    animKey = needsKey ? "door_key_closed" : "door_closed";
+                frame = item.Value.IsOpening ? item.Value.OpeningFrame : 0;
+            }
+            else if (item.Value.Type == "key")
+            {
+                animKey = "key";
+                frame = _itemAnimFrame % (_itemAnimations.ContainsKey("key") ? _itemAnimations["key"].Count : 1);
+                bob = ItemBob(item.Key);
+            }
+            else
+            {
+                animKey = "chest";
+                frame = _itemAnimFrame % (_itemAnimations.ContainsKey("chest") ? _itemAnimations["chest"].Count : 1);
+                bob = ItemBob(item.Key) * 0.5f;
+            }
+
+            if (!_itemAnimations.TryGetValue(animKey, out var frames) || frames.Count == 0) continue;
+            frame = Math.Min(frame, frames.Count - 1);
+            var pos = new Vector2(item.Key.X * TileMap.TileSize, item.Key.Y * TileMap.TileSize + bob);
+            _spriteBatch.Draw(_itemTexture, pos, frames[frame], Color.White);
+        }
+    }
+
+    private struct FlashLight
+    {
+        public Vector2 Pos;
+        public float Radius;
+        public Color Color;
+        public float Life;
+        public readonly float MaxLife;
+
+        public FlashLight(Vector2 pos, float radius, Color color, float life)
+        {
+            Pos = pos;
+            Radius = radius;
+            Color = color;
+            Life = life;
+            MaxLife = life;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -798,6 +1185,14 @@ public class GameScene : Scene
     {
         var transform = Game1.GetMapScaleMatrix(GameHud.ScreenHeight(Core.GraphicsDevice));
         _vfx?.AddExplosionEffect(worldCenter, transform, type);
+        var (lightR, lightCol) = type switch
+        {
+            VisualEffectSystem.ExplosionType.Nuke => (420f, new Color(140, 255, 110)),
+            VisualEffectSystem.ExplosionType.Walid => (240f, new Color(255, 130, 60)),
+            VisualEffectSystem.ExplosionType.Big => (200f, new Color(255, 210, 130)),
+            _ => (130f, new Color(255, 215, 150))
+        };
+        _flashLights.Add(new FlashLight(worldCenter, lightR, lightCol, 0.35f));
 
         var (intensity, duration) = type switch
         {
@@ -924,12 +1319,12 @@ public class GameScene : Scene
 
             if (big)
             {
-                _score += b.KillPoints;
+                AwardKill(b, b.KillPoints);
                 b.Kill(); // Nuke: kill istantaneo
             }
             else
             {
-                if (b.TakeDamage()) _score += b.KillPoints;
+                if (b.TakeDamage()) AwardKill(b, b.KillPoints);
             }
         }
 
@@ -1234,7 +1629,7 @@ public class GameScene : Scene
         foreach (var b in _bats.ToList())
             if (!b.IsDead && !b.IsInvincible && hitTiles.Contains(b.VisualTilePosition))
                 if (b.TakeDamage())
-                    _score += b.KillPoints;
+                    AwardKill(b, b.KillPoints);
 
         // La catena nasce dalle bombe del miner: Mythic Immortality la rende innocua
         if (!_miner.UpgradeMythicImmortality &&
@@ -1508,7 +1903,10 @@ public class GameScene : Scene
         _score += 500;
 
         _map = new TileMap(_atlas, 23, 39, _currentLevel, _spawnPoint);
-        _map.TileBroken += HandleChestDrop;
+        HookMap();
+        _particles?.Clear();
+        _flashLights.Clear();
+        _levelFadeTimer = 0f;
 
         _miner.ResetForNewLevel(_spawnPoint);
         _miner.NotifyLevelUp(); // SlowRegen

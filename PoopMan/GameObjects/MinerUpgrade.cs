@@ -169,7 +169,7 @@ public static class UpgradeRegistry
 
         new(UpgradeType.RemoteDetonator,
             "DETONATORE",
-            "Premi C (gamepad Y) per far\nesplodere subito le tue bombe.",
+            "Bombe senza miccia: premi C\n(gamepad Y) per farle esplodere.",
             Color.Tomato),
 
         new(UpgradeType.StunOnHit,

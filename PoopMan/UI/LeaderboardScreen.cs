@@ -167,18 +167,18 @@ public sealed class LeaderboardScreen : Scene
 
         // ── Titolo ───────────────────────────────────────────────────────
         DrawTextCentered("* CLASSIFICA *", cx, 28, Color.Gold, 2.0f);
-        DrawRect(new Rectangle(cx - 320, 68, 640, 2), new Color(100, 80, 200));
+        DrawRect(new Rectangle(cx - 360, 68, 720, 2), new Color(100, 80, 200));
 
         // ── Intestazione colonne ─────────────────────────────────────────
-        var tableX = cx - 320;
-        var tableW = 640;
+        var tableX = cx - 360;
+        var tableW = 720;
         var headerY = 78;
         DrawRect(new Rectangle(tableX, headerY, tableW, 26), new Color(30, 20, 60));
         DrawText("#", tableX + 8, headerY + 5, Color.LightGray, 1f);
         DrawText("NOME", tableX + 46, headerY + 5, Color.LightGray, 1f);
-        DrawText("SCORE", tableX + tableW - 220, headerY + 5, Color.LightGray, 1f);
-        DrawText("LV", tableX + tableW - 90, headerY + 5, Color.LightGray, 1f);
-        DrawText("DATA", tableX + tableW - 40, headerY + 5, Color.LightGray * 0.6f, 0.7f);
+        DrawText("SCORE", tableX + tableW - 330, headerY + 5, Color.LightGray, 1f);
+        DrawText("LV", tableX + tableW - 190, headerY + 5, Color.LightGray, 1f);
+        DrawTextRight("DATA", tableX + tableW - 10, headerY + 7, Color.LightGray * 0.6f, 0.8f);
 
         // ── Righe ────────────────────────────────────────────────────────
         var rowsY = headerY + 30;
@@ -213,9 +213,9 @@ public sealed class LeaderboardScreen : Scene
             var rankStr = isFirst ? "1." : $"{realIdx + 1}.";
             DrawText(rankStr, tableX + 6, ry + 8, textColor, scale);
             DrawText(Truncate(e.Name, 16), tableX + 46, ry + 8, textColor, scale);
-            DrawText($"{e.Score}", tableX + tableW - 220, ry + 8, textColor, scale);
-            DrawText($"{e.Level}", tableX + tableW - 90, ry + 8, textColor, scale);
-            DrawText(e.Date, tableX + tableW - 40, ry + 10, Color.Gray * 0.7f, 0.7f);
+            DrawText($"{e.Score}", tableX + tableW - 330, ry + 8, textColor, scale);
+            DrawText($"{e.Level}", tableX + tableW - 190, ry + 8, textColor, scale);
+            DrawTextRight(e.Date ?? "", tableX + tableW - 10, ry + 10, Color.Gray * 0.8f, 0.8f);
         }
 
         // Riga "vuota" se non ci sono dati
@@ -245,9 +245,8 @@ public sealed class LeaderboardScreen : Scene
                 : hov
                     ? new Color(100, 80, 200)
                     : new Color(50, 35, 110);
-            DrawRect(btn.Rect, bgCol);
-            DrawRect(new Rectangle(btn.Rect.X, btn.Rect.Y, btn.Rect.Width, 2),
-                hov ? Color.White : new Color(120, 80, 200));
+            UiDraw.Panel(_sb, _pixel, btn.Rect, Color.Lerp(bgCol, Color.White, 0.18f), bgCol,
+                hov ? Color.White : Color.Lerp(bgCol, Color.White, 0.35f), 7, true, 2);
             DrawTextCentered(btn.Label, btn.Rect.Center.X, btn.Rect.Y + 9, Color.White, 1f);
         }
 
@@ -270,6 +269,12 @@ public sealed class LeaderboardScreen : Scene
     private void DrawText(string text, int x, int y, Color color, float scale)
     {
         _sb.DrawString(_font, text, new Vector2(x, y), color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+    }
+
+    private void DrawTextRight(string text, int right, int y, Color color, float scale)
+    {
+        var w = _font.MeasureString(text).X * scale;
+        DrawText(text, (int)(right - w), y, color, scale);
     }
 
     private void DrawTextCentered(string text, int cx, int y, Color color, float scale)

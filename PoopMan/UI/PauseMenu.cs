@@ -45,6 +45,9 @@ public class PauseMenu
     }
 
     /// <summary>True se è visibile il menu principale (non Audio / Enciclopedia).</summary>
+    /// <summary>True quando è aperta l'enciclopedia (schermata intera: l'HUD va nascosto).</summary>
+    public bool IsFullScreen => _screen == Screen.Encyclopedia;
+
     public bool IsOnMainMenu => _screen == Screen.Menu;
 
     // ── Reset (chiamato quando si apre la pausa) ──────────────────────────
@@ -186,13 +189,14 @@ public class PauseMenu
     private void DrawMainMenu(SpriteBatch sb, int cx, int vh)
     {
         var totalMenuH = Items.Length * (BtnH + BtnGap) - BtnGap;
-        var boxW = BtnW + 60;
+        const string hint = "^v: seleziona   ENTER: conferma   ESC: riprendi";
+        var boxW = Math.Max(BtnW + 60, (int)(_font.MeasureString(hint).X * 0.95f) + 40);
         var boxH = 52 + totalMenuH + 28;
         var boxX = cx - boxW / 2;
         var boxY = vh / 2 - boxH / 2;
 
-        DrawRect(sb, new Rectangle(boxX, boxY, boxW, boxH), new Color(15, 15, 35, 240));
-        DrawBorderRect(sb, boxX, boxY, boxW, boxH, Color.Yellow);
+        UiDraw.Panel(sb, _pixel, new Rectangle(boxX, boxY, boxW, boxH),
+            new Color(40, 32, 84, 245), new Color(14, 12, 32, 245), new Color(235, 195, 60), 12, true, 2);
         DrawTextCentered(sb, "PAUSA", cx, boxY + 22, Color.Yellow, 1.8f);
         DrawRect(sb, new Rectangle(boxX + 16, boxY + 44, boxW - 32, 2), new Color(80, 60, 160));
 
@@ -213,8 +217,9 @@ public class PauseMenu
                     ? Color.Yellow * p
                     : Color.LightGray;
 
-            DrawRect(sb, new Rectangle(cx - BtnW / 2 - 1, btnY - 1, BtnW + 2, BtnH + 2), border);
-            DrawRect(sb, new Rectangle(cx - BtnW / 2, btnY, BtnW, BtnH), bg);
+            UiDraw.Button(sb, _pixel, new Rectangle(cx - BtnW / 2, btnY, BtnW, BtnH), sel, false,
+                i == 2 ? new Color(190, 60, 70) : new Color(120, 80, 220), (float)Math.Sin(_pulse));
+            if (sel) textColor = i == 2 ? new Color(255, 220, 220) : Color.White;
             DrawTextCentered(sb, Items[i], cx, btnY + BtnH / 2, textColor, sel ? 1.3f : 1.15f);
 
             if (sel)
@@ -227,8 +232,7 @@ public class PauseMenu
             }
         }
 
-        DrawTextCentered(sb, "^v: seleziona   ENTER: conferma   ESC: riprendi",
-            cx, boxY + boxH - 14, Color.DarkGray, 0.95f);
+        DrawTextCentered(sb, hint, cx, boxY + boxH - 14, Color.Gray, 0.95f);
     }
 
     private void DrawAudioPanel(SpriteBatch sb, int cx, int midY)
@@ -243,8 +247,8 @@ public class PauseMenu
         var boxX = cx - boxW / 2;
         var boxY = midY - boxH / 2;
 
-        DrawRect(sb, new Rectangle(boxX, boxY, boxW, boxH), new Color(15, 15, 35, 245));
-        DrawBorderRect(sb, boxX, boxY, boxW, boxH, Color.CornflowerBlue);
+        UiDraw.Panel(sb, _pixel, new Rectangle(boxX, boxY, boxW, boxH),
+            new Color(30, 38, 84, 248), new Color(12, 14, 34, 248), Color.CornflowerBlue, 12, true, 2);
         DrawTextCentered(sb, "IMPOSTAZIONI AUDIO", cx, boxY + 26, Color.CornflowerBlue, 1.3f);
         DrawRect(sb, new Rectangle(boxX + 16, boxY + 46, boxW - 32, 2), new Color(40, 80, 160));
 

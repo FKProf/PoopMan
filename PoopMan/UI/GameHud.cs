@@ -19,6 +19,7 @@ public class GameHud
     private static readonly Rectangle SrcMinerIcon = new(128, 32, 32, 32);
     private static readonly Rectangle SrcBigBomb = new(96, 0, 32, 32);
     private static readonly Rectangle SrcKey = new(96, 96, 32, 32);
+    private static readonly Rectangle SrcSmallBomb = new(0, 96, 32, 32);
 
     // Colori fissi HUD
     private static readonly Color BgTop = new(12, 10, 28);
@@ -66,19 +67,28 @@ public class GameHud
         bool hasShield = false, bool shieldActive = false,
         int explosionDmgBonus = 0, bool isInvincible = false,
         bool mythicImmortality = false, bool instantKill = false,
-        bool hasDetonator = false)
+        bool hasDetonator = false, int bombsAvailable = -1, int bombCapacity = 0)
     {
         var cy = (Height - _font.LineSpacing) / 2f;
         var iconH = Height / 32f; // scala icone all'altezza HUD
 
-        // ── Sfondo sfumato (due rettangoli) ──────────────────────────────
-        sb.Draw(_pixel, new Rectangle(0, 0, LogicalWidth, Height / 2), BgTop);
-        sb.Draw(_pixel, new Rectangle(0, Height / 2, LogicalWidth, Height / 2), BgBottom);
-        sb.Draw(_pixel, new Rectangle(0, Height - 2, LogicalWidth, 2), BorderColor);
+        // ── Sfondo: gradiente + linea d'accento del bioma che sfuma ai lati ──
+        var accent = ThemeStyle[theme].accent;
+        UiDraw.GradientRect(sb, _pixel, new Rectangle(0, 0, LogicalWidth, Height), BgBottom, BgTop, 0);
+        sb.Draw(_pixel, new Rectangle(0, 0, LogicalWidth, 1), Color.White * 0.06f);
+        const int segs = 48;
+        for (var i = 0; i < segs; i++)
+        {
+            var a = 1f - MathF.Abs(i - (segs - 1) / 2f) / (segs / 2f);
+            var col = Color.Lerp(BorderColor, accent, a);
+            sb.Draw(_pixel, new Rectangle(i * LogicalWidth / segs, Height - 2, LogicalWidth / segs + 1, 2),
+                col * (0.55f + 0.45f * a));
+        }
 
         // ── SINISTRA: Score ───────────────────────────────────────────────
         var lx = 10;
         var scoreStr = $"SCORE: {score,6}";
+        Chip(sb, lx - 5, (int)_font.MeasureString(scoreStr).X + 10);
         DrawS(sb, scoreStr, new Vector2(lx, cy), Color.Yellow);
         lx += (int)_font.MeasureString(scoreStr).X + 16;
 
@@ -136,15 +146,11 @@ public class GameHud
         var centerX = LogicalWidth / 2f - centerSize.X / 2f;
 
         // Sfondo pillola centrata
-        var pillPad = 8;
-        sb.Draw(_pixel,
-            new Rectangle((int)centerX - pillPad, 4,
-                (int)centerSize.X + pillPad * 2, Height - 8),
-            themeAccent * 0.18f);
-        sb.Draw(_pixel,
-            new Rectangle((int)centerX - pillPad, Height - 4,
-                (int)centerSize.X + pillPad * 2, 2),
-            themeAccent * 0.8f);
+        var pillPad = 10;
+        var pill = new Rectangle((int)centerX - pillPad, 4, (int)centerSize.X + pillPad * 2, Height - 8);
+        UiDraw.RoundedRect(sb, _pixel, pill, themeAccent * 0.65f, 8);
+        UiDraw.GradientRect(sb, _pixel, new Rectangle(pill.X + 1, pill.Y + 1, pill.Width - 2, pill.Height - 2),
+            Color.Lerp(BgTop, themeAccent, 0.30f), Color.Lerp(BgTop, themeAccent, 0.10f), 7);
 
         // Testo tema (colorato) + separatore + livello (cyan)
         var themeSize = _font.MeasureString(themeLabel);
@@ -156,6 +162,21 @@ public class GameHud
 
         var lvlX = sepX + _font.MeasureString(separator).X;
         DrawS(sb, $"LVL {level}", new Vector2(lvlX, cy), Color.Cyan);
+
+        // ── Bombe piccole disponibili (slot a destra del livello) ─────────
+        if (bombCapacity > 0 && bombsAvailable >= 0)
+        {
+            var slotScale = iconH * 0.8f;
+            var slotStep = (int)(32 * slotScale * 0.55f);
+            var sx = pill.Right + 12;
+            for (var i = 0; i < bombCapacity; i++)
+            {
+                var ready = i < bombsAvailable;
+                sb.Draw(_itemIcon, new Vector2(sx + i * slotStep, 4), SrcSmallBomb,
+                    ready ? Color.White : new Color(40, 40, 60) * 0.8f, 0f, Vector2.Zero, slotScale,
+                    SpriteEffects.None, 0f);
+            }
+        }
 
         // ── DESTRA: Chiave ────────────────────────────────────────────────
         var rx = LogicalWidth - 10;
@@ -230,6 +251,12 @@ public class GameHud
             rx -= (int)_font.MeasureString(miStr).X;
             DrawS(sb, miStr, new Vector2(rx, cy), new Color(220, 180, 30) * miPulse);
         }
+    }
+
+    /// <summary>Sfondo arrotondato leggero dietro un gruppo di informazioni.</summary>
+    private void Chip(SpriteBatch sb, int x, int w)
+    {
+        UiDraw.RoundedRect(sb, _pixel, new Rectangle(x, 5, w, Height - 10), Color.White * 0.06f, 6);
     }
 
     /// <summary>DrawString con ombra 1-pixel per garantire leggibilità sull'HUD.</summary>

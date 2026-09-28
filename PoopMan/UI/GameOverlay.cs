@@ -41,17 +41,14 @@ public class GameOverlay
         var boxH = (int)(vh * 0.45f);
         var boxX = cx - boxW / 2;
         var boxY = cy - boxH / 2;
-        DrawRect(sb, new Rectangle(boxX, boxY, boxW, boxH), new Color(30, 10, 10) * 0.95f);
-        DrawRect(sb, new Rectangle(boxX, boxY, boxW, 3), new Color(180, 20, 20));
-        DrawRect(sb, new Rectangle(boxX, boxY + boxH - 3, boxW, 3), new Color(180, 20, 20));
-        DrawRect(sb, new Rectangle(boxX, boxY, 3, boxH), new Color(180, 20, 20));
-        DrawRect(sb, new Rectangle(boxX + boxW - 3, boxY, 3, boxH), new Color(180, 20, 20));
+        UiDraw.Panel(sb, _pixel, new Rectangle(boxX, boxY, boxW, boxH),
+            new Color(70, 18, 24, 245), new Color(24, 6, 10, 245), new Color(210, 50, 50), 12, true, 3);
 
         // Testi
         DrawTextCentered(sb, "** GAME OVER **", cx, boxY + boxH / 5, Color.Red, 2.2f);
         DrawTextCentered(sb, "PUNTEGGIO FINALE", cx, boxY + boxH / 5 + 62, Color.White, 1.1f);
         DrawTextCentered(sb, $"{score}", cx, boxY + boxH / 5 + 92, Color.Gold, 2.0f);
-        DrawTextCentered(sb, "---------------------", cx, cy + 20, Color.DarkRed * 1.5f, 1f);
+        DrawRect(sb, new Rectangle(cx - boxW / 3, cy + 20, boxW * 2 / 3, 2), new Color(150, 40, 40));
         DrawTextCentered(sb, "R  /  ENTER  /  Click  per continuare", cx, cy + 50, Color.LightGray, 1f);
         DrawTextCentered(sb, "ESC  per uscire", cx, cy + 76, Color.Gray * 0.9f, 0.85f);
     }
@@ -127,11 +124,8 @@ public class GameOverlay
         var boxH = 110;
         var boxX = vw / 2 - boxW / 2;
         var boxY = vh / 2 - boxH / 2;
-        DrawRect(sb, new Rectangle(boxX, boxY, boxW, boxH), new Color(10, 60, 10) * alpha * 0.95f);
-        DrawRect(sb, new Rectangle(boxX, boxY, boxW, 3), Color.LimeGreen * alpha);
-        DrawRect(sb, new Rectangle(boxX, boxY + boxH - 3, boxW, 3), Color.LimeGreen * alpha);
-        DrawRect(sb, new Rectangle(boxX, boxY, 3, boxH), Color.LimeGreen * alpha);
-        DrawRect(sb, new Rectangle(boxX + boxW - 3, boxY, 3, boxH), Color.LimeGreen * alpha);
+        UiDraw.Panel(sb, _pixel, new Rectangle(boxX, boxY, boxW, boxH),
+            new Color(30, 110, 40) * alpha, new Color(8, 40, 12) * alpha, Color.LimeGreen * alpha, 12, alpha > 0.5f, 3);
 
         // Testo con effetto pulsante nella prima metà
         var pulse = t < 0.5f ? 1.0f + 0.15f * (float)Math.Sin(elapsed * 20f) : 1f;
@@ -219,18 +213,16 @@ public class GameOverlay
             if (sel)
             {
                 var glow = opt.Color * (0.30f * pulseMul);
-                DrawRect(sb, new Rectangle(x - 4, cardY - 4, cardW + 8, cardH + 8), glow);
+                UiDraw.RoundedRect(sb, _pixel, new Rectangle(x - 5, cardY - 5, cardW + 10, cardH + 10), glow, 14);
             }
 
-            DrawRect(sb, new Rectangle(x, cardY, cardW, cardH), bg);
             var bw = sel ? 3 : 2;
-            DrawRect(sb, new Rectangle(x, cardY, cardW, bw), border);
-            DrawRect(sb, new Rectangle(x, cardY + cardH - bw, cardW, bw), border);
-            DrawRect(sb, new Rectangle(x, cardY, bw, cardH), border);
-            DrawRect(sb, new Rectangle(x + cardW - bw, cardY, bw, cardH), border);
+            UiDraw.Panel(sb, _pixel, new Rectangle(x, cardY, cardW, cardH),
+                sel ? Color.Lerp(bg, opt.Color, 0.18f) : new Color(34, 30, 64, 230), sel ? bg : new Color(16, 14, 32, 230),
+                border, 10, true, bw);
 
             if (sel)
-                DrawRect(sb, new Rectangle(x + 4, cardY + 4, cardW - 8, 4), opt.Color * 0.7f);
+                UiDraw.RoundedRect(sb, _pixel, new Rectangle(x + 10, cardY + 6, cardW - 20, 4), opt.Color * 0.7f, 2);
 
             var cursorY = cardY + padding;
 

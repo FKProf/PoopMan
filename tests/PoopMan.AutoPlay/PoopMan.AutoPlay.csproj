@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Auto-play di PoopMan per Windows (DirectX): compila gli stessi sorgenti del gioco
+    (tranne Program.cs e la KeyboardInfo reale, sostituita da una versione pilotabile
+    dal bot) e li fa giocare automaticamente. Le risorse (Content/) vanno copiate
+    dall'output di PoopMan.csproj: vedi .github/workflows/windows-autoplay.yml.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <RollForward>Major</RollForward>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <NoWarn>$(NoWarn);CS8632;CS0414;CS0169;CS0649;CS0162</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>$(DefineConstants);AUTOPLAY</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../PoopMan/**/*.cs" Exclude="../../PoopMan/obj/**;../../PoopMan/bin/**;../../PoopMan/Program.cs" />
+    <Compile Include="../../PoopManLibrary/**/*.cs" Exclude="../../PoopManLibrary/Input/KeyboardInfo.cs;../../PoopManLibrary/obj/**;../../PoopManLibrary/bin/**" />
+    <Compile Include="AutoPlay.cs;KeyboardInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.*" />
+  </ItemGroup>
+</Project>
