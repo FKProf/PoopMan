@@ -629,7 +629,10 @@ public class Bat
             {
                 _knockbackVelocity = Vector2.Zero;
                 // Riallinea alla griglia: scivola al centro della tile in cui è finito
-                TilePosition = VisualTilePosition;
+                // (sempre calpestabile grazie al blocco per asse; per sicurezza si
+                //  ripiega sulla tile di partenza del movimento)
+                TilePosition = map.IsWalkable(VisualTilePosition) ? VisualTilePosition
+                    : map.IsWalkable(_moveFromTile) ? _moveFromTile : TilePosition;
                 targetPosition = new Vector2(TilePosition.X * TileMap.TileSize, TilePosition.Y * TileMap.TileSize);
                 isMoving = true;
                 _path.Clear();
@@ -705,7 +708,11 @@ public class Bat
             }
         }
 
-        if (!isMoving)
+        // Durante il knockback il bat è in balia della spinta: niente IA né movimento
+        // verso la destinazione (si muoverebbe in diagonale attraverso i muri).
+        var knockedBack = _knockbackTimer > 0f;
+
+        if (!isMoving && !knockedBack)
         {
             if (IsStunned) goto skip_movement; // stordito: non si muove
             waitTimer -= dt;
@@ -740,7 +747,7 @@ public class Bat
 
     skip_movement:
 
-        if (isMoving)
+        if (isMoving && !knockedBack)
         {
             // Se la destinazione è diventata bloccata (bomba piazzata nel frattempo), annulla
             if (_solidBombTiles.Contains(TilePosition) && TilePosition != _moveFromTile &&

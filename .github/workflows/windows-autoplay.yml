@@ -69,19 +69,22 @@ jobs:
 
           # Scenari brevi in sequenza
           $scenarios = @(
-            @('det',    "30 1 `"$out\det`" 999 det",       120),
-            @('knock',  "120 8 `"$out\knock`" 999 knock", 600),
-            @('ui',     "90 1 `"$out\ui`" 999 ui",         300),
-            @('biomes', "60 1 `"$out\biomes`" 999 biomes", 300)
+            @('det',    "30 1 `"$out\det`" 999 det",       120, 1),
+            @('knock',  "120 8 `"$out\knock`" 999 knock", 600, 1),
+            @('knock2', "120 6 `"$out\knock2`" 999 knock", 600, 7),
+            @('ui',     "90 1 `"$out\ui`" 999 ui",         300, 1),
+            @('biomes', "60 1 `"$out\biomes`" 999 biomes", 300, 1)
           )
           $runs = @()
           foreach ($s in $scenarios) {
+            $env:AUTOPLAY_SEED = $s[3]
             $r = Run-Mode $s[0] $s[1] $s[2]
             if (-not $r.Proc.WaitForExit($r.Timeout * 1000)) { $r.Proc.Kill(); Add-Content $r.Log "TIMEOUT" }
             $runs += $r
           }
 
           # Partite lunghe in parallelo
+          $env:AUTOPLAY_SEED = '1234'
           $long = @(
             (Run-Mode 'bot'     "600 10 `"$out\bot`" 20 bot"        1500),
             (Run-Mode 'deep'    "600 10 `"$out\deep`" 7 deep"       1500),

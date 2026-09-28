@@ -70,7 +70,7 @@ class BotGame : Game1
     readonly HashSet<Keys> _held = new();
     readonly HashSet<Keys> _tap = new();
     Keys _dir = Keys.None; double _dirUntil;
-    readonly Random _r = new(1234);
+    readonly Random _r = new(int.TryParse(Environment.GetEnvironmentVariable("AUTOPLAY_SEED"), out var seed) ? seed : 1234);
     double _pauseUntil = -1; int _pausePhase;
     int _gameOvers, _levelsSeen, _upgradesPicked, _scenes;
     object _lastScene;

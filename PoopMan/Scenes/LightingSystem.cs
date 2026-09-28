@@ -99,7 +99,7 @@ internal sealed class LightingSystem : IDisposable
     {
         var w = _mapW / Downscale;
         var h = _mapH / Downscale;
-        if (_lightMap != null && !_lightMap.IsDisposed && !_lightMap.IsContentLost) return;
+        if (_lightMap != null && !_lightMap.IsDisposed) return;
         _lightMap?.Dispose();
         _lightMap = new RenderTarget2D(_gd, w, h, false, SurfaceFormat.Color, DepthFormat.None);
     }
