@@ -166,6 +166,14 @@ public class Miner
     internal IEnumerable<Bomb> FreshExplosions =>
         _bombs.Where(b => b.IsExploding && !b.IsFinished && !b.DamageApplied);
 
+    /// <summary>Bombe piazzate (per luci e particelle).</summary>
+    internal IReadOnlyList<Bomb> Bombs => _bombs;
+
+    /// <summary>Bombe ancora piazzabili / capacità massima (per l'HUD).</summary>
+    public int BombsAvailable => Math.Max(0, MaxActiveBombs - _bombs.Count(b => !b.IsFinished));
+
+    public int BombCapacity => MaxActiveBombs;
+
     /// <summary>Tile dove si trova una bomba non ancora esplosa.</summary>
     public IEnumerable<Point> ActiveBombTiles =>
         _bombs.Where(b => !b.IsFinished)
@@ -307,6 +315,8 @@ public class Miner
             UpgradeType.ExplosionResistance or UpgradeType.DamageReduction =>
                 _invincibilityDuration >= UpgradeRegistry.MaxInvincibility,
             UpgradeType.BonusLoot => BonusLootChance >= 0.60f - 0.001f,
+            // Con il detonatore le bombe non hanno miccia: accorciarla non serve.
+            UpgradeType.FasterBomb => UpgradeRemoteDetonator,
             _ => false
         };
     }
@@ -382,6 +392,7 @@ public class Miner
             new Vector2(placeTile.X * TileMap.TileSize, placeTile.Y * TileMap.TileSize),
             _bombTexture, _bombAnimations, _explosionTexture, _explosionAnimations,
             big, BonusExplosionRange, _bombTimerBonus, UpgradeMultiHit);
+        bomb.IsRemote = UpgradeRemoteDetonator;
         bomb.Exploded += (s, isBig) => BombExploded?.Invoke(this, isBig);
         _bombs.Add(bomb);
         BombPlaced?.Invoke(this, EventArgs.Empty);
@@ -858,7 +869,10 @@ public class Miner
             case UpgradeType.MultiHit: UpgradeMultiHit = true; break;
             case UpgradeType.CriticalChance: UpgradeCritical = true; break;
             case UpgradeType.Magnet: UpgradeMagnet = true; break;
-            case UpgradeType.RemoteDetonator: UpgradeRemoteDetonator = true; break;
+            case UpgradeType.RemoteDetonator:
+                UpgradeRemoteDetonator = true;
+                foreach (var b in _bombs) b.IsRemote = true;
+                break;
             case UpgradeType.StunOnHit: UpgradeStunOnHit = true; break;
             case UpgradeType.SlowOnHit: UpgradeSlowOnHit = true; break;
 

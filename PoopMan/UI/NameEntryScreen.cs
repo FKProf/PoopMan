@@ -171,11 +171,8 @@ public sealed class NameEntryScreen : Scene
         var boxX = cx - boxW / 2;
         var boxY = cy - boxH / 2;
 
-        DrawRect(new Rectangle(boxX, boxY, boxW, boxH), new Color(18, 12, 36) * 0.98f);
-        DrawRect(new Rectangle(boxX, boxY, boxW, 3), new Color(180, 20, 20));
-        DrawRect(new Rectangle(boxX, boxY + boxH - 3, boxW, 3), new Color(180, 20, 20));
-        DrawRect(new Rectangle(boxX, boxY, 3, boxH), new Color(180, 20, 20));
-        DrawRect(new Rectangle(boxX + boxW - 3, boxY, 3, boxH), new Color(180, 20, 20));
+        UiDraw.Panel(_sb, _pixel, new Rectangle(boxX, boxY, boxW, boxH),
+            new Color(44, 22, 60), new Color(14, 10, 30), new Color(200, 50, 60), 12, true, 3);
 
         // ── Game Over & punteggio ─────────────────────────────────────────
         DrawTextCentered("GAME OVER", cx, boxY + 24, Color.Red, 2.2f);
@@ -194,9 +191,9 @@ public sealed class NameEntryScreen : Scene
         var fieldX = cx - fieldW / 2;
         var fieldY = boxY + 190;
 
-        DrawRect(new Rectangle(fieldX, fieldY, fieldW, fieldH), new Color(30, 20, 60));
-        DrawRect(new Rectangle(fieldX, fieldY, fieldW, 2), new Color(120, 80, 220));
-        DrawRect(new Rectangle(fieldX, fieldY + fieldH - 2, fieldW, 2), new Color(120, 80, 220));
+        UiDraw.RoundedRect(_sb, _pixel, new Rectangle(fieldX - 2, fieldY - 2, fieldW + 4, fieldH + 4),
+            new Color(120, 80, 220), 6);
+        UiDraw.RoundedRect(_sb, _pixel, new Rectangle(fieldX, fieldY, fieldW, fieldH), new Color(22, 16, 46), 5);
 
         var displayText = _name + (_caretVisible ? "|" : " ");
         var textSize = _font.MeasureString(displayText);

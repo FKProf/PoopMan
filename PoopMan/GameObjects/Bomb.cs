@@ -27,6 +27,7 @@ internal class Bomb
     private int _currentFrame;
     private List<Rectangle> _currentFrames;
     private float _fuseTimer;
+    private float _pulseTimer;
 
     // ═══════════════════════════════════════════════════════════════════
     // CAMPI – STATO
@@ -77,6 +78,12 @@ internal class Bomb
     public Vector2 Position => _position;
     public bool BigBomb { get; }
 
+    /// <summary>
+    ///     Bomba a detonazione remota (upgrade DETONATORE): la miccia non si consuma,
+    ///     esplode solo col comando di detonazione o se raggiunta da un'altra esplosione.
+    /// </summary>
+    public bool IsRemote { get; set; }
+
     /// <summary>Scattato nel momento in cui la bomba esplode. Arg: true = bomba grande.</summary>
     public event EventHandler<bool>? Exploded;
 
@@ -91,7 +98,8 @@ internal class Bomb
 
         if (!IsExploding)
         {
-            _fuseTimer += dt;
+            if (!IsRemote) _fuseTimer += dt;
+            _pulseTimer += dt;
             _animTimer += dt;
 
             if (_animTimer >= AnimSpeed)
@@ -100,7 +108,7 @@ internal class Bomb
                 _currentFrame = (_currentFrame + 1) % _currentFrames.Count;
             }
 
-            if (_fuseTimer >= _fuseDuration)
+            if (!IsRemote && _fuseTimer >= _fuseDuration)
                 Explode(map);
         }
         else
@@ -115,6 +123,14 @@ internal class Bomb
             }
         }
     }
+
+    /// <summary>Punto (mondo) della miccia accesa: sorgente di scintille e luce.</summary>
+    public Vector2 FusePosition => _position + (BigBomb ? new Vector2(16f, 5f) : new Vector2(25f, 6f));
+
+    /// <summary>Avanzamento dell'animazione di esplosione (0 → 1), 0 se non ancora esplosa.</summary>
+    public float ExplosionProgress => IsExploding && _currentFrames.Count > 0
+        ? Math.Clamp((_currentFrame + _animTimer / AnimSpeed) / _currentFrames.Count, 0f, 1f)
+        : 0f;
 
     /// <summary>Tile su cui si trova la bomba.</summary>
     public Point Tile => new((int)(_position.X / TileMap.TileSize), (int)(_position.Y / TileMap.TileSize));
@@ -187,6 +203,59 @@ internal class Bomb
     // DRAW
     // ═══════════════════════════════════════════════════════════════════
 
+    // Strati della fiamma dall'esterno verso il nucleo (larghezza relativa, colore)
+    private static readonly (float w, Color c)[] FlameLayers =
+    {
+        (1.00f, new Color(200, 40, 20)),
+        (0.74f, new Color(255, 120, 30)),
+        (0.48f, new Color(255, 214, 80)),
+        (0.22f, new Color(255, 250, 225))
+    };
+
+    /// <summary>
+    ///     Fiamme "a croce" in stile Bomberman: raggi luminosi che collegano le tile
+    ///     dell'esplosione. Sono emissive: vanno disegnate DOPO l'illuminazione.
+    /// </summary>
+    public void DrawFlame(SpriteBatch spriteBatch, Texture2D pixel, float time)
+    {
+        if (!IsExploding || IsFinished || ExplosionTiles.Count == 0) return;
+
+        var k = ExplosionProgress;
+        // Inviluppo: esplode in fretta, resta piena, poi si assottiglia e sparisce
+        var env = k < 0.12f ? k / 0.12f : k > 0.5f ? 1f - (k - 0.5f) / 0.4f : 1f;
+        if (env <= 0f) return;
+
+        var ts = TileMap.TileSize;
+        var set = new HashSet<Point>(ExplosionTiles);
+        var center = Tile;
+        var baseW = (BigBomb ? 28f : 24f) * env;
+        var alpha = k > 0.75f ? Math.Clamp(1f - (k - 0.75f) / 0.15f, 0f, 1f) : 1f;
+
+        foreach (var (lw, col) in FlameLayers)
+            foreach (var t in set)
+            {
+                var flick = 1f + 0.10f * MathF.Sin(time * 38f + t.X * 1.7f + t.Y * 2.3f);
+                var w = baseW * lw * flick * (t == center ? 1.2f : 1f);
+                if (w < 1f) continue;
+                var cx = t.X * ts + ts / 2;
+                var cy = t.Y * ts + ts / 2;
+                var hw = (int)MathF.Round(w / 2f);
+
+                // Nucleo della tile
+                spriteBatch.Draw(pixel, new Rectangle(cx - hw, cy - hw, hw * 2, hw * 2), col * alpha);
+
+                // Raggi verso le tile collegate (fino al bordo condiviso)
+                if (set.Contains(new Point(t.X + 1, t.Y)))
+                    spriteBatch.Draw(pixel, new Rectangle(cx, cy - hw, ts / 2, hw * 2), col * alpha);
+                if (set.Contains(new Point(t.X - 1, t.Y)))
+                    spriteBatch.Draw(pixel, new Rectangle(cx - ts / 2, cy - hw, ts / 2, hw * 2), col * alpha);
+                if (set.Contains(new Point(t.X, t.Y + 1)))
+                    spriteBatch.Draw(pixel, new Rectangle(cx - hw, cy, hw * 2, ts / 2), col * alpha);
+                if (set.Contains(new Point(t.X, t.Y - 1)))
+                    spriteBatch.Draw(pixel, new Rectangle(cx - hw, cy - ts / 2, hw * 2, ts / 2), col * alpha);
+            }
+    }
+
     public void Draw(SpriteBatch spriteBatch)
     {
         if (IsFinished) return;
@@ -200,6 +269,29 @@ internal class Bomb
                 spriteBatch.Draw(_explosionTexture, drawPos, _currentFrames[safeFrame], Color.White);
             }
         else
-            spriteBatch.Draw(_bombTexture, _position, _currentFrames[safeFrame], Color.White);
+        {
+            // Bomba remota: lampeggio rosso lento per distinguerla da quelle a miccia.
+            // Bomba a miccia: il lampeggio accelera negli ultimi istanti prima dello scoppio.
+            var tint = Color.White;
+            if (IsRemote)
+            {
+                var p = 0.5f + 0.5f * MathF.Sin(_pulseTimer * 5f);
+                tint = Color.Lerp(Color.White, new Color(255, 90, 90), p * 0.7f);
+            }
+            else
+            {
+                var remaining = _fuseDuration - _fuseTimer;
+                if (remaining < 0.8f && MathF.Sin(_pulseTimer * (remaining < 0.35f ? 45f : 25f)) > 0f)
+                    tint = new Color(255, 170, 170);
+            }
+
+            // Leggero "respiro" (squash & stretch) appoggiato al pavimento: accelera a fine miccia.
+            var speed = IsRemote ? 5f : 8f + 10f * Math.Clamp(_fuseTimer / _fuseDuration, 0f, 1f);
+            var s = 0.06f * MathF.Sin(_pulseTimer * speed);
+            var scale = new Vector2(1f + s, 1f - s * 0.8f);
+            var origin = new Vector2(16f, 30f);
+            spriteBatch.Draw(_bombTexture, _position + origin, _currentFrames[safeFrame], tint, 0f, origin, scale,
+                SpriteEffects.None, 0f);
+        }
     }
 }

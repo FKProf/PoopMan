@@ -34,6 +34,12 @@ public class TitleScene : Scene
     private SpriteFont _font;
 
     private Texture2D _pixel;
+    private Texture2D _glow;
+
+    // ── Braci che salgono dal fondo (atmosfera) ───────────────────────
+    private readonly System.Collections.Generic.List<(Vector2 pos, Vector2 vel, float life, float max, float size)> _embers = new();
+    private readonly Random _rng = new();
+    private float _emberTimer;
 
     // ── Grafica ────────────────────────────────────────────────────────
     private SpriteBatch _sb;
@@ -53,6 +59,8 @@ public class TitleScene : Scene
         _pixel = new Texture2D(Core.GraphicsDevice, 1, 1);
         _pixel.SetData(new[] { Color.White });
 
+        _glow = PoopMan.Scenes.FxTextures.CreateRadial(Core.GraphicsDevice, 128, 1.8f);
+
         _audioPanel = new AudioSettingsPanel(_font, _pixel);
 
         AudioManager.Load(Content);
@@ -67,6 +75,7 @@ public class TitleScene : Scene
         _c1X -= Cloud1Speed * dt;
         _c2X -= Cloud2Speed * dt;
         _cursorPulse += dt * 3.5f;
+        UpdateEmbers(dt);
 
         var kb = Core.Input.Keyboard;
         var mouse = Core.Input.Mouse;
@@ -161,18 +170,44 @@ public class TitleScene : Scene
         DrawScrollingCloud(_cloud1, _c1X, W, H, 0.55f);
         DrawScrollingCloud(_cloud2, _c2X, W, H, 0.45f);
         _sb.Draw(_pixel, new Rectangle(0, 0, W, H), Color.Black * 0.45f);
+        // Sfumatura scura verso il basso: stacca il menu dallo sfondo
+        for (var y = H / 2; y < H; y += 4)
+            _sb.Draw(_pixel, new Rectangle(0, y, W, 4), Color.Black * (0.35f * (y - H / 2f) / (H / 2f)));
+        _sb.End();
+
+        var titleY = H / 4;
+        var bob = MathF.Sin(_cursorPulse * 0.55f) * 4f;
+
+        // Braci + alone caldo dietro al logo (additivi)
+        _sb.Begin(samplerState: SamplerState.LinearClamp, blendState: BlendState.Additive);
+        var glowPulse = 0.85f + 0.15f * MathF.Sin(_cursorPulse * 0.8f);
+        _sb.Draw(_glow, new Rectangle(W / 2 - 330, (int)(titleY - 110 + bob), 660, 260),
+            new Color(255, 170, 60) * (0.28f * glowPulse));
+        foreach (var e in _embers)
+        {
+            var k = e.life / e.max;
+            var a = MathF.Sin(k * MathF.PI);
+            _sb.Draw(_glow, new Rectangle((int)(e.pos.X - e.size * 3), (int)(e.pos.Y - e.size * 3),
+                (int)(e.size * 6), (int)(e.size * 6)), new Color(255, 140, 50) * (0.35f * a));
+            _sb.Draw(_pixel, new Rectangle((int)e.pos.X, (int)e.pos.Y, (int)MathF.Max(1f, e.size * 0.6f),
+                (int)MathF.Max(1f, e.size * 0.6f)), new Color(255, 220, 140) * a);
+        }
+
         _sb.End();
 
         _sb.Begin(samplerState: SamplerState.PointClamp);
 
-        // Titolo
-        var titleY = H / 4;
-        DrawTextCentered("POOPMAN", W / 2, titleY, Color.Yellow, 3.0f);
-        DrawTextCentered("MINER", W / 2, titleY + 78, new Color(255, 160, 40), 2.0f);
+        // Titolo (galleggia leggermente)
+        DrawTextCentered("POOPMAN", W / 2, (int)(titleY + bob), Color.Yellow, 3.0f);
+        DrawTextCentered("MINER", W / 2, (int)(titleY + 78 + bob * 0.6f), new Color(255, 160, 40), 2.0f);
 
-        // Linea separatrice
+        // Linea separatrice sfumata ai lati
         var sepY = titleY + 128;
-        _sb.Draw(_pixel, new Rectangle(W / 2 - 180, sepY, 360, 2), new Color(70, 50, 140));
+        for (var i = 0; i < 36; i++)
+        {
+            var a = 1f - MathF.Abs(i - 17.5f) / 18f;
+            _sb.Draw(_pixel, new Rectangle(W / 2 - 180 + i * 10, sepY, 10, 2), new Color(140, 100, 255) * a);
+        }
 
         switch (_screen)
         {
@@ -187,7 +222,7 @@ public class TitleScene : Scene
                 break;
         }
 
-        _sb.DrawString(_font, "PoopMan v1.2.0", new Vector2(8, H - 18), Color.DarkGray * 0.7f);
+        _sb.DrawString(_font, "PoopMan v1.3.0", new Vector2(8, H - 18), Color.DarkGray * 0.7f);
         _sb.End();
     }
 
@@ -202,14 +237,12 @@ public class TitleScene : Scene
             var sel = i == _selectedItem;
 
             // Sfondo pulsante
-            var bgColor = sel ? new Color(60, 40, 140, 230) : new Color(20, 20, 50, 180);
-            var border = sel ? Color.Yellow : new Color(80, 80, 120);
             var pulse = sel ? 0.85f + 0.15f * (float)Math.Sin(_cursorPulse) : 1f;
 
-            DrawRect(new Rectangle(cx - BtnW / 2 - 1, btnY - 1, BtnW + 2, BtnH + 2), border);
-            DrawRect(new Rectangle(cx - BtnW / 2, btnY, BtnW, BtnH), bgColor);
+            UiDraw.Button(_sb, _pixel, new Rectangle(cx - BtnW / 2, btnY, BtnW, BtnH), sel, false,
+                new Color(120, 80, 220), (float)Math.Sin(_cursorPulse));
 
-            var textColor = sel ? Color.Yellow * pulse : Color.LightGray;
+            var textColor = sel ? Color.White : Color.LightGray;
             var scale = sel ? 1.05f : 1.0f;
             DrawTextCentered(MenuItems[i], cx, btnY + BtnH / 2, textColor, scale);
 
@@ -233,6 +266,35 @@ public class TitleScene : Scene
             Color.DarkGray, 0.70f);
     }
 
+    private void UpdateEmbers(float dt)
+    {
+        var vp = Core.GraphicsDevice.Viewport;
+        _emberTimer += dt;
+        while (_emberTimer >= 0.08f && _embers.Count < 70)
+        {
+            _emberTimer -= 0.08f;
+            var life = 3f + (float)_rng.NextDouble() * 3f;
+            _embers.Add((new Vector2(_rng.Next(0, vp.Width), vp.Height + 10),
+                new Vector2((float)(_rng.NextDouble() - 0.5) * 20f, -30f - (float)_rng.NextDouble() * 50f),
+                life, life, 2f + (float)_rng.NextDouble() * 2.5f));
+        }
+
+        for (var i = _embers.Count - 1; i >= 0; i--)
+        {
+            var e = _embers[i];
+            e.life -= dt;
+            if (e.life <= 0f)
+            {
+                _embers.RemoveAt(i);
+                continue;
+            }
+
+            e.pos += e.vel * dt;
+            e.pos.X += MathF.Sin(e.life * 2f + i) * 12f * dt; // oscillazione laterale
+            _embers[i] = e;
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────
     private void DrawAudioOverlay(int W, int H)
     {
@@ -247,8 +309,8 @@ public class TitleScene : Scene
         var boxY = H / 2 - boxH / 2;
 
         _sb.Draw(_pixel, new Rectangle(0, 0, W, H), Color.Black * 0.55f);
-        _sb.Draw(_pixel, new Rectangle(boxX, boxY, boxW, boxH), new Color(18, 18, 38, 240));
-        DrawBorder(boxX, boxY, boxW, boxH, Color.CornflowerBlue);
+        UiDraw.Panel(_sb, _pixel, new Rectangle(boxX, boxY, boxW, boxH),
+            new Color(30, 38, 84, 248), new Color(12, 14, 34, 248), Color.CornflowerBlue, 12, true, 2);
 
         DrawTextCentered("IMPOSTAZIONI AUDIO", cx, boxY + 26, Color.CornflowerBlue, 1.3f);
         _sb.Draw(_pixel, new Rectangle(boxX + 16, boxY + 46, boxW - 32, 2), new Color(40, 80, 160));
@@ -273,8 +335,8 @@ public class TitleScene : Scene
         var cx = W / 2;
 
         _sb.Draw(_pixel, new Rectangle(0, 0, W, H), Color.Black * 0.55f);
-        _sb.Draw(_pixel, new Rectangle(boxX, boxY, boxW, boxH), new Color(18, 18, 38, 240));
-        DrawBorder(boxX, boxY, boxW, boxH, new Color(255, 200, 60));
+        UiDraw.Panel(_sb, _pixel, new Rectangle(boxX, boxY, boxW, boxH),
+            new Color(44, 34, 84, 248), new Color(14, 12, 34, 248), new Color(255, 200, 60), 12, true, 2);
 
         DrawTextCentered("ISTRUZIONI", cx, boxY + 22, Color.Yellow, 1.1f);
 

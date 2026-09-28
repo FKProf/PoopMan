@@ -69,6 +69,7 @@ public class Bat
 
     // Dash
     private float _dashCooldown;
+    private Point _moveFromTile;
     private float _ghostCooldown;
     private float _ghostTimer;
 
@@ -159,6 +160,11 @@ public class Bat
         targetPosition = Position;
     }
 
+    private static Point TileAt(Vector2 pos)
+    {
+        return new Point((int)Math.Round(pos.X / TileMap.TileSize), (int)Math.Round(pos.Y / TileMap.TileSize));
+    }
+
     /// <summary>Tile visiva del bat basata sulla posizione pixel corrente.</summary>
     public Point VisualTilePosition =>
         new((int)Math.Round(Position.X / TileMap.TileSize),
@@ -239,6 +245,11 @@ public class Bat
             return 1.0f;
         }
     }
+
+    private readonly double _hoverSeed = Random.Shared.NextDouble() * Math.PI * 2;
+
+    /// <summary>Oscillazione verticale del volo (pixel): il bat "galleggia" in aria.</summary>
+    public float HoverOffset => IsDead ? 0f : (float)Math.Sin(Environment.TickCount64 * 0.006 + _hoverSeed) * 1.6f;
 
     /// <summary>True se il bat ha l'aura pulsante.</summary>
     public bool HasAura => _walidDetonating || _isBerserk || _isGhosting || _canWalid || BigExplosion;
@@ -603,9 +614,26 @@ public class Bat
         if (_knockbackTimer > 0f)
         {
             _knockbackTimer -= dt;
-            Position += _knockbackVelocity * dt;
+            // Spinta un asse alla volta: si ferma contro muri e blocchi invece di
+            // finirci dentro (prima il bat poteva restare fuori griglia e al passo
+            // successivo tagliare in diagonale l'angolo di un pilastro).
+            var step = _knockbackVelocity * dt;
+            var px = Position + new Vector2(step.X, 0f);
+            if (map.IsWalkable(TileAt(px))) Position = px;
+            else _knockbackVelocity.X = 0f;
+            var py = Position + new Vector2(0f, step.Y);
+            if (map.IsWalkable(TileAt(py))) Position = py;
+            else _knockbackVelocity.Y = 0f;
             _knockbackVelocity *= 0.80f; // attrito rapido
-            if (_knockbackTimer <= 0f) _knockbackVelocity = Vector2.Zero;
+            if (_knockbackTimer <= 0f)
+            {
+                _knockbackVelocity = Vector2.Zero;
+                // Riallinea alla griglia: scivola al centro della tile in cui è finito
+                TilePosition = VisualTilePosition;
+                targetPosition = new Vector2(TilePosition.X * TileMap.TileSize, TilePosition.Y * TileMap.TileSize);
+                isMoving = true;
+                _path.Clear();
+            }
         }
 
         // ── Walid: detonazione quando raggiunge il giocatore ──────────────
@@ -694,6 +722,9 @@ public class Bat
                     else if (ddx < 0) facing = Facing.Left;
                     else facing = Facing.Right;
 
+                    // Tile di partenza (il bat è fermo e allineato alla griglia)
+                    _moveFromTile = new Point((int)MathF.Round(Position.X / TileMap.TileSize),
+                        (int)MathF.Round(Position.Y / TileMap.TileSize));
                     TilePosition = nextMove;
                     targetPosition = new Vector2(nextMove.X * TileMap.TileSize,
                         nextMove.Y * TileMap.TileSize);
@@ -712,7 +743,18 @@ public class Bat
         if (isMoving)
         {
             // Se la destinazione è diventata bloccata (bomba piazzata nel frattempo), annulla
-            if (_solidBombTiles.Contains(TilePosition))
+            if (_solidBombTiles.Contains(TilePosition) && TilePosition != _moveFromTile &&
+                map.IsWalkable(_moveFromTile) && !_solidBombTiles.Contains(_moveFromTile))
+            {
+                // Torna indietro lungo la stessa linea verso il tile di partenza: un tile
+                // adiacente qualsiasi poteva essere in diagonale e far "tagliare"
+                // al bat l'angolo di un muro.
+                TilePosition = _moveFromTile;
+                targetPosition = new Vector2(_moveFromTile.X * TileMap.TileSize,
+                    _moveFromTile.Y * TileMap.TileSize);
+                _path.Clear();
+            }
+            else if (_solidBombTiles.Contains(TilePosition))
             {
                 // Torna al tile precedente
                 TilePosition = VisualTilePosition; // il tile più vicino alla posizione attuale
@@ -1172,6 +1214,7 @@ public class Bat
 
         var origin = new Vector2(srcRect.Width * 0.5f, srcRect.Height * 0.5f);
         var center = Position + new Vector2(srcRect.Width * 0.5f, srcRect.Height * 0.5f);
+        center.Y += HoverOffset;
 
         // Aura pulsante (berserk / ghost)
         if (HasAura)
