@@ -1,0 +1,124 @@
+name: Windows auto-play
+
+# Avvia e gioca PoopMan su Windows (DirectX) per verificare che tutto funzioni:
+#  1. build Release del gioco, identica a quella della release;
+#  2. smoke test del vero PoopMan.exe pilotato con tasti reali + screenshot;
+#  3. auto-play accelerato (bot) con controlli: eccezioni, pipistrelli nei muri,
+#     porta/chiave raggiungibili, detonatore, schermate UI e tutti i biomi.
+# Screenshot e log finiscono negli artifact del run.
+
+on:
+  push:
+    branches: [ 'claude/**' ]
+    paths:
+      - 'PoopMan/**'
+      - 'PoopManLibrary/**'
+      - 'tests/**'
+      - '.github/workflows/windows-autoplay.yml'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  autoplay:
+    # Le PR dai branch claude/** sono già coperte dal trigger push
+    if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'claude/')
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Build PoopMan (Release, content pipeline incluso)
+        run: |
+          Remove-Item -Recurse -Force PoopMan/Content/obj, PoopMan/Content/bin -ErrorAction SilentlyContinue
+          dotnet build PoopMan/PoopMan.csproj -c Release
+
+      - name: Smoke test del vero PoopMan.exe (tasti reali)
+        run: |
+          $game = (Resolve-Path PoopMan/bin/Release/net9.0-windows).Path
+          ./tests/windows-smoke.ps1 -GameDir $game -OutDir out/smoke -PlaySeconds 120
+
+      - name: Build auto-play
+        run: |
+          dotnet build tests/PoopMan.AutoPlay/PoopMan.AutoPlay.csproj -c Release
+          $dst = 'tests/PoopMan.AutoPlay/bin/Release/net9.0-windows'
+          Copy-Item -Recurse -Force PoopMan/bin/Release/net9.0-windows/Content "$dst/Content"
+
+      - name: Auto-play (bot)
+        run: |
+          $dir = (Resolve-Path tests/PoopMan.AutoPlay/bin/Release/net9.0-windows).Path
+          $exe = Join-Path $dir 'PoopMan.AutoPlay.exe'
+          $out = (New-Item -ItemType Directory -Force out).FullName
+
+          function Run-Mode($name, $argList, $timeoutSec) {
+            $log = Join-Path $out "$name.log"
+            $p = Start-Process -FilePath $exe -ArgumentList $argList -WorkingDirectory $dir -PassThru `
+                   -RedirectStandardOutput $log -RedirectStandardError "$log.err" -NoNewWindow
+            return @{ Name = $name; Proc = $p; Log = $log; Timeout = $timeoutSec }
+          }
+
+          # Scenari brevi in sequenza
+          $scenarios = @(
+            @('det',    "30 1 `"$out\det`" 999 det",       120),
+            @('knock',  "120 8 `"$out\knock`" 999 knock", 600),
+            @('ui',     "90 1 `"$out\ui`" 999 ui",         300),
+            @('biomes', "60 1 `"$out\biomes`" 999 biomes", 300)
+          )
+          $runs = @()
+          foreach ($s in $scenarios) {
+            $r = Run-Mode $s[0] $s[1] $s[2]
+            if (-not $r.Proc.WaitForExit($r.Timeout * 1000)) { $r.Proc.Kill(); Add-Content $r.Log "TIMEOUT" }
+            $runs += $r
+          }
+
+          # Partite lunghe in parallelo
+          $long = @(
+            (Run-Mode 'bot'     "600 10 `"$out\bot`" 20 bot"        1500),
+            (Run-Mode 'deep'    "600 10 `"$out\deep`" 7 deep"       1500),
+            (Run-Mode 'deepall' "400 10 `"$out\deepall`" 9 deepall" 1500)
+          )
+          foreach ($r in $long) {
+            if (-not $r.Proc.WaitForExit($r.Timeout * 1000)) { $r.Proc.Kill(); Add-Content $r.Log "TIMEOUT" }
+          }
+          $runs += $long
+
+          # Esito
+          $failed = $false
+          $summary = @("## PoopMan — auto-play su Windows", "", "| Modalità | Exit | Esito | Dettagli |", "|---|---|---|---|")
+          foreach ($r in $runs) {
+            $r.Proc.WaitForExit()
+            $text = (Get-Content $r.Log -Raw -ErrorAction SilentlyContinue) + (Get-Content "$($r.Log).err" -Raw -ErrorAction SilentlyContinue)
+            $problems = @()
+            if ($r.Proc.ExitCode -ne 0) { $problems += "exit $($r.Proc.ExitCode)" }
+            if ($text -match 'EXCEPTION|Unhandled exception') { $problems += 'eccezione' }
+            if ($text -match '\[INV\]') { $problems += 'invarianti violate' }
+            if ($text -match 'FAIL') { $problems += 'FAIL' }
+            if ($text -match 'TIMEOUT') { $problems += 'timeout' }
+            $detail = ($text -split "`n" | Where-Object { $_ -match '^(DONE|\[DET\]|\[KNOCK\]|AUTOPLAY)' } | Select-Object -Last 3) -join ' / '
+            $ok = $problems.Count -eq 0
+            if (-not $ok) { $failed = $true }
+            $summary += "| $($r.Name) | $($r.Proc.ExitCode) | $(if ($ok) {'✅'} else {'❌ ' + ($problems -join ', ')}) | $($detail.Trim() -replace '\|','/') |"
+            Write-Host "===== $($r.Name) (exit $($r.Proc.ExitCode)) ====="
+            Write-Host (($text -split "`n" | Where-Object { $_ -notmatch '^\[DBG\]' } | Select-Object -Last 25) -join "`n")
+          }
+          $summary -join "`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+          if ($failed) { Write-Host "::error::auto-play: problemi rilevati"; exit 1 }
+          Write-Host "AUTOPLAY PASS"
+
+      - name: Carica screenshot e log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: poopman-windows-autoplay
+          path: out/
+          retention-days: 14
