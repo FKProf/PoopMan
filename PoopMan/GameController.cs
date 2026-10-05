@@ -45,6 +45,36 @@ public class GameController
     public static bool MenuLeft() => MoveLeft();
     public static bool MenuRight() => MoveRight();
 
+    /// <summary>
+    ///     Indietro / chiudi nei menu: ESC oppure B / Back sul gamepad.
+    ///     Da usare solo nelle schermate di menu (in gioco B è la bomba grande).
+    /// </summary>
+    public static bool MenuBack()
+    {
+        return p_keyboard.WasKeyJustPressed(Keys.Escape) ||
+               p_gamePad.WasButtonJustPressed(Buttons.B) ||
+               p_gamePad.WasButtonJustPressed(Buttons.Back);
+    }
+
+    /// <summary>Sezione precedente (enciclopedia): Q oppure LB.</summary>
+    public static bool PrevTab()
+    {
+        return p_keyboard.WasKeyJustPressed(Keys.Q) || p_gamePad.WasButtonJustPressed(Buttons.LeftShoulder);
+    }
+
+    /// <summary>Sezione successiva (enciclopedia): TAB / E oppure RB.</summary>
+    public static bool NextTab()
+    {
+        return p_keyboard.WasKeyJustPressed(Keys.Tab) || p_keyboard.WasKeyJustPressed(Keys.E) ||
+               p_gamePad.WasButtonJustPressed(Buttons.RightShoulder);
+    }
+
+    /// <summary>Attiva/disattiva il mute nel pannello audio: M oppure X sul gamepad.</summary>
+    public static bool ToggleMute()
+    {
+        return p_keyboard.WasKeyJustPressed(Keys.M) || p_gamePad.WasButtonJustPressed(Buttons.X);
+    }
+
     /// <summary>Conferma nei menu: ENTER oppure A / Start sul gamepad.</summary>
     public static bool Confirm()
     {

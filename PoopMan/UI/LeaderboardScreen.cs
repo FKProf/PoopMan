@@ -93,10 +93,10 @@ public sealed class LeaderboardScreen : Scene
         var kb = Core.Input.Keyboard;
         var mouse = Core.Input.Mouse;
 
-        // Scroll tastiera
-        if (kb.WasKeyJustPressed(Keys.Up) || kb.WasKeyJustPressed(Keys.W))
+        // Scroll tastiera / gamepad
+        if (GameController.MenuUp())
             _scrollOffset = Math.Max(0, _scrollOffset - 1);
-        if (kb.WasKeyJustPressed(Keys.Down) || kb.WasKeyJustPressed(Keys.S))
+        if (GameController.MenuDown())
             _scrollOffset = Math.Min(Math.Max(0, _entries.Count - VisibleRows), _scrollOffset + 1);
 
         // Scroll rotella mouse
@@ -251,7 +251,9 @@ public sealed class LeaderboardScreen : Scene
         }
 
         // ── Suggerimento scroll ───────────────────────────────────────────
-        var keysHint = _fromGameOver ? "ENTER/R: riavvia   ESC: menu" : "ENTER/ESC: menu";
+        var keysHint = _fromGameOver
+            ? "ENTER/R/(A): riavvia   ESC/(B): menu"
+            : "ENTER/ESC  (A/B): menu";
         var hint = _entries.Count > VisibleRows
             ? "W/S  /  rotella mouse per scorrere     " + keysHint
             : keysHint;

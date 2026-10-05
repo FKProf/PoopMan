@@ -13,6 +13,12 @@ namespace PoopMan.UI;
 /// </summary>
 public class AudioSettingsPanel
 {
+    /// <summary>Riga di aiuto comandi (tastiera + gamepad) mostrata sotto il pannello.</summary>
+    public const string AudioHint = "< > volume   ^ v seleziona   M / (X) mute   scroll/click barra";
+
+    /// <summary>Riga di aiuto per tornare indietro.</summary>
+    public const string BackHint = "ESC / (B): indietro";
+
     private const float RepeatDelay = 0.35f;
     private const float RepeatInterval = 0.09f;
 
@@ -136,22 +142,23 @@ public class AudioSettingsPanel
             AudioManager.SavePreferences();
         }
 
-        // ── Tastiera: navigazione riga ────────────────────────────────────
-        if (kb.WasKeyJustPressed(Keys.Up)) _selectedRow = (_selectedRow - 1 + 3) % 3;
-        if (kb.WasKeyJustPressed(Keys.Down)) _selectedRow = (_selectedRow + 1) % 3;
+        // ── Tastiera / gamepad: navigazione riga ──────────────────────────
+        if (GameController.MenuUp()) _selectedRow = (_selectedRow - 1 + 3) % 3;
+        if (GameController.MenuDown()) _selectedRow = (_selectedRow + 1) % 3;
 
-        // Toggle mute da tastiera: M ovunque, oppure ENTER/SPACE sulla riga MUTE
-        var toggleMute = kb.WasKeyJustPressed(Keys.M) ||
-                         (_selectedRow == 2 && (kb.WasKeyJustPressed(Keys.Enter) || kb.WasKeyJustPressed(Keys.Space)));
+        // Toggle mute: M / gamepad X ovunque, oppure ENTER / SPAZIO / gamepad A sulla riga MUTE
+        var toggleMute = GameController.ToggleMute() ||
+                         (_selectedRow == 2 && (kb.WasKeyJustPressed(Keys.Enter) || kb.WasKeyJustPressed(Keys.Space) ||
+                                                Core.Input.GamePad.WasButtonJustPressed(Buttons.A)));
         if (toggleMute)
         {
             AudioManager.IsMuted = !AudioManager.IsMuted;
             AudioManager.SavePreferences();
         }
 
-        // ── Tastiera: modifica volume con auto-repeat ─────────────────────
-        var leftHeld = kb.IsKeyDown(Keys.Left);
-        var rightHeld = kb.IsKeyDown(Keys.Right);
+        // ── Tastiera / gamepad: modifica volume con auto-repeat ───────────
+        var leftHeld = GameController.HoldLeft();
+        var rightHeld = GameController.HoldRight();
 
         var doStep = false;
         if ((leftHeld || rightHeld) && _selectedRow < 2)
@@ -201,7 +208,7 @@ public class AudioSettingsPanel
         DrawMuteRow(sb, cx, cy + RowSpacing * 2, _selectedRow == 2);
 
         if (showHint)
-            DrawTextCentered(sb, "< > volume    ^ v seleziona    M = mute    scroll/click barra", cx,
+            DrawTextCentered(sb, AudioHint, cx,
                 cy + RowSpacing * 2 + 36, Color.DarkGray, 0.75f);
     }
 

@@ -40,6 +40,9 @@ public class AudioController : IDisposable
     // ── Suoni UI ──────────────────────────────────────────────────────────
     private SoundEffect? _uiSound;
     private SoundEffectInstance? _uiSoundInst;
+    private bool _uiLoopWanted; // la scena vuole la musica del titolo (se udibile)
+    private SoundEffect? _clickBlip;
+    private SoundEffect? _hoverBlip;
 
     private AudioController()
     {
@@ -59,8 +62,7 @@ public class AudioController : IDisposable
         {
             _bgmVolume = Math.Clamp(value, 0f, 1f);
             ApplyBgmVolume();
-            if (_uiSoundInst != null)
-                _uiSoundInst.Volume = _isMuted ? 0f : _bgmVolume * 0.7f;
+            ApplyUiLoopVolume();
         }
     }
 
@@ -70,9 +72,8 @@ public class AudioController : IDisposable
         set
         {
             _sfxVolume = Math.Clamp(value, 0f, 1f);
-            // Aggiorna il volume dell'istanza UI loopata (musica titolo)
-            if (_uiSoundInst != null)
-                _uiSoundInst.Volume = _isMuted ? 0f : _bgmVolume * 0.7f;
+            // La musica del titolo segue il volume musica, non quello SFX
+            ApplyUiLoopVolume();
         }
     }
 
@@ -86,9 +87,9 @@ public class AudioController : IDisposable
         set
         {
             _isMuted = value;
-            MediaPlayer.IsMuted = _isMuted;
-            if (_uiSoundInst != null)
-                _uiSoundInst.Volume = _isMuted ? 0f : _bgmVolume * 0.7f;
+            // Rispetta anche il volume a 0: togliere il mute non deve riaccendere la musica
+            ApplyBgmVolume();
+            ApplyUiLoopVolume();
         }
     }
 
@@ -104,6 +105,8 @@ public class AudioController : IDisposable
         _uiSoundInst?.Stop();
         foreach (var s in _placeBombSounds) s.Dispose();
         _uiSound?.Dispose();
+        _clickBlip?.Dispose();
+        _hoverBlip?.Dispose();
         _explosionSmall?.Dispose();
         _explosionBig?.Dispose();
         foreach (var t in _bgmTracks) t.Dispose();
@@ -179,9 +182,7 @@ public class AudioController : IDisposable
     {
         var sfx = bigBomb ? _explosionBig : _explosionSmall;
         if (sfx == null) return;
-        var inst = sfx.CreateInstance();
-        inst.Volume = _isMuted ? 0f : _sfxVolume;
-        inst.Play();
+        PlayOneShot(sfx, _isMuted ? 0f : _sfxVolume);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -189,9 +190,10 @@ public class AudioController : IDisposable
     // ─────────────────────────────────────────────────────────────────────
     private void ApplyBgmVolume()
     {
+        // Il volume va sempre allineato (anche a 0), altrimenti togliendo il mute
+        // MediaPlayer riparte con l'ultimo volume non nullo.
+        MediaPlayer.Volume = _isMuted ? 0f : _bgmVolume;
         MediaPlayer.IsMuted = _isMuted || _bgmVolume <= 0f;
-        if (!MediaPlayer.IsMuted)
-            MediaPlayer.Volume = _bgmVolume;
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -301,34 +303,89 @@ public class AudioController : IDisposable
         _uiSoundInst?.Stop();
         _uiSoundInst = _uiSound.CreateInstance();
         _uiSoundInst.IsLooped = loop;
-        _uiSoundInst.Volume = _isMuted ? 0f : _bgmVolume * 0.7f;
-        _uiSoundInst.Play();
+        _uiLoopWanted = true;
+        ApplyUiLoopVolume();
     }
 
     public void StopUiSound()
     {
+        _uiLoopWanted = false;
         _uiSoundInst?.Stop();
         _uiSoundInst = null;
     }
 
-    /// <summary>Riproduce un breve click UI (suono UI one-shot a pitch alto).</summary>
-    public void PlayClickSound()
+    /// <summary>
+    ///     Allinea la musica del titolo (loop UISound) a mute e volume musica.
+    ///     Con volume effettivo 0 il loop viene proprio fermato: su WindowsDX un
+    ///     SoundEffectInstance a Volume 0 impostato prima di Play() può suonare lo stesso.
+    ///     Quando il volume torna sopra 0 il loop riparte.
+    /// </summary>
+    private void ApplyUiLoopVolume()
     {
-        if (_uiSound == null) return;
-        var inst = _uiSound.CreateInstance();
-        inst.Volume = _isMuted ? 0f : Math.Clamp(_sfxVolume * 0.65f, 0f, 1f);
-        inst.Pitch = 0.4f;
-        inst.Play();
+        if (_uiSoundInst == null || !_uiLoopWanted) return;
+        var volume = _isMuted ? 0f : _bgmVolume * 0.7f;
+        if (volume <= 0f)
+        {
+            if (_uiSoundInst.State != SoundState.Stopped) _uiSoundInst.Stop();
+            return;
+        }
+
+        _uiSoundInst.Volume = volume;
+        if (_uiSoundInst.State != SoundState.Playing) _uiSoundInst.Play();
+        _uiSoundInst.Volume = volume; // ripetuto dopo Play(): ora la voce esiste di sicuro
     }
 
-    /// <summary>Riproduce un suono di hover UI (suono UI più soft e basso).</summary>
+    /// <summary>Riproduce uno SFX one-shot solo se udibile (volume impostato prima e dopo Play).</summary>
+    private static void PlayOneShot(SoundEffect sfx, float volume, float pitch = 0f)
+    {
+        if (volume <= 0f) return;
+        var inst = sfx.CreateInstance();
+        inst.Pitch = pitch;
+        inst.Volume = Math.Clamp(volume, 0f, 1f);
+        inst.Play();
+        inst.Volume = Math.Clamp(volume, 0f, 1f);
+    }
+
+    /// <summary>
+    ///     Riproduce un breve click UI. Usa un blip generato via codice: UISound.wav è la
+    ///     musica della schermata home (~1 minuto) e non va riprodotta nei menu di gioco.
+    /// </summary>
+    public void PlayClickSound()
+    {
+        _clickBlip ??= CreateBlip(880f, 660f, 0.07f);
+        PlayOneShot(_clickBlip, _isMuted ? 0f : _sfxVolume * 0.45f);
+    }
+
+    /// <summary>Riproduce un suono hover UI (blip breve, più soft e basso del click).</summary>
     public void PlayHoverSound()
     {
-        if (_uiSound == null) return;
-        var inst = _uiSound.CreateInstance();
-        inst.Volume = _isMuted ? 0f : Math.Clamp(_sfxVolume * 0.25f, 0f, 1f);
-        inst.Pitch = -0.2f;
-        inst.Play();
+        _hoverBlip ??= CreateBlip(520f, 520f, 0.04f);
+        PlayOneShot(_hoverBlip, _isMuted ? 0f : _sfxVolume * 0.25f);
+    }
+
+    /// <summary>
+    ///     Crea un breve tono sinusoidale (mono, 16 bit) con glissando da
+    ///     <paramref name="startHz" /> a <paramref name="endHz" /> e dissolvenza finale.
+    /// </summary>
+    private static SoundEffect CreateBlip(float startHz, float endHz, float seconds)
+    {
+        const int sampleRate = 44100;
+        var samples = (int)(sampleRate * seconds);
+        var data = new byte[samples * 2];
+        var phase = 0.0;
+        for (var i = 0; i < samples; i++)
+        {
+            var t = i / (float)samples;
+            var hz = startHz + (endHz - startHz) * t;
+            phase += 2.0 * Math.PI * hz / sampleRate;
+            var attack = Math.Min(1f, i / (sampleRate * 0.004f)); // evita il "pop" iniziale
+            var env = attack * (1f - t) * (1f - t);
+            var v = (short)(Math.Sin(phase) * env * short.MaxValue * 0.6f);
+            data[i * 2] = (byte)(v & 0xFF);
+            data[i * 2 + 1] = (byte)((v >> 8) & 0xFF);
+        }
+
+        return new SoundEffect(data, sampleRate, AudioChannels.Mono);
     }
 
     /// <summary>
@@ -349,8 +406,6 @@ public class AudioController : IDisposable
             } while (idx == _lastPlaceBombIndex);
 
         _lastPlaceBombIndex = idx;
-        var inst = _placeBombSounds[idx].CreateInstance();
-        inst.Volume = _isMuted ? 0f : _sfxVolume;
-        inst.Play();
+        PlayOneShot(_placeBombSounds[idx], _isMuted ? 0f : _sfxVolume);
     }
 }

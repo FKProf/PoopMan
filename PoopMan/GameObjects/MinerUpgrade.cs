@@ -239,6 +239,26 @@ public static class UpgradeRegistry
         };
     }
 
+    /// <summary>
+    ///     Coppie di upgrade che si annullano a vicenda: il DETONATORE toglie la miccia
+    ///     alle bombe, quindi MICCIA CORTA non avrebbe più effetto (e viceversa).
+    ///     Una volta presa una, l'altra non viene più proposta; le due non compaiono
+    ///     mai insieme nello stesso menu.
+    /// </summary>
+    private static readonly (UpgradeType a, UpgradeType b)[] Conflicts =
+    {
+        (UpgradeType.RemoteDetonator, UpgradeType.FasterBomb)
+    };
+
+    /// <summary>True se <paramref name="x" /> e <paramref name="y" /> non sono compatibili.</summary>
+    public static bool AreConflicting(UpgradeType x, UpgradeType y)
+    {
+        foreach (var (a, b) in Conflicts)
+            if ((x == a && y == b) || (x == b && y == a))
+                return true;
+        return false;
+    }
+
     /// <summary>Restituisce true se l'upgrade è di rarità Mythic.</summary>
     public static bool IsMythic(UpgradeType type) =>
         type is UpgradeType.MythicImmortality or UpgradeType.InstantKill;
@@ -254,14 +274,17 @@ public static class UpgradeRegistry
     {
         var rng = new Random();
 
+        int Level(UpgradeType t) => currentLevels.TryGetValue(t, out var v) ? v : 0;
+
+        // Esclude gli upgrade incompatibili con uno già posseduto
+        bool ConflictsWithOwned(UpgradeType t) =>
+            Conflicts.Any(c => (c.a == t && Level(c.b) > 0) || (c.b == t && Level(c.a) > 0));
+
         // Separa pool normale e Mythic
         var normalPool = All
             .Where(def => !IsMythic(def.Type))
-            .Where(def =>
-            {
-                var cur = currentLevels.TryGetValue(def.Type, out var v) ? v : 0;
-                return cur < MaxLevel(def.Type);
-            })
+            .Where(def => Level(def.Type) < MaxLevel(def.Type))
+            .Where(def => !ConflictsWithOwned(def.Type))
             .OrderBy(_ => rng.Next())
             .ToList();
 
@@ -290,7 +313,10 @@ public static class UpgradeRegistry
                 }
             }
 
-            // Slot normale
+            // Slot normale: salta le scelte incompatibili con una già proposta
+            while (normalIndex < normalPool.Count &&
+                   result.Any(r => AreConflicting(r.Type, normalPool[normalIndex].Type)))
+                normalIndex++;
             if (normalIndex < normalPool.Count)
                 result.Add(normalPool[normalIndex++]);
         }

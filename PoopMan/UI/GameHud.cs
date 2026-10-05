@@ -164,6 +164,7 @@ public class GameHud
         DrawS(sb, $"LVL {level}", new Vector2(lvlX, cy), Color.Cyan);
 
         // ── Bombe piccole disponibili (slot a destra del livello) ─────────
+        var middleRight = pill.Right; // limite sinistro per gli indicatori abilità
         if (bombCapacity > 0 && bombsAvailable >= 0)
         {
             var slotScale = iconH * 0.8f;
@@ -176,6 +177,8 @@ public class GameHud
                     ready ? Color.White : new Color(40, 40, 60) * 0.8f, 0f, Vector2.Zero, slotScale,
                     SpriteEffects.None, 0f);
             }
+
+            middleRight = sx + (bombCapacity - 1) * slotStep + (int)(32 * slotScale);
         }
 
         // ── DESTRA: Chiave ────────────────────────────────────────────────
@@ -193,63 +196,73 @@ public class GameHud
         }
 
         // ── DESTRA: Indicatori abilità permanenti ─────────────────────────
-        rx -= 10;
-        var abilityY = (Height - 14) / 2f; // centra verticalmente l'etichetta
-
-        // Invincibilità temporanea attiva (bordo luminoso pulsante)
+        // Ordine da destra verso sinistra (come prima): INV, scudo, DET, danno, mythic.
+        var tags = new List<(string text, Color color)>();
         if (isInvincible)
-        {
-            var iAlpha = 0.5f + 0.5f * (float)Math.Sin(Environment.TickCount64 * 0.012);
-            var iStr = "INV";
-            rx -= (int)_font.MeasureString(iStr).X;
-            DrawS(sb, iStr, new Vector2(rx, cy), new Color(255, 255, 120) * iAlpha);
-            rx -= 8;
-        }
-
-        // Scudo
+            tags.Add(("INV", new Color(255, 255, 120) * (0.5f + 0.5f * (float)Math.Sin(Environment.TickCount64 * 0.012))));
         if (hasShield)
-        {
-            var shColor = shieldActive ? new Color(180, 220, 255) : new Color(100, 130, 180);
-            var shStr = shieldActive ? "[SH]" : "[sh]";
-            rx -= (int)_font.MeasureString(shStr).X;
-            DrawS(sb, shStr, new Vector2(rx, cy), shColor);
-            rx -= 8;
-        }
-
-        // Detonatore remoto
+            tags.Add(shieldActive ? ("[SH]", new Color(180, 220, 255)) : ("[sh]", new Color(100, 130, 180)));
         if (hasDetonator)
-        {
-            var detStr = "[DET]";
-            rx -= (int)_font.MeasureString(detStr).X;
-            DrawS(sb, detStr, new Vector2(rx, cy), new Color(255, 99, 71));
-            rx -= 8;
-        }
-
-        // Danno esplosione extra
+            tags.Add(("[DET]", new Color(255, 99, 71)));
         if (explosionDmgBonus > 0)
-        {
-            var dmgStr = $"+{explosionDmgBonus}dmg";
-            rx -= (int)_font.MeasureString(dmgStr).X;
-            DrawS(sb, dmgStr, new Vector2(rx, cy), new Color(255, 160, 40));
-            rx -= 8;
-        }
-
-        // ── DESTRA: Upgrade Mythic ─────────────────────────────────────────
+            tags.Add(($"+{explosionDmgBonus}dmg", new Color(255, 160, 40)));
         if (instantKill)
+            tags.Add(("[IK]", new Color(255, 80, 80) * (0.7f + 0.3f * (float)Math.Sin(Environment.TickCount64 * 0.009))));
+        if (mythicImmortality)
+            tags.Add(("[IMM]", new Color(220, 180, 30) * (0.7f + 0.3f * (float)Math.Sin(Environment.TickCount64 * 0.008))));
+
+        DrawAbilityTags(sb, tags, middleRight + 12, rx - 10);
+    }
+
+    /// <summary>
+    ///     Disegna gli indicatori abilità allineati a destra nello spazio [left, right]
+    ///     senza mai sovrapporli agli altri elementi dell'HUD: se non entrano su una
+    ///     riga vengono rimpiccioliti e, se serve, divisi su due righe.
+    /// </summary>
+    private void DrawAbilityTags(SpriteBatch sb, List<(string text, Color color)> tags, int left, int right)
+    {
+        if (tags.Count == 0) return;
+        const float gap = 8f;
+        var available = Math.Max(1, right - left);
+
+        float RowWidth(int from, int to)
         {
-            var ikStr = "[IK]";
-            var ikPulse = 0.7f + 0.3f * (float)Math.Sin(Environment.TickCount64 * 0.009);
-            rx -= (int)_font.MeasureString(ikStr).X;
-            DrawS(sb, ikStr, new Vector2(rx, cy), new Color(255, 80, 80) * ikPulse);
-            rx -= 8;
+            var w = 0f;
+            for (var i = from; i < to; i++) w += _font.MeasureString(tags[i].text).X + (i > from ? gap : 0f);
+            return w;
         }
 
-        if (mythicImmortality)
+        // Una riga, eventualmente rimpicciolita
+        var single = RowWidth(0, tags.Count);
+        var singleScale = Math.Min(1f, available / single);
+        if (singleScale >= 0.75f || tags.Count == 1)
         {
-            var miStr = "[IMM]";
-            var miPulse = 0.7f + 0.3f * (float)Math.Sin(Environment.TickCount64 * 0.008);
-            rx -= (int)_font.MeasureString(miStr).X;
-            DrawS(sb, miStr, new Vector2(rx, cy), new Color(220, 180, 30) * miPulse);
+            DrawTagRow(sb, tags, 0, tags.Count, right, Height / 2f, singleScale, gap);
+            return;
+        }
+
+        // Due righe impilate (la prima contiene gli indicatori più a destra)
+        var split = (tags.Count + 1) / 2;
+        var widest = Math.Max(RowWidth(0, split), RowWidth(split, tags.Count));
+        var rowScale = Math.Min((Height - 4) / 2f / _font.LineSpacing, available / widest);
+        var rowH = _font.LineSpacing * rowScale;
+        DrawTagRow(sb, tags, 0, split, right, Height / 2f - rowH / 2f, rowScale, gap);
+        DrawTagRow(sb, tags, split, tags.Count, right, Height / 2f + rowH / 2f, rowScale, gap);
+    }
+
+    private void DrawTagRow(SpriteBatch sb, List<(string text, Color color)> tags, int from, int to,
+        float right, float centerY, float scale, float gap)
+    {
+        var x = right;
+        for (var i = from; i < to; i++)
+        {
+            var size = _font.MeasureString(tags[i].text) * scale;
+            x -= size.X;
+            var pos = new Vector2(x, centerY - size.Y / 2f);
+            sb.DrawString(_font, tags[i].text, pos + new Vector2(1, 1), Color.Black * 0.90f, 0f, Vector2.Zero,
+                scale, SpriteEffects.None, 0f);
+            sb.DrawString(_font, tags[i].text, pos, tags[i].color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            x -= gap * scale;
         }
     }
 

@@ -78,6 +78,15 @@ public sealed class NameEntryScreen : Scene
             return;
         }
 
+        // Gamepad: Back salta senza nome (come ESC)
+        if (Core.Input.GamePad.WasButtonJustPressed(Buttons.Back))
+        {
+            _name = "???";
+            Confirm();
+            _prevKb = kb;
+            return;
+        }
+
         foreach (var key in pressed)
             if (WasJustPressed(key, kb))
             {
@@ -206,7 +215,8 @@ public sealed class NameEntryScreen : Scene
         DrawTextCentered($"{_name.Length}/{MaxNameLength}", cx, fieldY + fieldH + 6, Color.Gray * 0.7f, 0.75f);
 
         // ── Istruzioni ────────────────────────────────────────────────────
-        DrawTextCentered("ENTER  per confermare   -   ESC  per saltare", cx, boxY + boxH - 36, Color.DimGray, 0.85f);
+        DrawTextCentered("ENTER / (Start)  per confermare   -   ESC / (Back)  per saltare", cx, boxY + boxH - 36,
+            Color.DimGray, 0.85f);
 
         _sb.End();
     }

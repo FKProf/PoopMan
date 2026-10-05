@@ -49,8 +49,8 @@ public class GameOverlay
         DrawTextCentered(sb, "PUNTEGGIO FINALE", cx, boxY + boxH / 5 + 62, Color.White, 1.1f);
         DrawTextCentered(sb, $"{score}", cx, boxY + boxH / 5 + 92, Color.Gold, 2.0f);
         DrawRect(sb, new Rectangle(cx - boxW / 3, cy + 20, boxW * 2 / 3, 2), new Color(150, 40, 40));
-        DrawTextCentered(sb, "R  /  ENTER  /  Click  per continuare", cx, cy + 50, Color.LightGray, 1f);
-        DrawTextCentered(sb, "ESC  per uscire", cx, cy + 76, Color.Gray * 0.9f, 0.85f);
+        DrawTextCentered(sb, "R  /  ENTER  /  (A)  /  Click  per continuare", cx, cy + 50, Color.LightGray, 1f);
+        DrawTextCentered(sb, "ESC  /  (Start)  per uscire", cx, cy + 76, Color.Gray * 0.9f, 0.85f);
     }
 
     // ── Flash livello ─────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ public class GameOverlay
         var titleY = UpgradeTitleY(vh);
         DrawTextCentered(sb, "SCEGLI UN POTENZIAMENTO", cx, titleY, Color.Gold, 2.0f);
         var subtitleScale = vw < 900 ? 0.85f : 1.0f;
-        DrawTextCentered(sb, "Frecce / A-D  |  ENTER  |  Click",
+        DrawTextCentered(sb, "Frecce / A-D / D-pad  |  ENTER / (A)  |  Click",
             cx, titleY + 46, new Color(170, 170, 170), subtitleScale);
 
         // ── Layout card adattivo (condiviso con l'hit-test del mouse) ──
