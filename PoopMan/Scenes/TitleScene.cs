@@ -17,10 +17,11 @@ public class TitleScene : Scene
     private const int BtnH = 36;
     private const int BtnGap = 14;
 
-    private static readonly string[] MenuItems = { "GIOCA", "CLASSIFICA", "ISTRUZIONI", "AUDIO" };
+    private static readonly string[] MenuItems = { "GIOCA", "CLASSIFICA", "ISTRUZIONI", "AUDIO", "COMANDI" };
 
     // ── Audio Panel ───────────────────────────────────────────────────
     private AudioSettingsPanel _audioPanel;
+    private ControlsSettingsPanel _controlsPanel;
     private Texture2D _bgFixed;
 
     // ── Nuvole ────────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ public class TitleScene : Scene
         _glow = PoopMan.Scenes.FxTextures.CreateRadial(Core.GraphicsDevice, 128, 1.8f);
 
         _audioPanel = new AudioSettingsPanel(_font, _pixel);
+        _controlsPanel = new ControlsSettingsPanel(_font, _pixel);
 
         AudioManager.Load(Content);
         AudioManager.StartTitleAudio();
@@ -85,6 +87,15 @@ public class TitleScene : Scene
         {
             _audioPanel.Update(gameTime);
             if (kb.WasKeyJustPressed(Keys.Back) || GameController.Pause() || GameController.MenuBack())
+                _screen = MenuScreen.Main;
+            return;
+        }
+
+        // ── Pannello comandi ──────────────────────────────────────────
+        if (_screen == MenuScreen.Comandi)
+        {
+            _controlsPanel.Update(gameTime);
+            if (!_controlsPanel.BlocksBack && (GameController.Pause() || GameController.MenuBack()))
                 _screen = MenuScreen.Main;
             return;
         }
@@ -133,6 +144,7 @@ public class TitleScene : Scene
                             case 1: Core.ChangeScene(new LeaderboardScreen(fromGameOver: false)); break;
                             case 2: _screen = MenuScreen.Istruzioni; break;
                             case 3: _screen = MenuScreen.Audio; break;
+                            case 4: OpenControls(); break;
                         }
                 }
             }
@@ -154,7 +166,16 @@ public class TitleScene : Scene
                 case 3: // AUDIO
                     _screen = MenuScreen.Audio;
                     break;
+                case 4: // COMANDI
+                    OpenControls();
+                    break;
             }
+    }
+
+    private void OpenControls()
+    {
+        _screen = MenuScreen.Comandi;
+        _controlsPanel.Open();
     }
 
     public override void Draw(GameTime gameTime)
@@ -219,6 +240,10 @@ public class TitleScene : Scene
                 break;
             case MenuScreen.Istruzioni:
                 DrawIstruzioniOverlay(W, H);
+                break;
+            case MenuScreen.Comandi:
+                _sb.Draw(_pixel, new Rectangle(0, 0, W, H), Color.Black * 0.55f);
+                _controlsPanel.Draw(_sb, W / 2, H / 2);
                 break;
         }
 
@@ -327,19 +352,30 @@ public class TitleScene : Scene
 
     // ─────────────────────────────────────────────────────────────────
     // Comandi mostrati nelle istruzioni: azione, tastiera, gamepad
-    private static readonly (string action, string keys, string pad)[] GameControls =
+    // Generati ogni volta dalle assegnazioni correnti (personalizzabili in COMANDI)
+    private static (string action, string keys, string pad)[] GameControls =>
+        new[]
+        {
+            Row("Su", GameAction.Up),
+            Row("Giu", GameAction.Down),
+            Row("Sinistra", GameAction.Left),
+            Row("Destra", GameAction.Right),
+            Row("Bomba piccola", GameAction.MiniBomb),
+            Row("Bomba grande", GameAction.BigBomb),
+            Row("Detonatore", GameAction.Detonate),
+            Row("Pausa / menu", GameAction.Pause),
+            ("Schermo intero", "F11", "-")
+        };
+
+    private static (string action, string keys, string pad) Row(string label, GameAction action)
     {
-        ("Muovi", "WASD / FRECCE", "D-PAD / LEVETTA SX"),
-        ("Bomba piccola", "SPAZIO", "A"),
-        ("Bomba grande", "X", "B"),
-        ("Detonatore", "C", "Y"),
-        ("Pausa / menu", "ESC", "START / BACK"),
-        ("Schermo intero", "F11", "-")
-    };
+        return (label, InputBindings.KeysLabel(action),
+            InputBindings.ButtonName(InputBindings.GetButton(action)));
+    }
 
     private static readonly (string action, string keys, string pad)[] MenuControls =
     {
-        ("Seleziona", "FRECCE / WASD", "D-PAD / LEVETTA SX"),
+        ("Seleziona", "FRECCE + TASTI MOVIMENTO", "D-PAD / LEVETTA SX"),
         ("Conferma", "ENTER", "A"),
         ("Indietro / chiudi", "ESC", "B"),
         ("Sezioni enciclopedia", "TAB / Q / E", "LB / RB"),
@@ -446,6 +482,7 @@ public class TitleScene : Scene
     {
         Main,
         Audio,
-        Istruzioni
+        Istruzioni,
+        Comandi
     }
 }

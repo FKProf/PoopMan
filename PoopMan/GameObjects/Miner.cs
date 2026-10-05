@@ -13,23 +13,19 @@ namespace PoopMan.GameObjects;
 
 public class Miner
 {
-    // Input buffer tile-per-tile
-    private const int MAX_BUFFER_SIZE = 2;
+    // Finestra in cui una svolta premuta "in anticipo" resta valida (s)
+    private const float TurnBufferTime = 0.18f;
     private const float AnimSpeed = 0.15f;
 
     private const int ExtraLifeEvery = 1000;
     private const float BlinkInterval = 0.1f;
     private const int ShieldRechargePeriod = 3;
     private readonly Dictionary<string, List<Rectangle>> _animations = new();
-
-    // Legacy body segments (non attivi)
-    private readonly List<(Vector2 from, Vector2 to)> _bodySegments = new();
     private readonly Dictionary<string, List<Rectangle>> _bombAnimations;
 
     private readonly List<Bomb> _bombs = new();
     private readonly Texture2D _bombTexture;
     private readonly Dictionary<string, List<Rectangle>> _explosionAnimations = new();
-    private readonly Queue<Vector2> _inputBuffer = new(MAX_BUFFER_SIZE);
     private readonly Dictionary<string, List<Rectangle>> _itemAnimations = new();
     // ═══════════════════════════════════════════════════════════════════
     // ANIMAZIONI
@@ -52,9 +48,14 @@ public class Miner
 
     // Tile occupate dai bat (aggiornate da GameScene prima di Update)
     private HashSet<Point> _batBlockedTiles = new();
-    private Vector2 _currentDirection = Vector2.UnitX;
-    private float _movementProgress;
+    private Vector2 _currentDirection = Vector2.UnitY;
+    private Point _fromTile;
     private float _moveSpeed = 160f;
+
+    // Direzioni tenute premute, in ordine di pressione (l'ultima ha la priorità)
+    private readonly List<Vector2> _heldDirections = new(4);
+    private Vector2 _bufferedDirection;
+    private float _bufferTimer;
     private Vector2 _targetPosition;
     private float _dashSpeedBonus;
     private float _dashTimer;
@@ -228,6 +229,12 @@ public class Miner
     public event EventHandler? DeathAnimationFinished;
 
     public event EventHandler? NeedsRespawn;
+
+    /// <summary>Lo scudo ha appena assorbito un colpo.</summary>
+    public event EventHandler? ShieldAbsorbed;
+
+    /// <summary>True mentre è attivo lo scatto post-danno (upgrade DashAfterHit).</summary>
+    public bool IsDashing => _dashTimer > 0f;
     public event EventHandler? ExtraLifeEarned;
 
     /// <summary>
@@ -459,102 +466,123 @@ public class Miner
 
     private void UpdateMovement(TileMap map, GameTime gameTime)
     {
-        if (!IsMoving && _inputBuffer.Count > 0)
+        var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        if (_bufferTimer > 0f) _bufferTimer = Math.Max(0f, _bufferTimer - dt);
+
+        // Inversione a metà tile: tornare indietro è immediato, senza dover
+        // prima arrivare al centro della tile successiva (salvo bomba sulla tile di partenza).
+        if (IsMoving && _heldDirections.Count > 0 && _heldDirections[^1] == -_currentDirection &&
+            !IsSolidBombTile(_fromTile))
         {
-            _currentDirection = _inputBuffer.Dequeue();
-            Point nextTile = new(TilePosition.X + (int)_currentDirection.X,
-                TilePosition.Y + (int)_currentDirection.Y);
-
-            if (map.IsWalkable(nextTile) && !IsSolidBombTile(nextTile))
-            {
-                // Aggiorna segmenti corpo (legacy)
-                for (var i = _bodySegments.Count - 1; i > 0; i--)
-                    _bodySegments[i] = (_bodySegments[i].to, _bodySegments[i - 1].to);
-                if (_bodySegments.Count > 0)
-                    _bodySegments[0] = (_bodySegments[0].to, _targetPosition);
-
-                TilePosition = nextTile;
-                _targetPosition = new Vector2(nextTile.X * TileMap.TileSize, nextTile.Y * TileMap.TileSize);
-                IsMoving = true;
-                _currentFrame = 0;
-                _animTimer = 0f;
-                _movementProgress = 0f;
-
-                _state = _currentDirection switch
-                {
-                    var d when d == Vector2.UnitX => MinerState.WalkRight,
-                    var d when d == -Vector2.UnitX => MinerState.WalkLeft,
-                    var d when d == -Vector2.UnitY => MinerState.WalkBack,
-                    _ => MinerState.WalkFront
-                };
-            }
-            else
-            {
-                _state = _state switch
-                {
-                    MinerState.WalkFront => MinerState.IdleFront,
-                    MinerState.WalkBack => MinerState.IdleBack,
-                    MinerState.WalkLeft => MinerState.IdleLeft,
-                    MinerState.WalkRight => MinerState.IdleRight,
-                    _ => _state
-                };
-            }
+            (TilePosition, _fromTile) = (_fromTile, TilePosition);
+            _targetPosition = TileToWorld(TilePosition);
+            _currentDirection = -_currentDirection;
+            _state = WalkStateOf(_currentDirection);
         }
 
-        if (IsMoving)
+        // Lo spostamento avanzato dopo aver raggiunto una tile prosegue subito sulla
+        // successiva: niente frame da fermo a ogni tile né animazione che riparte.
+        var budget = (_moveSpeed + (_dashTimer > 0f ? _dashSpeedBonus : 0f)) * dt;
+        for (var guard = 0; guard < 4 && budget > 0f; guard++)
         {
-            var effectiveSpeed = _moveSpeed + (_dashTimer > 0f ? _dashSpeedBonus : 0f);
-            var distance = effectiveSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            var dir = _targetPosition - Position;
+            if (!IsMoving && !TryStartStep(map)) break;
 
-            if (dir.Length() <= distance)
+            var toTarget = _targetPosition - Position;
+            var remaining = toTarget.Length();
+            if (remaining > budget)
+            {
+                Position += toTarget / remaining * budget;
+                budget = 0f;
+            }
+            else
             {
                 Position = _targetPosition;
+                budget -= remaining;
                 IsMoving = false;
-                _movementProgress = 1f;
-                _state = _state switch
-                {
-                    MinerState.WalkFront => MinerState.IdleFront,
-                    MinerState.WalkBack => MinerState.IdleBack,
-                    MinerState.WalkLeft => MinerState.IdleLeft,
-                    MinerState.WalkRight => MinerState.IdleRight,
-                    _ => _state
-                };
-            }
-            else
-            {
-                Position += Vector2.Normalize(dir) * distance;
-                _movementProgress = MathHelper.Clamp(_movementProgress + distance / TileMap.TileSize, 0f, 1f);
             }
         }
+
+        if (!IsMoving) _state = IdleStateOf(_currentDirection);
+    }
+
+    /// <summary>
+    ///     Avvia il passo verso la tile successiva. Priorità: svolta premuta in anticipo
+    ///     (buffer), poi i tasti tenuti dal più recente al più vecchio — così tenendo
+    ///     due direzioni il miner "scivola" nell'altra quando la prima è bloccata.
+    /// </summary>
+    private bool TryStartStep(TileMap map)
+    {
+        if (_bufferTimer > 0f && TryStepTowards(map, _bufferedDirection))
+        {
+            _bufferTimer = 0f;
+            return true;
+        }
+
+        for (var i = _heldDirections.Count - 1; i >= 0; i--)
+            if (TryStepTowards(map, _heldDirections[i]))
+                return true;
+
+        // Bloccato: si gira comunque verso il tasto premuto più di recente
+        if (_heldDirections.Count > 0) _currentDirection = _heldDirections[^1];
+        return false;
+    }
+
+    private bool TryStepTowards(TileMap map, Vector2 dir)
+    {
+        Point next = new(TilePosition.X + (int)dir.X, TilePosition.Y + (int)dir.Y);
+        if (!map.IsWalkable(next) || IsSolidBombTile(next)) return false;
+
+        _fromTile = TilePosition;
+        TilePosition = next;
+        _targetPosition = TileToWorld(next);
+        _currentDirection = dir;
+        _state = WalkStateOf(dir);
+        IsMoving = true;
+        return true;
     }
 
     private void HandleInput()
     {
-        var dir = Vector2.Zero;
+        UpdateHeldDirection(-Vector2.UnitY, GameController.HoldUp());
+        UpdateHeldDirection(Vector2.UnitY, GameController.HoldDown());
+        UpdateHeldDirection(-Vector2.UnitX, GameController.HoldLeft());
+        UpdateHeldDirection(Vector2.UnitX, GameController.HoldRight());
+    }
 
-        if (GameController.HoldUp()) dir = -Vector2.UnitY;
-        if (GameController.HoldDown()) dir = Vector2.UnitY;
-        if (GameController.HoldLeft()) dir = -Vector2.UnitX;
-        if (GameController.HoldRight()) dir = Vector2.UnitX;
-
-        if (dir == Vector2.Zero)
+    private void UpdateHeldDirection(Vector2 dir, bool held)
+    {
+        var index = _heldDirections.IndexOf(dir);
+        if (held && index < 0)
         {
-            _inputBuffer.Clear();
-            return;
+            // Appena premuto: diventa la direzione prioritaria e resta in buffer
+            // per un attimo, così una svolta anticipata non va persa.
+            _heldDirections.Add(dir);
+            _bufferedDirection = dir;
+            _bufferTimer = TurnBufferTime;
         }
-
-        var last = _inputBuffer.Count > 0 ? _inputBuffer.Last() : _currentDirection;
-
-        if (last != dir)
+        else if (!held && index >= 0)
         {
-            _inputBuffer.Clear();
-            _inputBuffer.Enqueue(dir);
+            _heldDirections.RemoveAt(index);
         }
-        else if (_inputBuffer.Count < MAX_BUFFER_SIZE)
-        {
-            _inputBuffer.Enqueue(dir);
-        }
+    }
+
+    private static Vector2 TileToWorld(Point tile)
+    {
+        return new Vector2(tile.X * TileMap.TileSize, tile.Y * TileMap.TileSize);
+    }
+
+    private static MinerState WalkStateOf(Vector2 dir)
+    {
+        if (dir == Vector2.UnitX) return MinerState.WalkRight;
+        if (dir == -Vector2.UnitX) return MinerState.WalkLeft;
+        return dir == -Vector2.UnitY ? MinerState.WalkBack : MinerState.WalkFront;
+    }
+
+    private static MinerState IdleStateOf(Vector2 dir)
+    {
+        if (dir == Vector2.UnitX) return MinerState.IdleRight;
+        if (dir == -Vector2.UnitX) return MinerState.IdleLeft;
+        return dir == -Vector2.UnitY ? MinerState.IdleBack : MinerState.IdleFront;
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -660,15 +688,13 @@ public class Miner
         if (Lives > 0)
         {
             IsMoving = false;
-            _movementProgress = 0f;
-            _inputBuffer.Clear();
+            _bufferTimer = 0f;
             NeedsRespawn?.Invoke(this, EventArgs.Empty);
             return;
         }
 
         IsDead = true;
         IsMoving = false;
-        _movementProgress = 0f;
         IsDeathAnimationFinished = false;
 
         if (_animations.ContainsKey("dead"))
@@ -728,9 +754,10 @@ public class Miner
         Position = new Vector2(spawnTile.X * TileMap.TileSize, spawnTile.Y * TileMap.TileSize);
         _targetPosition = Position;
         IsMoving = false;
-        _movementProgress = 0f;
-        _inputBuffer.Clear();
+        _bufferTimer = 0f;
         _state = MinerState.IdleFront;
+        _currentDirection = Vector2.UnitY;
+        _fromTile = spawnTile;
         _currentAnimation = "idle_front";
         _currentFrames = _animations["idle_front"];
         _currentFrame = 0;
@@ -936,6 +963,7 @@ public class Miner
         if (!ShieldActive) return false;
         ShieldActive = false;
         _shieldRechargeLevel = 0;
+        ShieldAbsorbed?.Invoke(this, EventArgs.Empty);
         // Breve invincibilità dopo assorbimento scudo
         StartInvincibility(_invincibilityDuration);
         return true;

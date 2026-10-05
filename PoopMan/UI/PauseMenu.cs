@@ -25,8 +25,10 @@ public class PauseMenu
     private const int BtnW = 280;
     private const int BtnH = 34;
     private const int BtnGap = 10;
-    private static readonly string[] Items = { "RIPRENDI", "ENCICLOPEDIA", "AUDIO", "MENU PRINCIPALE" };
+    private static readonly string[] Items = { "RIPRENDI", "ENCICLOPEDIA", "AUDIO", "COMANDI", "MENU PRINCIPALE" };
+    private static readonly int ExitItem = Items.Length - 1;
     private readonly AudioSettingsPanel _audioPanel;
+    private readonly ControlsSettingsPanel _controlsPanel;
     private readonly BatEncyclopedia _encyclopedia;
 
     // ── Dipendenze ────────────────────────────────────────────────────────
@@ -41,6 +43,7 @@ public class PauseMenu
         _font = font;
         _pixel = pixel;
         _audioPanel = new AudioSettingsPanel(font, pixel);
+        _controlsPanel = new ControlsSettingsPanel(font, pixel);
         _encyclopedia = new BatEncyclopedia(font, pixel, content);
     }
 
@@ -71,6 +74,14 @@ public class PauseMenu
         {
             _audioPanel.Update(gameTime);
             if (escPressed)
+                _screen = Screen.Menu;
+            return PauseAction.None;
+        }
+
+        if (_screen == Screen.Controls)
+        {
+            _controlsPanel.Update(gameTime);
+            if (escPressed && !_controlsPanel.BlocksBack)
                 _screen = Screen.Menu;
             return PauseAction.None;
         }
@@ -144,7 +155,8 @@ public class PauseMenu
             0 => PauseAction.Resume,
             1 => GoToEncyclopedia(),
             2 => GoToAudio(),
-            3 => PauseAction.GoToTitle,
+            3 => GoToControls(),
+            4 => PauseAction.GoToTitle,
             _ => PauseAction.None
         };
     }
@@ -153,6 +165,13 @@ public class PauseMenu
     {
         _screen = Screen.Encyclopedia;
         _encyclopedia.Open();
+        return PauseAction.None;
+    }
+
+    private PauseAction GoToControls()
+    {
+        _screen = Screen.Controls;
+        _controlsPanel.Open();
         return PauseAction.None;
     }
 
@@ -174,6 +193,12 @@ public class PauseMenu
         if (_screen == Screen.Audio)
         {
             DrawAudioPanel(sb, cx, vh / 2);
+            return;
+        }
+
+        if (_screen == Screen.Controls)
+        {
+            _controlsPanel.Draw(sb, cx, vh / 2);
             return;
         }
 
@@ -211,15 +236,15 @@ public class PauseMenu
 
             var bg = sel ? new Color(60, 40, 140, 230) : new Color(25, 25, 55, 180);
             var border = sel ? Color.Yellow : new Color(70, 70, 110);
-            var textColor = i == 2
+            var textColor = i == ExitItem
                 ? sel ? new Color(255, 120, 120) * p : new Color(200, 100, 100)
                 : sel
                     ? Color.Yellow * p
                     : Color.LightGray;
 
             UiDraw.Button(sb, _pixel, new Rectangle(cx - BtnW / 2, btnY, BtnW, BtnH), sel, false,
-                i == 2 ? new Color(190, 60, 70) : new Color(120, 80, 220), (float)Math.Sin(_pulse));
-            if (sel) textColor = i == 2 ? new Color(255, 220, 220) : Color.White;
+                i == ExitItem ? new Color(190, 60, 70) : new Color(120, 80, 220), (float)Math.Sin(_pulse));
+            if (sel) textColor = i == ExitItem ? new Color(255, 220, 220) : Color.White;
             DrawTextCentered(sb, Items[i], cx, btnY + BtnH / 2, textColor, sel ? 1.3f : 1.15f);
 
             if (sel)
@@ -297,6 +322,7 @@ public class PauseMenu
     {
         Menu,
         Audio,
+        Controls,
         Encyclopedia
     }
 }

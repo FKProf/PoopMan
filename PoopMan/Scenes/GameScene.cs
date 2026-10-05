@@ -169,6 +169,13 @@ public class GameScene : Scene
             _extraLifeFlashTimer = 0f;
         };
         _miner.BombPlaced += (s, e) => AudioManager.PlayBombPlaced();
+        _miner.ShieldAbsorbed += (s, e) =>
+        {
+            var c = _miner.Position + new Vector2(TileMap.TileSize * 0.5f);
+            _particles?.Burst(c, new Color(120, 220, 255), 24, 150f);
+            _particles?.AddText(c - new Vector2(0, 16), "SCUDO!", new Color(140, 230, 255), 0.85f);
+            _flashLights.Add(new FlashLight(c, 110f, new Color(120, 220, 255), 0.4f));
+        };
         _miner.BombExploded += (s, isBig) => AudioManager.PlayExplosion(isBig);
 
         // ── Pixel 1x1 per rettangoli HUD ─────────────────────────────────────
@@ -880,6 +887,42 @@ public class GameScene : Scene
         _particles?.AddText(c - new Vector2(0, 16), def.Name.Replace("\n", " "), def.Color, 0.85f);
     }
 
+    /// <summary>Particelle e testi per i cambi di stato dei bat (stordito, rallentato, colpito, immune).</summary>
+    private void EmitBatStatusFx()
+    {
+        if (_particles == null) return;
+        foreach (var bat in _bats)
+        {
+            var events = bat.TakeFxEvents();
+            if (events == Bat.FxEvent.None || bat.IsDead) continue;
+            var c = bat.Position + new Vector2(TileMap.TileSize * 0.5f);
+
+            if (events.HasFlag(Bat.FxEvent.Stunned))
+            {
+                _particles.Burst(c - new Vector2(0, 8), new Color(255, 235, 90), 12, 90f);
+                _particles.AddText(c - new Vector2(0, 22), "STORDITO!", new Color(255, 235, 90), 0.6f);
+            }
+
+            if (events.HasFlag(Bat.FxEvent.Slowed))
+            {
+                _particles.Burst(c, new Color(140, 200, 255), 12, 70f);
+                _particles.AddText(c - new Vector2(0, 8), "LENTO", new Color(150, 210, 255), 0.6f);
+            }
+
+            if (events.HasFlag(Bat.FxEvent.Damaged))
+            {
+                _particles.Burst(c, new Color(255, 150, 60), 8, 120f);
+                _particles.AddText(c + new Vector2(0, 4), $"-{bat.LastDamage}", new Color(255, 90, 80), 0.7f);
+                _flashLights.Add(new FlashLight(c, 50f, new Color(255, 140, 60), 0.15f));
+            }
+
+            if (events.HasFlag(Bat.FxEvent.Immune))
+                _particles.AddText(c, "IMMUNE", new Color(160, 255, 240), 0.6f);
+        }
+    }
+
+    private float _dashTrailTimer;
+
     /// <summary>Aggiorna particelle, luci temporanee, animazioni della mappa e VFX.</summary>
     private void UpdateWorldFx(GameTime gameTime)
     {
@@ -904,6 +947,7 @@ public class GameScene : Scene
         }
 
         _particles?.Update(dt);
+        EmitBatStatusFx();
 
         for (var i = _flashLights.Count - 1; i >= 0; i--)
         {
@@ -942,6 +986,18 @@ public class GameScene : Scene
                     };
                     _particles.FootDust(_miner.Position + new Vector2(16f, 29f), tint);
                 }
+
+                // Scatto post-danno: scia di scintille dietro al miner
+                if (_miner.IsDashing)
+                {
+                    _dashTrailTimer += dt;
+                    if (_dashTrailTimer >= 0.03f)
+                    {
+                        _dashTrailTimer = 0f;
+                        _particles.Emit(ParticleSystem.Kind.Spark, _miner.Position + new Vector2(16f, 18f),
+                            Vector2.Zero, 0.3f, 3f, 0.5f, new Color(255, 200, 90));
+                    }
+                }
             }
         }
 
@@ -949,7 +1005,7 @@ public class GameScene : Scene
         _map.Update(gameTime);
 
         // ── VFX update ───────────────────────────────────────────────────
-        _vfx?.Update(gameTime, _map.Theme,
+        _vfx?.Update(gameTime, _map,
             TileMap.Cols * TileMap.TileSize,
             TileMap.Rows * TileMap.TileSize,
             () => Enumerable.Empty<(Vector2, Color, float)>());

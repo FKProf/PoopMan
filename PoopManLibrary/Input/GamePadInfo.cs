@@ -48,6 +48,12 @@ public class GamePadInfo
     public bool IsLeftDown => IsButtonDown(Buttons.DPadLeft) || Stick(CurrentState).X < -StickThreshold;
     public bool IsRightDown => IsButtonDown(Buttons.DPadRight) || Stick(CurrentState).X > StickThreshold;
 
+    // ── Solo levetta sinistra (il D-pad è rimappabile in gioco) ──────────
+    public bool IsStickUp => Stick(CurrentState).Y > StickThreshold;
+    public bool IsStickDown => Stick(CurrentState).Y < -StickThreshold;
+    public bool IsStickLeft => Stick(CurrentState).X < -StickThreshold;
+    public bool IsStickRight => Stick(CurrentState).X > StickThreshold;
+
     public bool WasUpJustPressed => WasButtonJustPressed(Buttons.DPadUp) ||
                                     (Stick(CurrentState).Y > StickThreshold && Stick(PreviousState).Y <= StickThreshold);
 

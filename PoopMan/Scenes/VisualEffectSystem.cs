@@ -13,8 +13,8 @@ namespace PoopMan.Scenes;
 ///     1. Caller calls BeginWorldCapture() — just clears the back buffer, no render target.
 ///     2. Caller draws the world normally into the back buffer.
 ///     3. ApplyPostProcess() draws overlays on top:
-///     a. Soft vignette
-///     b. Ambient particles
+///     a. Biome atmosphere (fog, light rays, aurora, per-biome particles — see BiomeAtmosphere)
+///     b. Soft vignette
 ///     c. Light flashes (explosion halos)
 ///     d. Shockwave rings (CPU-drawn)
 ///     4. Caller draws HUD + UI on top.
@@ -33,8 +33,6 @@ internal sealed class VisualEffectSystem : IDisposable
     private const float ShockwaveSpeed = 0.70f;
     private const int MaxShockwaves = 6;
     private const int MaxFlashes = 8;
-    private const float AmbientInterval = 0.07f;
-    private const int MaxAmbientParticles = 80;
 
     // ── Vignette strength per biome ───────────────────────────────────────────
     private static readonly Dictionary<TileMap.MapTheme, (Color col, float strength)>
@@ -71,13 +69,12 @@ internal sealed class VisualEffectSystem : IDisposable
 
     // ─────────────────────────────────────────────────────────────────────────
     private static readonly Random _rng = new();
-    private readonly List<AmbientParticle> _ambientParticles = new();
     private readonly List<FlashEntry> _flashes = new();
 
     // ── Graphics ──────────────────────────────────────────────────────────────
     private readonly GraphicsDevice _gd;
     private readonly List<ShockwaveEntry> _shockwaves = new();
-    private float _ambientTimer;
+    private BiomeAtmosphere _atmosphere; // nebbia, raggi, aurora e particelle per bioma
     private bool _initialized;
     private int _mapH;
     private int _mapW;
@@ -100,6 +97,7 @@ internal sealed class VisualEffectSystem : IDisposable
     {
         _pixel?.Dispose();
         _glow?.Dispose();
+        _atmosphere?.Dispose();
         _sb?.Dispose();
     }
 
@@ -112,6 +110,7 @@ internal sealed class VisualEffectSystem : IDisposable
         _pixel = new Texture2D(_gd, 1, 1);
         _pixel.SetData(new[] { Color.White });
         _glow = CreateRadialGlow(_gd, 64);
+        _atmosphere = new BiomeAtmosphere(_gd, mapW, mapH);
         _initialized = true;
     }
 
@@ -128,13 +127,13 @@ internal sealed class VisualEffectSystem : IDisposable
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    public void Update(GameTime gameTime, TileMap.MapTheme theme, int worldW, int worldH,
+    public void Update(GameTime gameTime, TileMap map, int worldW, int worldH,
         Func<IEnumerable<(Vector2 worldPos, Color col, float radius)>> lightSources)
     {
         if (!_initialized) return;
         var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
         _time += dt;
-        _theme = theme;
+        _theme = map.Theme;
 
         // ── Shockwaves ────────────────────────────────────────────────────────
         for (var i = _shockwaves.Count - 1; i >= 0; i--)
@@ -165,113 +164,8 @@ internal sealed class VisualEffectSystem : IDisposable
             _flashes[i] = f;
         }
 
-        // ── Ambient particles ─────────────────────────────────────────────────
-        if (_ambientParticles.Count < MaxAmbientParticles)
-        {
-            _ambientTimer += dt;
-            while (_ambientTimer >= AmbientInterval && _ambientParticles.Count < MaxAmbientParticles)
-            {
-                _ambientTimer -= AmbientInterval;
-                SpawnAmbientParticle(theme, worldW, worldH);
-            }
-        }
-
-        for (var i = _ambientParticles.Count - 1; i >= 0; i--)
-        {
-            var p = _ambientParticles[i];
-            p.Pos += p.Vel * dt;
-            p.Life -= dt;
-            if (p.Life <= 0)
-            {
-                _ambientParticles.RemoveAt(i);
-                continue;
-            }
-
-            _ambientParticles[i] = p;
-        }
-    }
-
-    private void SpawnAmbientParticle(TileMap.MapTheme theme, int worldW, int worldH)
-    {
-        AmbientParticle p;
-        switch (theme)
-        {
-            case TileMap.MapTheme.Lava:
-                p = new AmbientParticle
-                {
-                    Pos = new Vector2(_rng.Next(0, worldW), _rng.Next(worldH / 2, worldH)),
-                    Vel = new Vector2((float)(_rng.NextDouble() - 0.5) * 14f, -(float)_rng.NextDouble() * 42f - 14f),
-                    Life = (float)(_rng.NextDouble() * 1.0 + 0.5f),
-                    MaxLife = 1.5f,
-                    Col = _rng.Next(3) == 0 ? new Color(255, 240, 80)
-                        : _rng.Next(2) == 0 ? new Color(255, 120, 0)
-                        : new Color(220, 50, 0),
-                    Size = (float)(_rng.NextDouble() * 2.5f + 0.5f)
-                };
-                break;
-
-            case TileMap.MapTheme.Ice:
-                p = new AmbientParticle
-                {
-                    Pos = new Vector2(_rng.Next(0, worldW), _rng.Next(-8, worldH / 2)),
-                    Vel = new Vector2((float)(_rng.NextDouble() - 0.5) * 8f, (float)_rng.NextDouble() * 14f + 4f),
-                    Life = (float)(_rng.NextDouble() * 2.0 + 1.0f),
-                    MaxLife = 3.0f,
-                    Col = new Color(200, 230, 255),
-                    Size = (float)(_rng.NextDouble() * 1.8f + 0.4f)
-                };
-                break;
-
-            case TileMap.MapTheme.Swamp:
-                p = new AmbientParticle
-                {
-                    Pos = new Vector2(_rng.Next(0, worldW), _rng.Next(worldH / 3, worldH)),
-                    Vel = new Vector2((float)(_rng.NextDouble() - 0.5) * 5f, -(float)_rng.NextDouble() * 18f - 4f),
-                    Life = (float)(_rng.NextDouble() * 1.4 + 0.7f),
-                    MaxLife = 2.1f,
-                    Col = _rng.Next(2) == 0 ? new Color(80, 200, 60) : new Color(100, 160, 40),
-                    Size = (float)(_rng.NextDouble() * 2.5f + 0.8f)
-                };
-                break;
-
-            case TileMap.MapTheme.Cave:
-                p = new AmbientParticle
-                {
-                    Pos = new Vector2(_rng.Next(0, worldW), _rng.Next(0, worldH)),
-                    Vel = new Vector2((float)(_rng.NextDouble() - 0.5) * 8f, (float)_rng.NextDouble() * 4f - 5f),
-                    Life = (float)(_rng.NextDouble() * 1.6 + 0.4f),
-                    MaxLife = 2.0f,
-                    Col = _rng.Next(3) == 0 ? new Color(150, 140, 190) : new Color(85, 85, 130),
-                    Size = (float)(_rng.NextDouble() * 1.5f + 0.4f)
-                };
-                break;
-
-            case TileMap.MapTheme.Ruins:
-                p = new AmbientParticle
-                {
-                    Pos = new Vector2(_rng.Next(0, worldW), _rng.Next(0, worldH)),
-                    Vel = new Vector2((float)(_rng.NextDouble() - 0.5) * 5f, -(float)_rng.NextDouble() * 7f - 1f),
-                    Life = (float)(_rng.NextDouble() * 2.2 + 0.8f),
-                    MaxLife = 3.0f,
-                    Col = new Color(185, 170, 125),
-                    Size = (float)(_rng.NextDouble() * 1.6f + 0.4f)
-                };
-                break;
-
-            default: // Forest
-                p = new AmbientParticle
-                {
-                    Pos = new Vector2(_rng.Next(0, worldW), _rng.Next(0, worldH)),
-                    Vel = new Vector2((float)(_rng.NextDouble() - 0.5) * 8f, -(float)_rng.NextDouble() * 12f - 2f),
-                    Life = (float)(_rng.NextDouble() * 1.8 + 0.6f),
-                    MaxLife = 2.4f,
-                    Col = _rng.Next(2) == 0 ? new Color(205, 255, 145) : new Color(165, 235, 105),
-                    Size = (float)(_rng.NextDouble() * 1.8f + 0.4f)
-                };
-                break;
-        }
-
-        _ambientParticles.Add(p);
+        // ── Atmosfera del bioma ───────────────────────────────────────────────
+        _atmosphere.Update(dt, map);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -326,6 +220,9 @@ internal sealed class VisualEffectSystem : IDisposable
         var vw = _gd.Viewport.Width;
         var vh = _gd.Viewport.Height;
 
+        // ── 0: Atmosfera del bioma (sotto vignetta e flash) ──────────────
+        _atmosphere.Draw(_sb, worldTransform);
+
         // ── 1: Soft vignette ─────────────────────────────────────────────
         DrawVignette(vw, vh);
 
@@ -334,9 +231,6 @@ internal sealed class VisualEffectSystem : IDisposable
 
         // ── 3: Shockwave rings (CPU-drawn expanding circles) ──────────────
         DrawShockwaveRings(vw, vh);
-
-        // ── 4: Ambient particles ──────────────────────────────────────────
-        DrawAmbientParticles(worldTransform);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -440,24 +334,6 @@ internal sealed class VisualEffectSystem : IDisposable
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    private void DrawAmbientParticles(Matrix worldTransform)
-    {
-        if (_ambientParticles.Count == 0) return;
-        _sb.Begin(samplerState: SamplerState.PointClamp,
-            blendState: BlendState.Additive,
-            transformMatrix: worldTransform);
-        foreach (var p in _ambientParticles)
-        {
-            var alpha = MathF.Sin(p.Life / p.MaxLife * MathF.PI) * 0.55f;
-            var c = p.Col * alpha;
-            var s = Math.Max(1, (int)(p.Size + 0.5f));
-            _sb.Draw(_pixel, new Rectangle((int)(p.Pos.X - s / 2f), (int)(p.Pos.Y - s / 2f), s, s), c);
-        }
-
-        _sb.End();
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
     /// <summary>Draws additive glow halos for point-light sources.</summary>
     public void DrawGlowOverlay(SpriteBatch sb, IEnumerable<(Vector2 worldPos, Color col, float radius)> lights,
         Matrix worldTransform)
@@ -502,16 +378,5 @@ internal sealed class VisualEffectSystem : IDisposable
         public float Life;
         public Color Col;
         public float RadiusUV;
-    }
-
-    // ── Ambient particles ─────────────────────────────────────────────────────
-    private struct AmbientParticle
-    {
-        public Vector2 Pos;
-        public Vector2 Vel;
-        public float Life;
-        public float MaxLife;
-        public Color Col;
-        public float Size;
     }
 }
