@@ -157,8 +157,8 @@ public class AudioSettingsPanel
         }
 
         // ── Tastiera / gamepad: modifica volume con auto-repeat ───────────
-        var leftHeld = GameController.HoldLeft();
-        var rightHeld = GameController.HoldRight();
+        var leftHeld = GameController.MenuHoldLeft();
+        var rightHeld = GameController.MenuHoldRight();
 
         var doStep = false;
         if ((leftHeld || rightHeld) && _selectedRow < 2)

@@ -39,8 +39,34 @@ public class Bat
     private const float BerserkDuration = 2f;
     private const float BerserkSpeedMul = 2.2f;
     private const float KnockbackDuration = 0.22f;
+    private const float HitFlashDuration = 0.18f;
+    private const float AlertDuration = 0.9f;
+    private const float TrailInterval = 0.035f;
+    private const float DashSpeedMul = 2.4f;
 
     private static readonly Random _rand = new();
+
+    private static readonly Point[] CardinalDirs = { new(0, -1), new(0, 1), new(-1, 0), new(1, 0) };
+
+    /// <summary>Eventi visivi accaduti al bat (letti e azzerati da GameScene per particelle e testi).</summary>
+    [Flags]
+    public enum FxEvent
+    {
+        None = 0,
+        Stunned = 1,
+        Slowed = 2,
+        Damaged = 4,
+        Immune = 8,
+        Spotted = 16
+    }
+
+    // ── Effetti visivi di stato ───────────────────────────────────────────
+    private FxEvent _fxEvents;
+    private float _hitFlashTimer; // lampo rosso + "pop" quando subisce danno
+    private float _alertTimer; // "!" sopra la testa quando avvista il giocatore
+    private readonly Vector2[] _trail = new Vector2[5]; // scia (ghost / dash / berserk / spinta)
+    private int _trailCount;
+    private float _trailTimer;
 
     // ── Separazione tra bat ───────────────────────────────────────────────
     private static readonly List<Point> _allBatPositions = new();
@@ -69,6 +95,7 @@ public class Bat
 
     // Dash
     private float _dashCooldown;
+    private bool _isDashing; // il passo corrente è uno scatto (più veloce)
     private Point _moveFromTile;
     private float _ghostCooldown;
     private float _ghostTimer;
@@ -211,6 +238,19 @@ public class Bat
     public bool IsInvincible { get; private set; }
 
     public bool IsStunned { get; private set; }
+
+    public bool IsSlowed => _slowTimer > 0f;
+
+    /// <summary>Danno dell'ultimo colpo non letale (per il testo "-N").</summary>
+    public int LastDamage { get; private set; }
+
+    /// <summary>Restituisce gli eventi visivi accumulati e li azzera.</summary>
+    public FxEvent TakeFxEvents()
+    {
+        var events = _fxEvents;
+        _fxEvents = FxEvent.None;
+        return events;
+    }
 
     /// <summary>Colore tint del bat in base al tipo speciale attivo.</summary>
     public Color DrawColor
@@ -424,6 +464,7 @@ public class Bat
     public void ApplyStun(float duration)
     {
         if (IsDead) return;
+        if (!IsStunned) _fxEvents |= FxEvent.Stunned;
         IsStunned = true;
         _stunTimer = duration;
     }
@@ -431,6 +472,7 @@ public class Bat
     public void ApplySlow(float factor, float duration)
     {
         if (IsDead) return;
+        if (_slowTimer <= 0f) _fxEvents |= FxEvent.Slowed;
         _slowFactor = 1f - factor; // es. 0.4 → _slowFactor = 0.6
         _slowTimer = duration;
     }
@@ -465,10 +507,18 @@ public class Bat
     {
         if (IsDead) return false;
         // Ghost: immune ai danni durante la fase di attraversamento
-        if (_isGhosting) return false;
+        if (_isGhosting)
+        {
+            _fxEvents |= FxEvent.Immune;
+            return false;
+        }
+
         _hitPoints -= damage;
         if (_hitPoints > 0)
         {
+            _fxEvents |= FxEvent.Damaged;
+            LastDamage = damage;
+            _hitFlashTimer = HitFlashDuration;
             // Breve invincibilità inter-hit per evitare danno multiplo nella stessa frame
             SetInvincible(0.3f);
             return false;
@@ -587,6 +637,9 @@ public class Bat
             invincibilityTimer -= dt;
             if (invincibilityTimer <= 0f) IsInvincible = false;
         }
+
+        if (_hitFlashTimer > 0f) _hitFlashTimer -= dt;
+        if (_alertTimer > 0f) _alertTimer -= dt;
 
         // ── Stordimento ───────────────────────────────────────────────────
         if (IsStunned)
@@ -737,8 +790,10 @@ public class Bat
                         nextMove.Y * TileMap.TileSize);
                     isMoving = true;
                     state = BatState.Fly;
-                    animationTimer = 0f;
-                    currentFrame = 0;
+                }
+                else
+                {
+                    state = BatState.Idle;
                 }
 
                 waitTimer = waitDuration * (float)(0.8 + _rand.NextDouble() * 0.4);
@@ -783,16 +838,27 @@ public class Bat
 
             var direction = targetPosition - Position;
             var distance = direction.Length();
-            var currentSpeed = moveSpeed * (_isBerserk ? BerserkSpeedMul : 1f) * _slowFactor;
+            var currentSpeed = moveSpeed * (_isBerserk ? BerserkSpeedMul : 1f)
+                                         * (_isDashing ? DashSpeedMul : 1f) * _slowFactor;
 
             if (distance <= currentSpeed * dt)
             {
                 Position = targetPosition;
                 isMoving = false;
-                state = BatState.Idle;
-                waitTimer = (float)(_rand.NextDouble() * waitDuration * 0.5f + waitDuration * 0.2f);
-                currentFrame = 0;
-                animationTimer = 0f;
+                _isDashing = false;
+                // In pericolo o all'inseguimento non c'è pausa tra un passo e l'altro:
+                // il bat scappa dalle fiamme / incalza il giocatore in modo fluido.
+                if (_dangerTiles.Contains(TilePosition))
+                {
+                    waitTimer = 0f;
+                }
+                else
+                {
+                    var pause = _aiState == AiState.Chase ? 0.35f : 1f;
+                    waitTimer = (float)(_rand.NextDouble() * waitDuration * 0.5f + waitDuration * 0.2f) * pause;
+                    // Resta in volo (stessa animazione) se riparte quasi subito
+                    if (waitTimer > 0.12f) state = BatState.Idle;
+                }
             }
             else
             {
@@ -800,8 +866,34 @@ public class Bat
             }
         }
 
+        UpdateTrail(dt);
         UpdateAnimation(gameTime);
     }
+
+    /// <summary>Registra le ultime posizioni per la scia; senza scatto/ghost la scia si accorcia.</summary>
+    private void UpdateTrail(float dt)
+    {
+        _trailTimer -= dt;
+        if (_trailTimer > 0f) return;
+        _trailTimer = TrailInterval;
+
+        if (_isGhosting || _isDashing || _isBerserk || _knockbackTimer > 0f)
+        {
+            for (var i = _trail.Length - 1; i > 0; i--) _trail[i] = _trail[i - 1];
+            _trail[0] = Position;
+            _trailCount = Math.Min(_trailCount + 1, _trail.Length);
+        }
+        else if (_trailCount > 0)
+        {
+            _trailCount--;
+        }
+    }
+
+    private Color TrailColor =>
+        _isGhosting ? new Color(120, 255, 255)
+        : _isBerserk ? new Color(220, 80, 255)
+        : _isDashing ? new Color(255, 190, 80)
+        : new Color(255, 255, 255);
 
     // ── Macchina a stati: sceglie la prossima tile ────────────────────────
     private Point ChooseNextTile(TileMap map, float dt)
@@ -837,6 +929,12 @@ public class Bat
         var canSee = HasLineOfSight(map, TilePosition, _playerTile, _sightRange);
         if (canSee)
         {
+            if (!_playerSeen)
+            {
+                _fxEvents |= FxEvent.Spotted;
+                _alertTimer = AlertDuration;
+            }
+
             _lastKnownPlayerTile = _playerTile;
             _playerSeen = true;
             _aiState = _rand.NextDouble() < _chaseChance ? AiState.Chase : AiState.Patrol;
@@ -880,6 +978,7 @@ public class Bat
         if (dashOk)
         {
             _dashCooldown = DashCooldownMax;
+            _isDashing = true;
             // Aggiorna facing e posizione logica intermedia anche per il tile skippato
             TilePosition = nextStep; // passa dal tile intermedio
             // Avanza _pathStep per il tile saltato, così il percorso non torna indietro
@@ -914,14 +1013,25 @@ public class Bat
 
         var next = _path[_pathStep];
 
-        // Separazione: evita tile occupate da altri bat
+        // Separazione: se la tile è occupata da un altro bat aggira lateralmente
+        // (solo tile adiacenti: prima poteva saltare a una tile a due passi,
+        //  tagliando in diagonale gli angoli dei muri) oppure aspetta il turno.
         if (_allBatPositions.Contains(next) && next != TilePosition)
         {
-            // Cerca step successivo libero
-            for (var s = _pathStep + 1; s < Math.Min(_pathStep + 3, _path.Count); s++)
-                if (!_allBatPositions.Contains(_path[s]) || _path[s] == TilePosition)
-                    return _path[s];
-            return WanderStep(map); // aspetta o si sposta lateralmente
+            var currentDist = Heuristic(TilePosition, _playerTile);
+            foreach (var d in CardinalDirs.OrderBy(_ => _rand.Next()))
+            {
+                Point side = new(TilePosition.X + d.X, TilePosition.Y + d.Y);
+                if (side == next || !map.IsWalkable(side) || IsBlocked(side) ||
+                    _allBatPositions.Contains(side)) continue;
+                if (Heuristic(side, _playerTile) <= currentDist)
+                {
+                    _path.Clear();
+                    return side;
+                }
+            }
+
+            return Point.Zero;
         }
 
         return next;
@@ -961,9 +1071,10 @@ public class Bat
             if (_rand.NextDouble() >= _wanderChangeChance)
                 return preferred;
 
-        // Scegli nuova direzione
-        var dirs = new[] { new Point(0, -1), new Point(0, 1), new Point(-1, 0), new Point(1, 0) }
-            .OrderBy(_ => _rand.Next()).ToArray();
+        // Scegli nuova direzione: tornare indietro solo come ultima scelta,
+        // altrimenti il bat oscilla avanti e indietro sulla stessa coppia di tile.
+        var back = new Point(-_wanderDir.X, -_wanderDir.Y);
+        var dirs = CardinalDirs.OrderBy(d => d == back ? 1 : 0).ThenBy(_ => _rand.Next()).ToArray();
 
         foreach (var d in dirs)
         {
@@ -1107,7 +1218,9 @@ public class Bat
             foreach (var d in dirs)
             {
                 Point next = new(cur.X + d.X, cur.Y + d.Y);
-                if (!parent.ContainsKey(next) && map.IsWalkable(next))
+                if (!parent.ContainsKey(next) && map.IsWalkable(next) &&
+                    (_isGhosting || !_solidBombTiles.Contains(next)) &&
+                    !_permanentBlockedTiles.Contains(next))
                 {
                     parent[next] = cur;
                     queue.Enqueue(next);
@@ -1215,13 +1328,42 @@ public class Bat
         if (_hitPoints < _maxHitPoints && IsInvincible)
             tint = Color.Lerp(tint, Color.White, 0.6f);
 
+        var time = Environment.TickCount64 * 0.001f;
+        var alive = !IsDead;
+
+        // Stati: stordito = grigio, rallentato = azzurro ghiaccio, colpito = lampo rosso
+        if (alive && IsStunned) tint = Color.Lerp(tint, new Color(150, 150, 150), 0.45f);
+        if (alive && IsSlowed) tint = Color.Lerp(tint, new Color(110, 170, 255), 0.5f);
+        var hitK = alive ? Math.Clamp(_hitFlashTimer / HitFlashDuration, 0f, 1f) : 0f;
+        if (hitK > 0f)
+        {
+            tint = Color.Lerp(tint, new Color(255, 70, 70), hitK);
+            scale *= 1f + 0.22f * hitK; // "pop" all'impatto
+        }
+
         // Ghost: semi-trasparente
         if (_isGhosting)
             tint *= 0.55f;
 
+        // Rotazione: barcolla se stordito, ruota mentre viene sbalzato dall'esplosione
+        var rotation = 0f;
+        if (alive && IsStunned) rotation += MathF.Sin(time * 14f) * 0.22f;
+        if (alive && _knockbackTimer > 0f)
+            rotation += (_knockbackVelocity.X >= 0f ? 1f : -1f) * (_knockbackTimer / KnockbackDuration) * 0.7f;
+
         var origin = new Vector2(srcRect.Width * 0.5f, srcRect.Height * 0.5f);
         var center = Position + new Vector2(srcRect.Width * 0.5f, srcRect.Height * 0.5f);
         center.Y += HoverOffset;
+
+        // Scia di immagini residue (ghost / dash / berserk / spinta)
+        if (alive)
+            for (var i = _trailCount - 1; i >= 0; i--)
+            {
+                var a = 0.35f * (1f - (i + 1f) / (_trail.Length + 1f));
+                var trailCenter = _trail[i] + new Vector2(srcRect.Width * 0.5f, srcRect.Height * 0.5f);
+                spriteBatch.Draw(texture, trailCenter, srcRect, TrailColor * a,
+                    rotation, origin, scale, SpriteEffects.None, 0f);
+            }
 
         // Aura pulsante (berserk / ghost)
         if (HasAura)
@@ -1229,11 +1371,13 @@ public class Bat
             var auraScale = scale * (1.35f + 0.10f * (float)Math.Sin(
                 Environment.TickCount64 * 0.005));
             spriteBatch.Draw(texture, center, srcRect, AuraColor,
-                0f, origin, auraScale, SpriteEffects.None, 0f);
+                rotation, origin, auraScale, SpriteEffects.None, 0f);
         }
 
         spriteBatch.Draw(texture, center, srcRect, tint,
-            0f, origin, scale, SpriteEffects.None, 0f);
+            rotation, origin, scale, SpriteEffects.None, 0f);
+
+        if (alive) DrawStatusEffects(spriteBatch, center, srcRect, scale, time);
 
         // Occhi luminosi per bat speciali (piccoli quadrati bianchi sopra gli occhi)
         if (_level >= 5 && !_isMini && !IsDead)
@@ -1349,6 +1493,72 @@ public class Bat
                     new Rectangle(barX, barY, fillW, barH),
                     new Color(50, 220, 50));
         }
+    }
+
+    /// <summary>Indicatori sopra/attorno al bat: stelline, cristalli, "!" e anello d'allarme Walid.</summary>
+    private void DrawStatusEffects(SpriteBatch sb, Vector2 center, Rectangle srcRect, float scale, float time)
+    {
+        var headY = center.Y - srcRect.Height * 0.5f * scale;
+
+        // Stordito: tre stelline che girano attorno alla testa
+        if (IsStunned)
+            for (var i = 0; i < 3; i++)
+            {
+                var a = time * 6f + i * MathF.Tau / 3f;
+                var front = MathF.Sin(a) > 0f;
+                var pos = new Vector2(center.X + MathF.Cos(a) * 11f * scale, headY + 3f + MathF.Sin(a) * 3.5f);
+                DrawStar(sb, pos, front ? new Color(255, 240, 90) : new Color(200, 170, 60) * 0.7f);
+            }
+
+        // Rallentato: cristalli di ghiaccio che colano dal corpo
+        if (IsSlowed)
+            for (var i = 0; i < 3; i++)
+            {
+                var phase = (time * 0.9f + i / 3f) % 1f;
+                var x = center.X + (i - 1) * 7f * scale;
+                var y = center.Y - 4f + phase * 16f;
+                sb.Draw(_pixel, new Rectangle((int)x, (int)y, 2, 3), new Color(170, 220, 255) * (1f - phase));
+            }
+
+        // Avvistamento: "!" che spunta sopra la testa
+        if (_alertTimer > 0f)
+        {
+            var k = _alertTimer / AlertDuration;
+            var pop = k > 0.8f ? 1f + (k - 0.8f) * 3f : 1f;
+            var alpha = k < 0.25f ? k / 0.25f : 1f;
+            var ax = (int)center.X;
+            var ay = (int)(headY - 16f * scale - (1f - k) * 4f);
+            var w = (int)(3 * pop);
+            var h = (int)(7 * pop);
+            var bar = new Rectangle(ax - w / 2, ay - h, w, h);
+            var dot = new Rectangle(ax - w / 2, ay + 2, w, w);
+            sb.Draw(_pixel, new Rectangle(bar.X - 1, bar.Y - 1, bar.Width + 2, bar.Height + 2), Color.Black * alpha);
+            sb.Draw(_pixel, new Rectangle(dot.X - 1, dot.Y - 1, dot.Width + 2, dot.Height + 2), Color.Black * alpha);
+            var c = _aiState == AiState.Chase ? new Color(255, 70, 50) : new Color(255, 220, 60);
+            sb.Draw(_pixel, bar, c * alpha);
+            sb.Draw(_pixel, dot, c * alpha);
+        }
+
+        // Walid in detonazione: anello d'allarme che si espande
+        if (_walidDetonating)
+        {
+            var phase = time * 3f % 1f;
+            var radius = 8f + phase * 22f;
+            for (var i = 0; i < 20; i++)
+            {
+                var a = i * MathF.Tau / 20f;
+                sb.Draw(_pixel, new Rectangle((int)(center.X + MathF.Cos(a) * radius) - 1,
+                    (int)(center.Y + MathF.Sin(a) * radius) - 1, 2, 2), new Color(255, 120, 30) * (1f - phase));
+            }
+        }
+    }
+
+    private void DrawStar(SpriteBatch sb, Vector2 pos, Color color)
+    {
+        var x = (int)pos.X;
+        var y = (int)pos.Y;
+        sb.Draw(_pixel, new Rectangle(x - 1, y - 3, 2, 6), color);
+        sb.Draw(_pixel, new Rectangle(x - 3, y - 1, 6, 2), color);
     }
 
     public Collision GetBounds()

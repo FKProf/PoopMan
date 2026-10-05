@@ -6,37 +6,72 @@ namespace PoopMan;
 
 /// <summary>
 ///     Astrazione dell'input di gioco: tastiera + gamepad (giocatore 1).
-///     Gamepad: D-pad / levetta sinistra = movimento, A = bomba piccola / conferma,
-///     B = bomba grande, Y = detonatore, Start = pausa, Back = indietro.
+///     I comandi di gioco seguono le assegnazioni personalizzabili di <see cref="InputBindings" />;
+///     i comandi dei menu (frecce, ENTER, ESC, D-pad, A, B) restano fissi.
 /// </summary>
 public class GameController
 {
     private static KeyboardInfo p_keyboard => Core.Input.Keyboard;
     private static GamePadInfo p_gamePad => Core.Input.GamePad;
 
-    // === Pressione singola (tap) — per menu, azioni una-tantum ===
+    // === Comandi rimappabili (vedi InputBindings) ===
+    /// <summary>True mentre l'azione è tenuta premuta (tastiera o gamepad).</summary>
+    public static bool IsHeld(GameAction action)
+    {
+        for (var s = 0; s < InputBindings.KeySlots; s++)
+        {
+            var key = InputBindings.GetKey(action, s);
+            if (key != Keys.None && p_keyboard.IsKeyDown(key)) return true;
+        }
+
+        return p_gamePad.IsButtonDown(InputBindings.GetButton(action));
+    }
+
+    /// <summary>True solo nel frame in cui l'azione viene premuta.</summary>
+    public static bool WasPressed(GameAction action)
+    {
+        for (var s = 0; s < InputBindings.KeySlots; s++)
+        {
+            var key = InputBindings.GetKey(action, s);
+            if (key != Keys.None && p_keyboard.WasKeyJustPressed(key)) return true;
+        }
+
+        return p_gamePad.WasButtonJustPressed(InputBindings.GetButton(action));
+    }
+
+    // === Pressione singola (tap) — per menu ===
+    // Le frecce e il D-pad / levetta funzionano sempre nei menu, anche se rimappati,
+    // così il giocatore non può restare bloccato con una configurazione sbagliata.
     public static bool MoveUp()
     {
-        return p_keyboard.WasKeyJustPressed(Keys.Up) || p_keyboard.WasKeyJustPressed(Keys.W) ||
-               p_gamePad.WasUpJustPressed;
+        return p_keyboard.WasKeyJustPressed(Keys.Up) || p_gamePad.WasUpJustPressed || WasPressed(GameAction.Up);
     }
 
     public static bool MoveDown()
     {
-        return p_keyboard.WasKeyJustPressed(Keys.Down) || p_keyboard.WasKeyJustPressed(Keys.S) ||
-               p_gamePad.WasDownJustPressed;
+        return p_keyboard.WasKeyJustPressed(Keys.Down) || p_gamePad.WasDownJustPressed || WasPressed(GameAction.Down);
     }
 
     public static bool MoveLeft()
     {
-        return p_keyboard.WasKeyJustPressed(Keys.Left) || p_keyboard.WasKeyJustPressed(Keys.A) ||
-               p_gamePad.WasLeftJustPressed;
+        return p_keyboard.WasKeyJustPressed(Keys.Left) || p_gamePad.WasLeftJustPressed || WasPressed(GameAction.Left);
     }
 
     public static bool MoveRight()
     {
-        return p_keyboard.WasKeyJustPressed(Keys.Right) || p_keyboard.WasKeyJustPressed(Keys.D) ||
-               p_gamePad.WasRightJustPressed;
+        return p_keyboard.WasKeyJustPressed(Keys.Right) || p_gamePad.WasRightJustPressed ||
+               WasPressed(GameAction.Right);
+    }
+
+    /// <summary>Sinistra tenuta nei menu (regolazione volume): frecce / D-pad sempre attivi.</summary>
+    public static bool MenuHoldLeft()
+    {
+        return p_keyboard.IsKeyDown(Keys.Left) || p_gamePad.IsLeftDown || IsHeld(GameAction.Left);
+    }
+
+    public static bool MenuHoldRight()
+    {
+        return p_keyboard.IsKeyDown(Keys.Right) || p_gamePad.IsRightDown || IsHeld(GameAction.Right);
     }
 
     // === Navigazione menu (alias leggibili) ===
@@ -83,48 +118,47 @@ public class GameController
                p_gamePad.WasButtonJustPressed(Buttons.Start);
     }
 
-    // === Tasto tenuto premuto (hold) — per movimento continuo ===
+    // === Tasto tenuto premuto (hold) — movimento in gioco ===
+    // La levetta sinistra muove sempre, in aggiunta ai comandi assegnati.
     public static bool HoldUp()
     {
-        return p_keyboard.IsKeyDown(Keys.Up) || p_keyboard.IsKeyDown(Keys.W) || p_gamePad.IsUpDown;
+        return IsHeld(GameAction.Up) || p_gamePad.IsStickUp;
     }
 
     public static bool HoldDown()
     {
-        return p_keyboard.IsKeyDown(Keys.Down) || p_keyboard.IsKeyDown(Keys.S) || p_gamePad.IsDownDown;
+        return IsHeld(GameAction.Down) || p_gamePad.IsStickDown;
     }
 
     public static bool HoldLeft()
     {
-        return p_keyboard.IsKeyDown(Keys.Left) || p_keyboard.IsKeyDown(Keys.A) || p_gamePad.IsLeftDown;
+        return IsHeld(GameAction.Left) || p_gamePad.IsStickLeft;
     }
 
     public static bool HoldRight()
     {
-        return p_keyboard.IsKeyDown(Keys.Right) || p_keyboard.IsKeyDown(Keys.D) || p_gamePad.IsRightDown;
+        return IsHeld(GameAction.Right) || p_gamePad.IsStickRight;
     }
 
     public static bool MiniBomb()
     {
-        return p_keyboard.WasKeyJustPressed(Keys.Space) || p_gamePad.WasButtonJustPressed(Buttons.A);
+        return WasPressed(GameAction.MiniBomb);
     }
 
     public static bool BigBomb()
     {
-        return p_keyboard.WasKeyJustPressed(Keys.X) || p_gamePad.WasButtonJustPressed(Buttons.B);
+        return WasPressed(GameAction.BigBomb);
     }
 
-    /// <summary>Detonatore remoto (upgrade DETONATORE): C oppure Y sul gamepad.</summary>
+    /// <summary>Detonatore remoto (upgrade DETONATORE).</summary>
     public static bool Detonate()
     {
-        return p_keyboard.WasKeyJustPressed(Keys.C) || p_gamePad.WasButtonJustPressed(Buttons.Y);
+        return WasPressed(GameAction.Detonate);
     }
 
     public static bool Pause()
     {
-        return p_keyboard.WasKeyJustPressed(Keys.Escape) ||
-               p_gamePad.WasButtonJustPressed(Buttons.Start) ||
-               p_gamePad.WasButtonJustPressed(Buttons.Back);
+        return WasPressed(GameAction.Pause);
     }
 
     public static bool Action()
