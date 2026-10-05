@@ -189,7 +189,7 @@ public class PauseMenu
     private void DrawMainMenu(SpriteBatch sb, int cx, int vh)
     {
         var totalMenuH = Items.Length * (BtnH + BtnGap) - BtnGap;
-        const string hint = "^v: seleziona   ENTER: conferma   ESC: riprendi";
+        const string hint = "^v: seleziona   ENTER/(A): conferma   ESC/(B): riprendi";
         var boxW = Math.Max(BtnW + 60, (int)(_font.MeasureString(hint).X * 0.95f) + 40);
         var boxH = 52 + totalMenuH + 28;
         var boxX = cx - boxW / 2;
@@ -258,9 +258,9 @@ public class PauseMenu
 
         var hintControlY = boxY + headerH + rowsH + 18;
         var hintEscY = boxY + headerH + rowsH + 42;
-        DrawTextCentered(sb, "< > volume    ^ v seleziona    M = mute    scroll/click barra",
+        DrawTextCentered(sb, AudioSettingsPanel.AudioHint,
             cx, hintControlY, new Color(100, 100, 130), 0.78f);
-        DrawTextCentered(sb, "ESC: indietro", cx, hintEscY, Color.DarkGray, 0.95f);
+        DrawTextCentered(sb, AudioSettingsPanel.BackHint, cx, hintEscY, Color.DarkGray, 0.95f);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────

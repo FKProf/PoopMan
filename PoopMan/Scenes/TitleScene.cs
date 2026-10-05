@@ -84,7 +84,7 @@ public class TitleScene : Scene
         if (_screen == MenuScreen.Audio)
         {
             _audioPanel.Update(gameTime);
-            if (kb.WasKeyJustPressed(Keys.Back) || GameController.Pause())
+            if (kb.WasKeyJustPressed(Keys.Back) || GameController.Pause() || GameController.MenuBack())
                 _screen = MenuScreen.Main;
             return;
         }
@@ -92,7 +92,7 @@ public class TitleScene : Scene
         // ── Pannello istruzioni ───────────────────────────────────────
         if (_screen == MenuScreen.Istruzioni)
         {
-            if (kb.WasKeyJustPressed(Keys.Back) || GameController.Pause() ||
+            if (kb.WasKeyJustPressed(Keys.Back) || GameController.Pause() || GameController.MenuBack() ||
                 GameController.Confirm() ||
                 mouse.WasButtonJustPressed(MouseButton.Left))
                 _screen = MenuScreen.Main;
@@ -258,7 +258,7 @@ public class TitleScene : Scene
             }
         }
 
-        DrawTextCentered("^v: seleziona    ENTER: conferma", cx,
+        DrawTextCentered("^v / D-pad: seleziona    ENTER / (A): conferma", cx,
             startY + MenuItems.Length * (BtnH + BtnGap) + 18,
             Color.Gray, 0.75f);
         DrawTextCentered("F11: schermo intero", cx,
@@ -320,19 +320,47 @@ public class TitleScene : Scene
 
         var hintControlY = boxY + headerH + rowsH + 18;
         var hintEscY = boxY + headerH + rowsH + 42;
-        DrawTextCentered("< > volume    ^ v seleziona    M = mute    scroll/click barra",
+        DrawTextCentered(AudioSettingsPanel.AudioHint,
             cx, hintControlY, new Color(100, 100, 130), 0.78f);
-        DrawTextCentered("ESC: indietro", cx, hintEscY, Color.DarkGray, 0.95f);
+        DrawTextCentered(AudioSettingsPanel.BackHint, cx, hintEscY, Color.DarkGray, 0.95f);
     }
 
     // ─────────────────────────────────────────────────────────────────
+    // Comandi mostrati nelle istruzioni: azione, tastiera, gamepad
+    private static readonly (string action, string keys, string pad)[] GameControls =
+    {
+        ("Muovi", "WASD / FRECCE", "D-PAD / LEVETTA SX"),
+        ("Bomba piccola", "SPAZIO", "A"),
+        ("Bomba grande", "X", "B"),
+        ("Detonatore", "C", "Y"),
+        ("Pausa / menu", "ESC", "START / BACK"),
+        ("Schermo intero", "F11", "-")
+    };
+
+    private static readonly (string action, string keys, string pad)[] MenuControls =
+    {
+        ("Seleziona", "FRECCE / WASD", "D-PAD / LEVETTA SX"),
+        ("Conferma", "ENTER", "A"),
+        ("Indietro / chiudi", "ESC", "B"),
+        ("Sezioni enciclopedia", "TAB / Q / E", "LB / RB"),
+        ("Volume / mute", "< >  /  M", "D-PAD < >  /  X")
+    };
+
     private void DrawIstruzioniOverlay(int W, int H)
     {
-        var boxW = 520;
-        var boxH = 300;
+        const int lineH = 21;
+        const int sectionH = 26;
+        var rows = GameControls.Length + MenuControls.Length;
+        var boxW = Math.Min(W - 32, 640);
+        var boxH = Math.Min(H - 16, 70 + sectionH * 2 + rows * lineH + 2 * lineH + 40);
         var boxX = W / 2 - boxW / 2;
         var boxY = H / 2 - boxH / 2;
         var cx = W / 2;
+
+        // Colonne: azione | tastiera | gamepad
+        var colAction = boxX + boxW * 18 / 100;
+        var colKeys = boxX + boxW * 50 / 100;
+        var colPad = boxX + boxW * 80 / 100;
 
         _sb.Draw(_pixel, new Rectangle(0, 0, W, H), Color.Black * 0.55f);
         UiDraw.Panel(_sb, _pixel, new Rectangle(boxX, boxY, boxW, boxH),
@@ -340,26 +368,40 @@ public class TitleScene : Scene
 
         DrawTextCentered("ISTRUZIONI", cx, boxY + 22, Color.Yellow, 1.1f);
 
-        var ly = boxY + 55;
-        const int lineH = 22;
+        var ly = boxY + 50;
+        DrawTextCentered("TASTIERA", colKeys, ly, new Color(255, 220, 120), 0.85f);
+        DrawTextCentered("GAMEPAD", colPad, ly, new Color(150, 200, 255), 0.85f);
+        ly += lineH;
 
-        void Line(string t, Color c, float sc = 0.9f)
+        void Section(string title)
         {
-            DrawTextCentered(t, cx, ly, c, sc);
-            ly += lineH;
+            _sb.Draw(_pixel, new Rectangle(boxX + 16, ly - 2, boxW - 32, 1), new Color(110, 90, 170));
+            DrawTextCentered(title, colAction, ly + 9, new Color(200, 170, 255), 0.8f);
+            ly += sectionH;
         }
 
-        Line("WASD / FRECCE  :  muovi il minatore", Color.LightGray);
-        Line("SPAZIO         :  piazza bomba piccola", Color.LightGray);
-        Line("X              :  piazza bomba grande", Color.LightGray);
-        Line("ESC            :  pausa / menu", Color.LightGray);
-        Line("F11            :  schermo intero", Color.LightGray);
-        Line("C              :  detonatore (se sbloccato)", Color.LightGray);
-        Line("Dal livello 5 serve la chiave per aprire la porta!", new Color(180, 255, 160), 0.85f);
-        Line("Le bombe esplodono a catena. Vita extra ogni 1000 pt.", new Color(255, 220, 80), 0.80f);
-        Line("Supporta il gamepad (A bomba, B big bomb, Start pausa).", new Color(150, 200, 255), 0.80f);
+        void Rows((string action, string keys, string pad)[] list)
+        {
+            foreach (var (action, keys, pad) in list)
+            {
+                DrawTextCentered(action, colAction, ly, Color.LightGray, 0.8f);
+                DrawTextCentered(keys, colKeys, ly, Color.White, 0.8f);
+                DrawTextCentered(pad, colPad, ly, new Color(170, 215, 255), 0.8f);
+                ly += lineH;
+            }
+        }
 
-        DrawTextCentered("ESC / ENTER: chiudi", cx, boxY + boxH - 18, Color.DarkGray, 0.75f);
+        Section("IN GIOCO");
+        Rows(GameControls);
+        Section("MENU");
+        Rows(MenuControls);
+
+        ly += 4;
+        DrawTextCentered("Dal livello 5 serve la chiave per aprire la porta!", cx, ly, new Color(180, 255, 160), 0.8f);
+        ly += lineH;
+        DrawTextCentered("Le bombe esplodono a catena. Vita extra ogni 1000 pt.", cx, ly, new Color(255, 220, 80), 0.8f);
+
+        DrawTextCentered("ESC / ENTER  (B / A): chiudi", cx, boxY + boxH - 16, Color.DarkGray, 0.75f);
     }
 
     // ─────────────────────────────────────────────────────────────────

@@ -28,7 +28,7 @@ internal sealed class LightingSystem : IDisposable
     {
         [TileMap.MapTheme.Forest] = new Color(240, 236, 226),
         [TileMap.MapTheme.Cave] = new Color(104, 100, 140),
-        [TileMap.MapTheme.Lava] = new Color(160, 118, 108),
+        [TileMap.MapTheme.Lava] = new Color(118, 88, 84),
         [TileMap.MapTheme.Ice] = new Color(205, 218, 240),
         [TileMap.MapTheme.Swamp] = new Color(142, 166, 140),
         [TileMap.MapTheme.Ruins] = new Color(188, 172, 146)
@@ -66,6 +66,17 @@ internal sealed class LightingSystem : IDisposable
 
     /// <summary>Luce ambientale del bioma corrente.</summary>
     public Color AmbientColor => Ambient.TryGetValue(Theme, out var c) ? c : Color.White;
+
+    /// <summary>
+    ///     Intensità (0..1) della lanterna del miner per una data luce ambientale:
+    ///     0 nei biomi luminosi (Forest, Ice), piena nei biomi bui (Cave, Lava).
+    /// </summary>
+    public static float LanternStrength(Color ambient)
+    {
+        var luma = (0.2126f * ambient.R + 0.7152f * ambient.G + 0.0722f * ambient.B) / 255f;
+        // luma >= 0.85 → spenta; luma <= 0.50 → piena
+        return Math.Clamp((0.85f - luma) / 0.35f, 0f, 1f);
+    }
 
     public void Dispose()
     {

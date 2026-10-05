@@ -296,7 +296,10 @@ public class GameScene : Scene
             return;
         }
 
-        if (pausePressed)
+        // In pausa anche B del gamepad vale come "indietro" (in gioco B è la bomba grande)
+        var menuBack = _isPaused && GameController.MenuBack();
+
+        if (pausePressed || menuBack)
         {
             if (!_isPaused)
             {
@@ -305,9 +308,11 @@ public class GameScene : Scene
             }
             else if (_pauseMenu.IsOnMainMenu)
             {
-                // ESC nel menu principale della pausa = riprendi.
-                // Nei sotto-menu (Audio, Enciclopedia) ESC torna indietro: lo gestisce PauseMenu.
+                // ESC / B nel menu principale della pausa = riprendi.
+                // Nei sotto-menu (Audio, Enciclopedia) torna indietro: lo gestisce PauseMenu.
+                // Salta il resto del frame: B appena premuto non deve piazzare una bomba grande.
                 _isPaused = false;
+                return;
             }
         }
 
@@ -315,7 +320,7 @@ public class GameScene : Scene
         {
             var action = _pauseMenu.Update(gameTime,
                 Core.Input.Keyboard, Core.Input.Mouse,
-                Core.GraphicsDevice, pausePressed && _isPaused);
+                Core.GraphicsDevice, pausePressed || menuBack);
 
             switch (action)
             {
@@ -958,11 +963,15 @@ public class GameScene : Scene
         var half = new Vector2(TileMap.TileSize * 0.5f);
         var flicker = 1f + 0.05f * MathF.Sin(_fxTime * 13f) + 0.03f * MathF.Sin(_fxTime * 31f);
 
-        // Miner: "lanterna" calda che lo segue
+        // Miner: "lanterna" calda che lo segue. Si accende solo dove serve:
+        // spenta nei biomi luminosi e attenuata vicino ad altre sorgenti (es. lava).
         if (!_miner.IsDead || !_miner.IsDeathAnimationFinished)
         {
+            var minerCenter = _miner.Position + half;
+            var lantern = LightingSystem.LanternStrength(_lighting.AmbientColor)
+                          * (1f - LocalLightLevel(minerCenter));
             var r = _map.Theme == TileMap.MapTheme.Cave ? 190f : 165f;
-            _lighting.AddLight(_miner.Position + half, r * flicker, new Color(255, 236, 205), 0.95f);
+            _lighting.AddLight(minerCenter, r * flicker, new Color(255, 236, 205), 0.95f * lantern);
         }
 
         // Bombe: bagliore della miccia / fiamme dell'esplosione
@@ -987,13 +996,13 @@ public class GameScene : Scene
             }
         }
 
-        // Lava: pozze luminose che pulsano lentamente
+        // Lava: pozze luminose che pulsano lentamente e illuminano le tile vicine
         foreach (var t in _lavaTiles)
         {
             var c = TileCenter(t);
-            var pulse = 0.75f + 0.12f * MathF.Sin(_fxTime * 2.1f + t.X * 0.9f + t.Y * 1.7f);
-            _lighting.AddLight(c, 56f, new Color(255, 120, 45), pulse);
-            _lighting.AddGlow(c, 26f, new Color(255, 90, 20), 0.14f * pulse);
+            var pulse = 0.85f + 0.15f * MathF.Sin(_fxTime * 2.1f + t.X * 0.9f + t.Y * 1.7f);
+            _lighting.AddLight(c, LavaLightRadius * flicker, new Color(255, 120, 45), pulse);
+            _lighting.AddGlow(c, 34f, new Color(255, 90, 20), 0.28f * pulse);
         }
 
         // Oggetti: porta, chiave, casse
@@ -1044,6 +1053,40 @@ public class GameScene : Scene
             var k = f.Life / f.MaxLife;
             _lighting.AddLight(f.Pos, f.Radius * (1.1f - 0.1f * k), f.Color, k);
         }
+    }
+
+    private const float LavaLightRadius = 96f;
+
+    /// <summary>
+    ///     Quanta luce "forte" (lava, esplosioni) arriva già in <paramref name="pos" />:
+    ///     0 = buio, 1 = zona pienamente illuminata. Serve a spegnere la lanterna del miner
+    ///     quando non è necessaria.
+    /// </summary>
+    private float LocalLightLevel(Vector2 pos)
+    {
+        var level = 0f;
+
+        foreach (var t in _lavaTiles)
+        {
+            var d = Vector2.Distance(pos, TileCenter(t));
+            if (d < LavaLightRadius) level += 1f - d / LavaLightRadius;
+            if (level >= 1f) return 1f;
+        }
+
+        foreach (var b in _miner.Bombs)
+        {
+            if (!b.IsExploding || b.IsFinished) continue;
+            var k = 1f - b.ExplosionProgress;
+            foreach (var t in b.ExplosionTiles)
+            {
+                var d = Vector2.Distance(pos, TileCenter(t));
+                if (d < 78f) level += (1f - d / 78f) * k;
+            }
+
+            if (level >= 1f) return 1f;
+        }
+
+        return Math.Clamp(level, 0f, 1f);
     }
 
     /// <summary>

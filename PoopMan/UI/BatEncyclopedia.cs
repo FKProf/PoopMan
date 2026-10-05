@@ -373,15 +373,15 @@ public class BatEncyclopedia
         var vh = gd.Viewport.Height;
 
         // -- Navigazione tab -------------------------
-        if (kb.WasKeyJustPressed(Keys.Tab) || kb.WasKeyJustPressed(Keys.E))
+        if (GameController.NextTab())
             _tab = (_tab + 1) % 3;
-        if (kb.WasKeyJustPressed(Keys.Q))
+        if (GameController.PrevTab())
             _tab = (_tab - 1 + 3) % 3;
 
-        // -- Navigazione card ------------------------
-        if (kb.WasKeyJustPressed(Keys.Left) || kb.WasKeyJustPressed(Keys.A))
+        // -- Navigazione card (frecce / A D / D-pad / levetta) --
+        if (GameController.MenuLeft())
             Selected = Math.Max(0, Selected - 1);
-        if (kb.WasKeyJustPressed(Keys.Right) || kb.WasKeyJustPressed(Keys.D))
+        if (GameController.MenuRight())
             Selected = Math.Min(CurrentCount - 1, Selected + 1);
 
         // -- Scroll fluido ---------------------------
@@ -481,7 +481,7 @@ public class BatEncyclopedia
 
         // Hint tab + counter
         var hintY = TabBarY + TabH + 8;
-        DrawTextCentered(sb, "TAB/Q/E: cambia sezione", cx, hintY, new Color(80, 80, 120), 0.9f);
+        DrawTextCentered(sb, "TAB/Q/E  (LB/RB): cambia sezione", cx, hintY, new Color(80, 80, 120), 0.9f);
         DrawTextCentered(sb, $"{Selected + 1} / {CurrentCount}", cx, hintY + 14, Color.Gray, 0.95f);
 
         // -- Cards -----------------------------------
@@ -521,7 +521,7 @@ public class BatEncyclopedia
         }
 
         // Hint basso
-        DrawTextCentered(sb, "< > / A D : sfoglia    scroll: scorre    ESC: chiudi", cx, vh - 64, Color.DimGray, 0.9f);
+        DrawTextCentered(sb, "< > / A D / D-pad: sfoglia    scroll: scorre    ESC / (B): chiudi", cx, vh - 64, Color.DimGray, 0.9f);
 
         // Pulsante Chiudi
         var cbx = cx - 80;
