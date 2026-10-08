@@ -1724,6 +1724,12 @@ public class GameScene : Scene
 
         _miner.DetonateBombsInArea(hitTiles, _map);
 
+        // Feedback della mini-esplosione (come bombe e Walid): suono, flash, shake, particelle
+        AudioManager.PlayExplosion(false);
+        AddExplosionFeedback(TileCenter(origin), VisualEffectSystem.ExplosionType.Normal);
+        foreach (var t in hitTiles)
+            _particles?.ExplosionTile(TileCenter(t), false);
+
         // Copia della lista: un Splitter ucciso aggiunge mini-bat a _bats durante l'iterazione
         foreach (var b in _bats.ToList())
             if (!b.IsDead && !b.IsInvincible && hitTiles.Contains(b.VisualTilePosition))
