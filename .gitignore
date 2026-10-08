@@ -216,3 +216,6 @@ leaderboard_backup.json
 /PoopManLibrary/obj/Release/net9.0/PoopManLibrary.AssemblyInfoInputs.cache
 /PoopMan/obj/Release/net9.0-windows/PoopMan.AssemblyInfoInputs.cache
 /PoopMan/obj/Release/net9.0-windows/PoopMan.AssemblyInfo.cs
+
+# graphify knowledge graph output
+graphify-out/
