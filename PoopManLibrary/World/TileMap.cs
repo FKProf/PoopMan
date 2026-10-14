@@ -22,6 +22,9 @@ public class TileMap
     private const float LiquidFrameInterval = 0.55f; // secondi per frame
 
     public const int TileSize = 32;
+
+    /// <summary>Ogni quanti livelli si passa al bioma successivo.</summary>
+    public const int LevelsPerBiome = 5;
     public const int Rows = 23;
     public const int Cols = 39;
 
@@ -39,9 +42,29 @@ public class TileMap
             [MapTheme.Swamp] = ("mossy_brick_wall", new[] { "log0", "log1", "plank0", "plank1" },
                 new[] { "ground2", "ground0" }, "mossy_brick_wall"),
             [MapTheme.Ruins] = ("mossy_brick_wall",
-                new[] { "cobblestone", "mossy_cobblestone", "dirt_stone", "plank0" },
-                new[] { "ground0", "ground1", "sand0" }, "stone_brick_wall")
+                new[] { "dirt_stone", "cobblestone", "mossy_cobblestone" },
+                new[] { RuinsSand, RuinsPaving }, "stone_brick_wall")
         };
+
+    // ── Rovine: linguaggio visivo ─────────────────────────────────────────
+    // Mattoni = indistruttibili, pietre tonde = distruttibili, sabbia/lastricato = pavimento.
+    private const string RuinsSand = "sand0";
+    private const string RuinsPaving = "ground2";
+    private const string RuinsRubble = "dirt_stone";
+    private const string RuinsMasonry = "cobblestone";
+    private const string RuinsMossyMasonry = "mossy_cobblestone";
+    private const string RuinsTempleColumn = "brick_wall1";
+    private const string RuinsStump = "log1";
+    private static readonly string[] RuinsWeeds = { "glass0", "glass1", "glass2" };
+
+    private enum RuinsZone
+    {
+        Open,
+        Avenue,
+        Plaza,
+        Room,
+        RoomWall
+    }
 
     private static readonly Dictionary<MapTheme, Color> ThemeBackground = new()
     {
@@ -62,6 +85,10 @@ public class TileMap
     private readonly TileAtlas atlas;
     private readonly TileType[,] map;
     private readonly string[,] tileVariant;
+
+    // Pavimento "sotto" ogni tile (solo Rovine): rompendo un blocco riappare il pavimento
+    // coerente con la zona (sabbia / lastricato) invece di una variante casuale.
+    private string[,] floorVariant;
 
     // ── Animazione liquidi ────────────────────────────────────────────────
     private float _liquidAnimTimer;
@@ -84,7 +111,7 @@ public class TileMap
         map = new TileType[rows, cols];
         tileVariant = new string[rows, cols];
 
-        Theme = (level / 4 % 6) switch
+        Theme = (level / LevelsPerBiome % 6) switch
         {
             0 => MapTheme.Forest,
             1 => MapTheme.Cave,
@@ -97,8 +124,7 @@ public class TileMap
         var rand = new Random();
         var t = ThemeTiles[Theme];
 
-        // Densita breakable: 35% base, cresce con il livello fino a 75
-        var breakableChance = Math.Clamp(35 + level * 2, 35, 75);
+        var breakableChance = BreakableChance(level);
 
         // 1) Riempimento completo uniforme con pavimento decorato
         // Genera una "mappa di zona" 2D con Perlin-like noise per variare i floor tile
@@ -153,6 +179,18 @@ public class TileMap
 
     public MapTheme Theme { get; }
 
+    // Densita breakable: 35% base, cresce con il livello fino a 75
+    private static int BreakableChance(int level)
+    {
+        return Math.Clamp(35 + level * 2, 35, 75);
+    }
+
+    private string FloorAt(int y, int x, Random rand)
+    {
+        var empty = ThemeTiles[Theme].empty;
+        return floorVariant?[y, x] ?? empty[rand.Next(empty.Length)];
+    }
+
     public Color BackgroundColor => ThemeBackground[Theme];
 
     public event Action<Point>? TileBroken;
@@ -162,7 +200,6 @@ public class TileMap
     // -------------------------------------------------------------------------
     private void ClearSpawnZone(Point spawn, int rows, int cols, Random rand)
     {
-        var theme = ThemeTiles[Theme];
         for (var dy = -3; dy <= 3; dy++)
             for (var dx = -3; dx <= 3; dx++)
             {
@@ -173,7 +210,7 @@ public class TileMap
                 if (map[cy, cx] != TileType.Empty)
                 {
                     map[cy, cx] = TileType.Empty;
-                    tileVariant[cy, cx] = theme.empty[rand.Next(theme.empty.Length)];
+                    tileVariant[cy, cx] = FloorAt(cy, cx, rand);
                 }
             }
     }
@@ -194,7 +231,7 @@ public class TileMap
                 if (map[y, x] == TileType.Wall && IsHazardVariant(tileVariant[y, x]))
                 {
                     map[y, x] = TileType.Empty;
-                    tileVariant[y, x] = t.empty[0];
+                    tileVariant[y, x] = floorVariant?[y, x] ?? t.empty[0];
                 }
             }
     }
@@ -290,17 +327,177 @@ public class TileMap
                 break;
 
             case MapTheme.Ruins:
-                for (var y = 1; y < rows - 1; y++)
-                    for (var x = 1; x < cols - 1; x++)
-                        if (map[y, x] == TileType.Empty && rand.Next(100) < 25 + intensity * 5)
-                            tileVariant[y, x] = "sand0";
-                for (var i = 0; i < rand.Next(3, 5 + intensity); i++)
-                    AddRockCluster(rand.Next(1, rows - 1), rand.Next(1, cols - 1),
-                        rand.Next(3, 6 + intensity), rows, cols, rand);
-                for (var i = 0; i < rand.Next(3, 6 + intensity); i++)
-                    AddColumnCluster(rand.Next(1, rows - 1), rand.Next(1, cols - 1), rows, cols, rand);
+                BuildRuins(rows, cols, rand, level);
                 break;
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Rovine: ricostruisce l'intera mappa come una città sepolta nella sabbia.
+    //   1) Viale orizzontale + verticale lastricati, piazza con fontana all'incrocio
+    //   2) 4-6 edifici in rovina: mura di pietra distruttibili con crolli e porte,
+    //      pavimento lastricato e colonne di arenaria all'interno
+    //   3) Fuori dagli edifici: dune di sabbia con campi di macerie (noise),
+    //      lastre affioranti qua e là
+    // Tutte le pareti nuove sono Breakable: la raggiungibilità non cambia.
+    // -------------------------------------------------------------------------
+    private void BuildRuins(int rows, int cols, Random rand, int level)
+    {
+        floorVariant = new string[rows, cols];
+        var zone = new RuinsZone[rows, cols];
+        var pavingNoise = GenerateNoiseMap(rows, cols, rand);
+        var rubbleNoise = GenerateNoiseMap(rows, cols, rand);
+        var density = BreakableChance(level) / 100f;
+
+        // 1) Viali su righe/colonne dispari (niente pilastri sul percorso)
+        var avenueRow = 9 + 2 * rand.Next(3); // 9, 11, 13
+        var avenueCol = 15 + 2 * rand.Next(5); // 15..23
+        for (var x = 1; x < cols - 1; x++) zone[avenueRow, x] = RuinsZone.Avenue;
+        for (var y = 1; y < rows - 1; y++) zone[y, avenueCol] = RuinsZone.Avenue;
+        for (var dy = -2; dy <= 2; dy++)
+            for (var dx = -2; dx <= 2; dx++)
+                zone[avenueRow + dy, avenueCol + dx] = RuinsZone.Plaza;
+
+        // 2) Edifici: 1-2 per ciascuno dei 4 quartieri delimitati dai viali.
+        //    Angoli su coordinate dispari, così i muri sono linee continue
+        //    e i pilastri fissi finiscono all'interno come colonnato.
+        var rooms = new List<(int x0, int y0, int x1, int y1)>();
+        var quarters = new[]
+        {
+            (xMin: 3, xMax: avenueCol - 2, yMin: 3, yMax: avenueRow - 2),
+            (xMin: avenueCol + 2, xMax: cols - 4, yMin: 3, yMax: avenueRow - 2),
+            (xMin: 3, xMax: avenueCol - 2, yMin: avenueRow + 2, yMax: rows - 4),
+            (xMin: avenueCol + 2, xMax: cols - 4, yMin: avenueRow + 2, yMax: rows - 4)
+        };
+        foreach (var q in quarters)
+        {
+            var target = rand.Next(1, 3);
+            var placed = 0;
+            for (var attempt = 0; attempt < 30 && placed < target; attempt++)
+            {
+                var w = 6 + 2 * rand.Next(3); // 6, 8, 10
+                var h = 4 + 2 * rand.Next(2); // 4, 6
+                if (w > q.xMax - q.xMin || h > q.yMax - q.yMin) continue;
+                var x0 = q.xMin + 2 * rand.Next((q.xMax - q.xMin - w) / 2 + 1);
+                var y0 = q.yMin + 2 * rand.Next((q.yMax - q.yMin - h) / 2 + 1);
+                var x1 = x0 + w;
+                var y1 = y0 + h;
+
+                // Non invadere la piazza
+                if (x0 <= avenueCol + 2 && x1 >= avenueCol - 2 && y0 <= avenueRow + 2 && y1 >= avenueRow - 2) continue;
+                // Lontano dallo spawn del miner
+                if (x0 <= _playerSpawn.X + 4 && x1 >= _playerSpawn.X - 4 &&
+                    y0 <= _playerSpawn.Y + 4 && y1 >= _playerSpawn.Y - 4) continue;
+                // Almeno un corridoio tra due edifici
+                if (rooms.Any(r => x0 <= r.x1 + 2 && x1 >= r.x0 - 2 && y0 <= r.y1 + 2 && y1 >= r.y0 - 2)) continue;
+
+                rooms.Add((x0, y0, x1, y1));
+                placed++;
+                for (var y = y0; y <= y1; y++)
+                    for (var x = x0; x <= x1; x++)
+                        zone[y, x] = y == y0 || y == y1 || x == x0 || x == x1 ? RuinsZone.RoomWall : RuinsZone.Room;
+            }
+        }
+
+        // 3) Crolli: su gran parte dei lati un intero tratto di muro è venuto giù
+        var collapsed = new bool[rows, cols];
+        foreach (var (x0, y0, x1, y1) in rooms)
+        {
+            foreach (var y in new[] { y0, y1 })
+            {
+                if (rand.Next(100) >= 50) continue;
+                var len = rand.Next(2, 5);
+                var start = rand.Next(x0 + 1, x1 - len + 1);
+                for (var i = 0; i < len; i++) collapsed[y, start + i] = true;
+            }
+
+            foreach (var x in new[] { x0, x1 })
+            {
+                if (rand.Next(100) >= 50) continue;
+                var len = rand.Next(2, Math.Min(5, y1 - y0));
+                var start = rand.Next(y0 + 1, y1 - len + 1);
+                for (var i = 0; i < len; i++) collapsed[start + i, x] = true;
+            }
+        }
+
+        bool NextToCollapse(int y, int x)
+        {
+            return collapsed[y - 1, x] || collapsed[y + 1, x] || collapsed[y, x - 1] || collapsed[y, x + 1];
+        }
+
+        // 4) Pavimento + contenuto di ogni tile in base alla zona
+        var driftNoise = GenerateNoiseMap(rows, cols, rand);
+        var weedNoise = GenerateNoiseMap(rows, cols, rand);
+        for (var y = 1; y < rows - 1; y++)
+            for (var x = 1; x < cols - 1; x++)
+            {
+                var z = zone[y, x];
+
+                // Lastricato solo dove c'era la città, mezzo sepolto dalla sabbia portata dal vento;
+                // erbacce e ciuffi d'erba spuntano tra le pietre nei punti riparati.
+                var built = z != RuinsZone.Open;
+                var floor = built
+                    ? driftNoise[y, x] > 0.7f ? RuinsSand : RuinsPaving
+                    : pavingNoise[y, x] > 0.75f ? RuinsPaving : RuinsSand;
+                if (built && weedNoise[y, x] > 0.6f && rand.Next(100) < 22)
+                    floor = RuinsWeeds[rand.Next(RuinsWeeds.Length)];
+                floorVariant[y, x] = floor;
+
+                if (y % 2 == 0 && x % 2 == 0)
+                {
+                    // Colonne di arenaria negli edifici, in parte invase dall'edera; fuori solo edera
+                    tileVariant[y, x] = z is RuinsZone.Room or RuinsZone.Plaza && driftNoise[y, x] < 0.55f
+                        ? RuinsTempleColumn
+                        : ThemeTiles[Theme].wall;
+                    continue;
+                }
+
+                var rubbleChance = z switch
+                {
+                    RuinsZone.Plaza => 0.08f,
+                    RuinsZone.Room => 0.16f,
+                    RuinsZone.Avenue => 0.25f,
+                    RuinsZone.RoomWall => collapsed[y, x] ? 0.45f : 0.92f,
+                    // Macerie riversate fuori dai muri crollati
+                    _ when NextToCollapse(y, x) => 0.45f,
+                    // Dune aperte dove il noise è basso, campi di macerie dove è alto
+                    _ => Math.Min(0.95f, density * (0.15f + 1.2f * rubbleNoise[y, x]))
+                };
+
+                if (rand.NextDouble() < rubbleChance)
+                {
+                    map[y, x] = TileType.Breakable;
+                    // Pietra squadrata solo per i tratti di muro ancora in piedi;
+                    // dentro gli edifici qualche ceppo d'albero cresciuto tra le rovine.
+                    tileVariant[y, x] = z switch
+                    {
+                        RuinsZone.RoomWall when !collapsed[y, x] => rand.Next(100) < 60 ? RuinsMossyMasonry : RuinsMasonry,
+                        RuinsZone.Room when rand.Next(100) < 25 => RuinsStump,
+                        _ => RuinsRubble
+                    };
+                }
+                else
+                {
+                    map[y, x] = TileType.Empty;
+                    tileVariant[y, x] = floorVariant[y, x];
+                }
+            }
+
+        // 5) Porte: una per lato, sempre su riga/colonna dispari (mai davanti a un pilastro)
+        foreach (var (x0, y0, x1, y1) in rooms)
+        {
+            var doorX = x0 + 2 * rand.Next(1, (x1 - x0) / 2);
+            var doorY = y0 + 2 * rand.Next(1, (y1 - y0) / 2);
+            foreach (var (dx, dy) in new[] { (doorX, y0), (doorX, y1), (x0, doorY), (x1, doorY) })
+            {
+                map[dy, dx] = TileType.Empty;
+                tileVariant[dy, dx] = floorVariant[dy, dx];
+            }
+        }
+
+        // 6) Fontana abbandonata al centro della piazza: acqua stagnante tra le 4 colonne
+        map[avenueRow, avenueCol] = TileType.Wall;
+        tileVariant[avenueRow, avenueCol] = "swamp_water0";
     }
 
     // -------------------------------------------------------------------------
@@ -645,9 +842,10 @@ public class TileMap
         map[tile.Y, tile.X] = TileType.Empty;
 
         var t = ThemeTiles[Theme];
-        tileVariant[tile.Y, tile.X] = HasAdjacentLiquid(tile.Y, tile.X, map.GetLength(0), map.GetLength(1))
-            ? t.empty[0]
-            : t.empty[new Random().Next(t.empty.Length)];
+        tileVariant[tile.Y, tile.X] = floorVariant?[tile.Y, tile.X] ??
+                                      (HasAdjacentLiquid(tile.Y, tile.X, map.GetLength(0), map.GetLength(1))
+                                          ? t.empty[0]
+                                          : t.empty[new Random().Next(t.empty.Length)]);
 
         TileBroken?.Invoke(tile);
     }

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- Porte per bioma: riga 0 = porta con chiave, riga 1 = porta senza chiave -->
+<XnaContent xmlns:ns="Microsoft.Xna.Framework">
+	<Texture>image/items/doors</Texture>
+	<Regions>
+
+		<!-- forest -->
+		<Region Name="forest_door_key_closed0" X="0" Y="0" Width="32" Height="32" />
+		<Region Name="forest_door_key0" X="32" Y="0" Width="32" Height="32" />
+		<Region Name="forest_door_key1" X="64" Y="0" Width="32" Height="32" />
+		<Region Name="forest_door_key2" X="96" Y="0" Width="32" Height="32" />
+		<Region Name="forest_door_closed0" X="0" Y="32" Width="32" Height="32" />
+		<Region Name="forest_door_opening0" X="32" Y="32" Width="32" Height="32" />
+		<Region Name="forest_door_opening1" X="64" Y="32" Width="32" Height="32" />
+		<Region Name="forest_door_opening2" X="96" Y="32" Width="32" Height="32" />
+
+		<!-- cave -->
+		<Region Name="cave_door_key_closed0" X="0" Y="64" Width="32" Height="32" />
+		<Region Name="cave_door_key0" X="32" Y="64" Width="32" Height="32" />
+		<Region Name="cave_door_key1" X="64" Y="64" Width="32" Height="32" />
+		<Region Name="cave_door_key2" X="96" Y="64" Width="32" Height="32" />
+		<Region Name="cave_door_closed0" X="0" Y="96" Width="32" Height="32" />
+		<Region Name="cave_door_opening0" X="32" Y="96" Width="32" Height="32" />
+		<Region Name="cave_door_opening1" X="64" Y="96" Width="32" Height="32" />
+		<Region Name="cave_door_opening2" X="96" Y="96" Width="32" Height="32" />
+
+		<!-- lava -->
+		<Region Name="lava_door_key_closed0" X="0" Y="128" Width="32" Height="32" />
+		<Region Name="lava_door_key0" X="32" Y="128" Width="32" Height="32" />
+		<Region Name="lava_door_key1" X="64" Y="128" Width="32" Height="32" />
+		<Region Name="lava_door_key2" X="96" Y="128" Width="32" Height="32" />
+		<Region Name="lava_door_closed0" X="0" Y="160" Width="32" Height="32" />
+		<Region Name="lava_door_opening0" X="32" Y="160" Width="32" Height="32" />
+		<Region Name="lava_door_opening1" X="64" Y="160" Width="32" Height="32" />
+		<Region Name="lava_door_opening2" X="96" Y="160" Width="32" Height="32" />
+
+		<!-- ice -->
+		<Region Name="ice_door_key_closed0" X="0" Y="192" Width="32" Height="32" />
+		<Region Name="ice_door_key0" X="32" Y="192" Width="32" Height="32" />
+		<Region Name="ice_door_key1" X="64" Y="192" Width="32" Height="32" />
+		<Region Name="ice_door_key2" X="96" Y="192" Width="32" Height="32" />
+		<Region Name="ice_door_closed0" X="0" Y="224" Width="32" Height="32" />
+		<Region Name="ice_door_opening0" X="32" Y="224" Width="32" Height="32" />
+		<Region Name="ice_door_opening1" X="64" Y="224" Width="32" Height="32" />
+		<Region Name="ice_door_opening2" X="96" Y="224" Width="32" Height="32" />
+
+		<!-- swamp -->
+		<Region Name="swamp_door_key_closed0" X="0" Y="256" Width="32" Height="32" />
+		<Region Name="swamp_door_key0" X="32" Y="256" Width="32" Height="32" />
+		<Region Name="swamp_door_key1" X="64" Y="256" Width="32" Height="32" />
+		<Region Name="swamp_door_key2" X="96" Y="256" Width="32" Height="32" />
+		<Region Name="swamp_door_closed0" X="0" Y="288" Width="32" Height="32" />
+		<Region Name="swamp_door_opening0" X="32" Y="288" Width="32" Height="32" />
+		<Region Name="swamp_door_opening1" X="64" Y="288" Width="32" Height="32" />
+		<Region Name="swamp_door_opening2" X="96" Y="288" Width="32" Height="32" />
+
+		<!-- ruins -->
+		<Region Name="ruins_door_key_closed0" X="0" Y="320" Width="32" Height="32" />
+		<Region Name="ruins_door_key0" X="32" Y="320" Width="32" Height="32" />
+		<Region Name="ruins_door_key1" X="64" Y="320" Width="32" Height="32" />
+		<Region Name="ruins_door_key2" X="96" Y="320" Width="32" Height="32" />
+		<Region Name="ruins_door_closed0" X="0" Y="352" Width="32" Height="32" />
+		<Region Name="ruins_door_opening0" X="32" Y="352" Width="32" Height="32" />
+		<Region Name="ruins_door_opening1" X="64" Y="352" Width="32" Height="32" />
+		<Region Name="ruins_door_opening2" X="96" Y="352" Width="32" Height="32" />
+	</Regions>
+</XnaContent>

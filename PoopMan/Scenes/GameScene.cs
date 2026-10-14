@@ -66,6 +66,8 @@ public class GameScene : Scene
 
     // ── Sistema casse e item droppati ────────────────────────────────────
     private Texture2D _itemTexture;
+    private Texture2D _doorTexture;
+    private readonly Dictionary<string, List<Rectangle>> _doorAnimations = new();
     private int _killStreak;
     private bool _levelComplete;
     private float _levelFlashTimer;
@@ -1246,10 +1248,24 @@ public class GameScene : Scene
                 bob = ItemBob(item.Key) * 0.5f;
             }
 
-            if (!_itemAnimations.TryGetValue(animKey, out var frames) || frames.Count == 0) continue;
+            var texture = _itemTexture;
+            List<Rectangle> frames;
+            // Porta del bioma corrente, se presente in doors.png; altrimenti quella generica
+            if (item.Value.Type == "door" &&
+                _doorAnimations.TryGetValue($"{_map.Theme.ToString().ToLowerInvariant()}_{animKey}", out var doorFrames))
+            {
+                texture = _doorTexture;
+                frames = doorFrames;
+            }
+            else if (!_itemAnimations.TryGetValue(animKey, out frames))
+            {
+                continue;
+            }
+
+            if (frames.Count == 0) continue;
             frame = Math.Min(frame, frames.Count - 1);
             var pos = new Vector2(item.Key.X * TileMap.TileSize, item.Key.Y * TileMap.TileSize + bob);
-            _spriteBatch.Draw(_itemTexture, pos, frames[frame], Color.White);
+            _spriteBatch.Draw(texture, pos, frames[frame], Color.White);
         }
     }
 
@@ -1970,11 +1986,19 @@ public class GameScene : Scene
 
     private void LoadItemAnimations()
     {
-        var xmlPath = Path.Combine(Content.RootDirectory, "image", "items", "items.xml");
+        _itemTexture = LoadAnimationAtlas("items.xml", "image/items/items", _itemAnimations);
+        // Porte specifiche per bioma (image/items/doors.png): "<bioma>_door_closed", ...
+        _doorTexture = LoadAnimationAtlas("doors.xml", "image/items/doors", _doorAnimations);
+    }
+
+    private Texture2D LoadAnimationAtlas(string xmlName, string defaultTexture,
+        Dictionary<string, List<Rectangle>> animations)
+    {
+        var xmlPath = Path.Combine(Content.RootDirectory, "image", "items", xmlName);
         var doc = XDocument.Load(xmlPath);
 
-        var texturePath = doc.Descendants("Texture").FirstOrDefault()?.Value ?? "image/items/items";
-        _itemTexture = Content.Load<Texture2D>(texturePath);
+        var texturePath = doc.Descendants("Texture").FirstOrDefault()?.Value ?? defaultTexture;
+        var texture = Content.Load<Texture2D>(texturePath);
 
         foreach (var region in doc.Descendants("Region"))
         {
@@ -1989,13 +2013,15 @@ public class GameScene : Scene
             var animName = fullName[..i].TrimEnd('_', '-', ' ');
             if (string.IsNullOrEmpty(animName)) animName = fullName;
 
-            if (!_itemAnimations.ContainsKey(animName))
-                _itemAnimations[animName] = new List<Rectangle>();
+            if (!animations.ContainsKey(animName))
+                animations[animName] = new List<Rectangle>();
 
             var rect = new Rectangle(x, y, width, height);
-            if (!_itemAnimations[animName].Contains(rect))
-                _itemAnimations[animName].Add(rect);
+            if (!animations[animName].Contains(rect))
+                animations[animName].Add(rect);
         }
+
+        return texture;
     }
 
     private void GoToNextLevel()

@@ -31,6 +31,7 @@
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/enemies/bat.png</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/fxs/fxs.png</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/items/items.png</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/items/doors.png</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/Tile/terrain.png</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/fx/bloom.fx</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/fx/colorgrade.fx</File>
@@ -38,6 +39,7 @@
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/fx/shockwave.fx</File>
   </SourceFiles>
   <DestFiles>
+    <File xsi:nil="true" />
     <File xsi:nil="true" />
     <File xsi:nil="true" />
     <File xsi:nil="true" />
