@@ -73,8 +73,8 @@ public class GameOverlay
             _ => Color.Cyan
         };
 
-        // Bioma cambiato? (ogni 4 livelli)
-        var themeChanged = level % 4 == 0 && level > 0;
+        // Bioma cambiato? (ogni TileMap.LevelsPerBiome livelli)
+        var themeChanged = level % TileMap.LevelsPerBiome == 0 && level > 0;
         var themeName = theme switch
         {
             TileMap.MapTheme.Forest => "FOREST",

@@ -2,11 +2,11 @@
   "version": 4,
   "targets": {
     "net9.0": {
-      "MonoGame.Framework.DesktopGL/3.8.4.1": {
+      "MonoGame.Framework.DesktopGL/3.8.5.1": {
         "type": "package",
         "dependencies": {
-          "MonoGame.Library.OpenAL": "1.24.3.2",
-          "MonoGame.Library.SDL": "2.32.2.1",
+          "MonoGame.Library.OpenAL": "1.24.3.4",
+          "MonoGame.Library.SDL": "2.32.10.2",
           "NVorbis": "0.10.4"
         },
         "compile": {
@@ -23,7 +23,7 @@
           "build/MonoGame.Framework.DesktopGL.targets": {}
         }
       },
-      "MonoGame.Library.OpenAL/1.24.3.2": {
+      "MonoGame.Library.OpenAL/1.24.3.4": {
         "type": "package",
         "runtimeTargets": {
           "runtimes/android-arm/native/libopenal.so": {
@@ -66,15 +66,23 @@
             "assetType": "native",
             "rid": "osx"
           },
+          "runtimes/win-arm64/native/openal.dll": {
+            "assetType": "native",
+            "rid": "win-arm64"
+          },
           "runtimes/win-x64/native/openal.dll": {
             "assetType": "native",
             "rid": "win-x64"
           }
         }
       },
-      "MonoGame.Library.SDL/2.32.2.1": {
+      "MonoGame.Library.SDL/2.32.10.2": {
         "type": "package",
         "runtimeTargets": {
+          "runtimes/linux-arm64/native/libSDL2-2.0.so.0": {
+            "assetType": "native",
+            "rid": "linux-arm64"
+          },
           "runtimes/linux-x64/native/libSDL2-2.0.so.0": {
             "assetType": "native",
             "rid": "linux-x64"
@@ -82,6 +90,10 @@
           "runtimes/osx/native/libSDL2-2.0.0.dylib": {
             "assetType": "native",
             "rid": "osx"
+          },
+          "runtimes/win-arm64/native/SDL2.dll": {
+            "assetType": "native",
+            "rid": "win-arm64"
           },
           "runtimes/win-x64/native/SDL2.dll": {
             "assetType": "native",
@@ -127,10 +139,10 @@
     }
   },
   "libraries": {
-    "MonoGame.Framework.DesktopGL/3.8.4.1": {
-      "sha512": "YybxIIT5+Ky78E/XdkS0glyluMr2EeDZwx2LqXULAOCqiKt1+aDrjPZaqLL5qpNgBcMEHUeZJ4YjWe4TAZlWLw==",
+    "MonoGame.Framework.DesktopGL/3.8.5.1": {
+      "sha512": "za6tOSYT2xpks932wU/WcpPu2xkUyKwn251gkRuiJ/3XPZBdwds7RPXRhtcrZGnZ2jtjtwh4upRLd+EGrrWtFw==",
       "type": "package",
-      "path": "monogame.framework.desktopgl/3.8.4.1",
+      "path": "monogame.framework.desktopgl/3.8.5.1",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -139,21 +151,21 @@
         "build/MonoGame.Framework.DesktopGL.targets",
         "lib/net8.0/MonoGame.Framework.dll",
         "lib/net8.0/MonoGame.Framework.xml",
-        "monogame.framework.desktopgl.3.8.4.1.nupkg.sha512",
+        "monogame.framework.desktopgl.3.8.5.1.nupkg.sha512",
         "monogame.framework.desktopgl.nuspec"
       ]
     },
-    "MonoGame.Library.OpenAL/1.24.3.2": {
-      "sha512": "nGRsXQXs+NSUC3C5w90hFQfyKdZPpBnHnyg2w+Dw/2pUH7s+CoRWTJNYbzzdJf3+aeUvfvG4rTbFvMKDDj5olA==",
+    "MonoGame.Library.OpenAL/1.24.3.4": {
+      "sha512": "/FhE0hblY9owGPvIHnMbH+6kXtjfl+/t3Cm776RQiZnGyxGy2Qd9pTAzclLuMO8pvtjiGLYkkRwjRciUA4XFyQ==",
       "type": "package",
-      "path": "monogame.library.openal/1.24.3.2",
+      "path": "monogame.library.openal/1.24.3.4",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
         "LICENSE",
         "README.md",
-        "monogame.library.openal.1.24.3.2.nupkg.sha512",
+        "monogame.library.openal.1.24.3.4.nupkg.sha512",
         "monogame.library.openal.nuspec",
         "runtimes/android-arm/native/libopenal.so",
         "runtimes/android-arm64/native/libopenal.so",
@@ -165,23 +177,26 @@
         "runtimes/linux-arm64/native/libopenal.so",
         "runtimes/linux-x64/native/libopenal.so",
         "runtimes/osx/native/libopenal.dylib",
+        "runtimes/win-arm64/native/openal.dll",
         "runtimes/win-x64/native/openal.dll"
       ]
     },
-    "MonoGame.Library.SDL/2.32.2.1": {
-      "sha512": "T4E2ppGlSTC2L9US1rxtdg3qTbarRzNId31xZoumUW9cf9Nq8nRQPMu9GzvZGrhfSySf0+UWPEj1rlicps+P/w==",
+    "MonoGame.Library.SDL/2.32.10.2": {
+      "sha512": "mtnmWr50KgH2Ui9fPscHPMI3sXgb5NBRnPS7igi4ViJ23ROdP+MLi/j9CmLWX47KuXvI3Bp5BElCDVwRUlswgg==",
       "type": "package",
-      "path": "monogame.library.sdl/2.32.2.1",
+      "path": "monogame.library.sdl/2.32.10.2",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
         "LICENSE.txt",
         "README.md",
-        "monogame.library.sdl.2.32.2.1.nupkg.sha512",
+        "monogame.library.sdl.2.32.10.2.nupkg.sha512",
         "monogame.library.sdl.nuspec",
+        "runtimes/linux-arm64/native/libSDL2-2.0.so.0",
         "runtimes/linux-x64/native/libSDL2-2.0.so.0",
         "runtimes/osx/native/libSDL2-2.0.0.dylib",
+        "runtimes/win-arm64/native/SDL2.dll",
         "runtimes/win-x64/native/SDL2.dll"
       ]
     },
@@ -273,8 +288,7 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\fkpro\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\fkpro\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
@@ -285,12 +299,8 @@
       "packagesPath": "C:\\Users\\fkpro\\.nuget\\packages\\",
       "outputPath": "C:\\Users\\fkpro\\source\\repos\\PoopMan\\PoopManLibrary\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
         "C:\\Users\\fkpro\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -298,7 +308,6 @@
       ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -318,7 +327,7 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "10.0.300"
+      "SdkAnalysisLevel": "10.0.400"
     },
     "frameworks": {
       "net9.0": {
@@ -347,7 +356,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

@@ -242,6 +242,21 @@
 #begin image/items/items.xml
 /copy:image/items/items.xml
 
+#begin image/items/doors.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:image/items/doors.png
+
+#begin image/items/doors.xml
+/copy:image/items/doors.xml
+
 #begin image/Tile/terrain.png
 /importer:TextureImporter
 /processor:TextureProcessor

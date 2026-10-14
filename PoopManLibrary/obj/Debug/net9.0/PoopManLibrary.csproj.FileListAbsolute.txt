@@ -36,3 +36,4 @@ C:\Users\fkpro\source\repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibra
 C:\Users\fkpro\source\repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\refint\PoopManLibrary.dll
 C:\Users\fkpro\source\repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManLibrary.pdb
 C:\Users\fkpro\source\repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\ref\PoopManLibrary.dll
+C:\Users\fkpro\source\repos\PoopMan\PoopManLibrary\obj\Debug\net9.0\PoopManL.D9FB8570.Up2Date
