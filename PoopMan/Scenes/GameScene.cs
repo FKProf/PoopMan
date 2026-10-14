@@ -49,7 +49,7 @@ public class GameScene : Scene
     private List<Bat> _bats;
 
     // ── Progressione livelli ──────────────────────────────────────────────
-    private int _currentLevel=8;
+    private int _currentLevel;
     private Point _doorPosition;
 
     // ── Porta ────────────────────────────────────────────────────────────
