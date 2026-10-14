@@ -127,24 +127,36 @@
 /processorParam:Quality=Best
 /build:Audio/UISounds/UISound.wav
 
-#begin Audio/FxsSound/fxs.wav
-/importer:WavImporter
-/processor:SoundEffectProcessor
-/processorParam:Quality=Best
-/build:Audio/FxsSound/fxs.wav
-
-#begin Audio/FxsSound/fxsBig.wav
-/importer:WavImporter
-/processor:SoundEffectProcessor
-/processorParam:Quality=Best
-/build:Audio/FxsSound/fxsBig.wav
-
 #begin font/Score.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
 /processorParam:PremultiplyAlpha=True
 /processorParam:TextureFormat=Color
 /build:font/Score.spritefont
+
+#begin fx/bloom.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:fx/bloom.fx
+
+#begin fx/colorgrade.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:fx/colorgrade.fx
+
+#begin fx/heatdistort.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:fx/heatdistort.fx
+
+#begin fx/shockwave.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:fx/shockwave.fx
 
 #begin image/backgound/1.png
 /importer:TextureImporter
@@ -212,6 +224,96 @@
 #begin image/enemies/bat.xml
 /copy:image/enemies/bat.xml
 
+#begin image/enemies/golem_booler.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:image/enemies/golem_booler.png
+
+#begin image/enemies/golem_booler.xml
+/copy:image/enemies/golem_booler.xml
+
+#begin image/enemies/golem_brute.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:image/enemies/golem_brute.png
+
+#begin image/enemies/golem_brute.xml
+/copy:image/enemies/golem_brute.xml
+
+#begin image/enemies/golem_godness.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:image/enemies/golem_godness.png
+
+#begin image/enemies/golem_godness.xml
+/copy:image/enemies/golem_godness.xml
+
+#begin image/enemies/golem_laser.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:image/enemies/golem_laser.png
+
+#begin image/enemies/golem_laser.xml
+/copy:image/enemies/golem_laser.xml
+
+#begin image/enemies/golem_normal.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:image/enemies/golem_normal.png
+
+#begin image/enemies/golem_normal.xml
+/copy:image/enemies/golem_normal.xml
+
+#begin image/enemies/golem_rhino.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:image/enemies/golem_rhino.png
+
+#begin image/enemies/golem_rhino.xml
+/copy:image/enemies/golem_rhino.xml
+
 #begin image/fxs/fsx.xml
 /copy:image/fxs/fsx.xml
 
@@ -226,21 +328,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:image/fxs/fxs.png
-
-#begin image/items/items.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:image/items/items.png
-
-#begin image/items/items.xml
-/copy:image/items/items.xml
 
 #begin image/items/doors.png
 /importer:TextureImporter
@@ -257,6 +344,21 @@
 #begin image/items/doors.xml
 /copy:image/items/doors.xml
 
+#begin image/items/items.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:image/items/items.png
+
+#begin image/items/items.xml
+/copy:image/items/items.xml
+
 #begin image/Tile/terrain.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -272,26 +374,3 @@
 #begin image/Tile/TilesetAtlas.xml
 /copy:image/Tile/TilesetAtlas.xml
 
-#begin fx/bloom.fx
-/importer:EffectImporter
-/processor:EffectProcessor
-/processorParam:DebugMode=Auto
-/build:fx/bloom.fx
-
-#begin fx/colorgrade.fx
-/importer:EffectImporter
-/processor:EffectProcessor
-/processorParam:DebugMode=Auto
-/build:fx/colorgrade.fx
-
-#begin fx/heatdistort.fx
-/importer:EffectImporter
-/processor:EffectProcessor
-/processorParam:DebugMode=Auto
-/build:fx/heatdistort.fx
-
-#begin fx/shockwave.fx
-/importer:EffectImporter
-/processor:EffectProcessor
-/processorParam:DebugMode=Auto
-/build:fx/shockwave.fx

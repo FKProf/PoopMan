@@ -10,6 +10,8 @@
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/BMG/frozen_winter.ogg</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/BMG/hope.ogg</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/BMG/woo_scary.ogg</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/FxsSound/fxs.wav</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/FxsSound/fxsBig.wav</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_1.wav</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_10.wav</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_2.wav</File>
@@ -21,24 +23,34 @@
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_8.wav</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/PlaceBomb/Fart_9.wav</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/UISounds/UISound.wav</File>
-    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/FxsSound/fxs.wav</File>
-    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/Audio/FxsSound/fxsBig.wav</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/font/Score.spritefont</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/fx/bloom.fx</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/fx/colorgrade.fx</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/fx/heatdistort.fx</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/fx/shockwave.fx</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/backgound/1.png</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/backgound/2.png</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/backgound/3.png</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/character/miner.png</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/enemies/bat.png</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/enemies/golem_booler.png</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/enemies/golem_brute.png</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/enemies/golem_godness.png</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/enemies/golem_laser.png</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/enemies/golem_normal.png</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/enemies/golem_rhino.png</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/fxs/fxs.png</File>
-    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/items/items.png</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/items/doors.png</File>
+    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/items/items.png</File>
     <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/image/Tile/terrain.png</File>
-    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/fx/bloom.fx</File>
-    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/fx/colorgrade.fx</File>
-    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/fx/heatdistort.fx</File>
-    <File>C:/Users/fkpro/source/repos/PoopMan/PoopMan/Content/fx/shockwave.fx</File>
   </SourceFiles>
   <DestFiles>
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
     <File xsi:nil="true" />
     <File xsi:nil="true" />
     <File xsi:nil="true" />

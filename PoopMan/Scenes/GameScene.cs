@@ -38,6 +38,7 @@ public class GameScene : Scene
     };
 
     private readonly List<BatExplosionParticle> _batExplosionParticles = new();
+    private readonly GolemAttackSystem _golemAttacks = new();
     private readonly HashSet<Point> _chestTiles = new();
     private readonly Dictionary<Point, DroppedItem> _droppedItems = new();
     private readonly Dictionary<string, List<Rectangle>> _itemAnimations = new();
@@ -48,7 +49,7 @@ public class GameScene : Scene
     private List<Bat> _bats;
 
     // ── Progressione livelli ──────────────────────────────────────────────
-    private int _currentLevel;
+    private int _currentLevel=8;
     private Point _doorPosition;
 
     // ── Porta ────────────────────────────────────────────────────────────
@@ -206,6 +207,8 @@ public class GameScene : Scene
             TileMap.Cols * TileMap.TileSize, TileMap.Rows * TileMap.TileSize);
         _particles = new ParticleSystem(Core.GraphicsDevice);
         _shadowTex = FxTextures.CreateEllipse(Core.GraphicsDevice, 24, 8);
+        _golemAttacks.RockShattered += pos =>
+            _particles?.BlockDebris(pos, new Color(130, 120, 110), new Color(70, 62, 55));
         _fadeV = FxTextures.CreateVerticalFade(Core.GraphicsDevice, 14);
         _fadeH = FxTextures.CreateHorizontalFade(Core.GraphicsDevice, 8);
         _levelFadeTimer = 0f;
@@ -351,6 +354,22 @@ public class GameScene : Scene
             {
                 if (bat.IsDead) continue;
                 if (bat.VisualTilePosition != _miner.TilePosition) continue;
+
+                // Godness: il suo tocco chiude la partita (ignora vite e scudo)
+                if (bat.IsGodness)
+                {
+                    GodnessCaughtMiner();
+                    break;
+                }
+
+                // Rhino in carica: stordisce il miner invece di ferirlo
+                if (bat.IsCharging)
+                {
+                    RhinoHitMiner(bat);
+                    break;
+                }
+
+                if (!bat.DealsContactDamage) continue;
 
                 // CRITICO: 20% di probabilità di uccidere il bat al contatto (punti doppi).
                 // Il tiro avviene una sola volta per contatto: se fallisce il miner
@@ -673,6 +692,11 @@ public class GameScene : Scene
             }
         }
 
+        // ── Rocce e laser dei golem ↔ miner ───────────────────────────────
+        if (_golemAttacks.Update((float)gameTime.ElapsedGameTime.TotalSeconds, _map, _miner.VisualTilePosition) &&
+            !_miner.IsDead && !_miner.IsInvincible)
+            HurtMiner();
+
         // ── Danno continuo esplosione ↔ bat (bat che entrano nel fuoco attivo) ──
         {
             var activeTiles = _miner.ActiveExplosionTiles.ToHashSet();
@@ -748,6 +772,8 @@ public class GameScene : Scene
         _miner.Draw(_spriteBatch);
 
         foreach (var b in _bats) b.Draw(_spriteBatch);
+        _golemAttacks.Draw(_spriteBatch, _pixel, _map, _bats, _fxTime);
+        if (_miner.IsStunned && !_miner.IsDead) DrawMinerStunStars();
 
         // ── Particelle esplosione bat ─────────────────────────────────────
         foreach (var p in _batExplosionParticles)
@@ -920,6 +946,32 @@ public class GameScene : Scene
 
             if (events.HasFlag(Bat.FxEvent.Immune))
                 _particles.AddText(c, "IMMUNE", new Color(160, 255, 240), 0.6f);
+
+            // ── Golem ─────────────────────────────────────────────────────
+            if (events.HasFlag(Bat.FxEvent.Tanked))
+            {
+                _particles.Burst(c, new Color(170, 170, 180), 10, 90f);
+                _particles.AddText(c - new Vector2(0, 14), "BLOCCATO!", new Color(200, 200, 215), 0.65f);
+            }
+
+            if (events.HasFlag(Bat.FxEvent.Enraged))
+            {
+                _particles.Burst(c, new Color(255, 70, 50), 16, 130f);
+                _particles.AddText(c - new Vector2(0, 26), "FURIA!", new Color(255, 80, 60), 0.75f);
+            }
+
+            if (events.HasFlag(Bat.FxEvent.PhaseShift))
+            {
+                _particles.Burst(c, new Color(170, 90, 255), 20, 110f);
+                _particles.AddText(c - new Vector2(0, 26), "FASE!", new Color(190, 120, 255), 0.7f);
+            }
+
+            if (events.HasFlag(Bat.FxEvent.Crashed))
+            {
+                SpawnBlockDebris(bat.TilePosition);
+                _particles.AddText(c - new Vector2(0, 30), "SBAM!", new Color(255, 200, 90), 0.7f);
+                ShakeScreen(4f, 0.25f);
+            }
         }
     }
 
@@ -1092,6 +1144,10 @@ public class GameScene : Scene
             col.A = 255;
             _lighting.AddLight(bat.Position + half, 40f, col, 0.45f);
         }
+
+        // Raggi laser dei golem
+        foreach (var (pos, radius, color, intensity) in _golemAttacks.Lights())
+            _lighting.AddLight(pos, radius, color, intensity);
 
         // Scintille: micro-luci (solo le più "vive", per non appesantire)
         if (_particles != null)
@@ -1316,6 +1372,11 @@ public class GameScene : Scene
             VisualEffectSystem.ExplosionType.Big => (5f, 0.30f),
             _ => (2f, 0.15f)
         };
+        ShakeScreen(intensity, duration);
+    }
+
+    private void ShakeScreen(float intensity, float duration)
+    {
         // Non sovrascrive uno shake più forte ancora in corso
         var currentAmp = _shakeDuration > 0f ? _shakeIntensity * (_shakeTimer / _shakeDuration) : 0f;
         if (intensity >= currentAmp)
@@ -1851,6 +1912,116 @@ public class GameScene : Scene
             if (_doorSpawned) bat.SetPermanentBlockedTiles(DoorBlockedTiles());
             _bats.Add(bat);
         }
+
+        SpawnGolems(level, rand);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // GOLEM (nuovo mondo, dal livello 30)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    ///     Dal livello 30 una parte dell'ondata diventa golem (quota crescente, max 60%).
+    ///     La Godness compare raramente dal livello 35, al massimo una per ondata.
+    /// </summary>
+    private void SpawnGolems(int level, Random rand)
+    {
+        var kinds = Bat.UnlockedGolems(level);
+        if (kinds.Count == 0) return;
+
+        var share = Math.Clamp(0.30f + (level - Bat.GolemFirstLevel) * 0.02f, 0.30f, 0.60f);
+        var golemCount = Math.Max(1, (int)MathF.Round(_bats.Count * share));
+
+        // Sostituisce i bat meno preziosi (i normali) con i golem: l'ondata resta della stessa dimensione
+        var replaced = _bats.OrderBy(b => b.KillPoints).ThenBy(_ => rand.Next()).Take(golemCount).ToList();
+        foreach (var old in replaced)
+        {
+            // Il golem Normal compare il doppio delle volte rispetto agli altri tipi
+            var roll = rand.Next(kinds.Count + 1);
+            var kind = roll >= kinds.Count ? Bat.GolemKind.Normal : kinds[roll];
+            var golem = CreateGolem(old.TilePosition, kind, level);
+            if (golem != null) _bats[_bats.IndexOf(old)] = golem;
+        }
+
+        // Godness: probabilità minima ai livelli alti (2% al lv 35, +0.4% per livello, max 8%)
+        var godnessChance = Math.Min(0.02 + (level - Bat.GodnessFirstLevel) * 0.004, 0.08);
+        if (level >= Bat.GodnessFirstLevel && rand.NextDouble() < godnessChance)
+        {
+            var tile = PickReachableTile(14f, t => !(_doorSpawned && IsDoorArea(t)));
+            var boss = tile.HasValue ? CreateGolem(tile.Value, Bat.GolemKind.Godness, level) : null;
+            if (boss != null) _bats.Add(boss);
+        }
+    }
+
+    private Bat? CreateGolem(Point tile, Bat.GolemKind kind, int level)
+    {
+        if (!_map.IsWalkable(tile)) return null;
+        var xml = Path.Combine(Content.RootDirectory, "image", "enemies", Bat.GolemXmlName(kind));
+        var golem = new Bat(tile, xml, Content, _map);
+        golem.SetAggressionLevel(level);
+        golem.ApplyGolem(kind);
+        golem.OnSplit += SpawnMiniBats;
+        golem.OnDeathExplosion += TriggerBatExplosion;
+        golem.OnRockThrow += (_, origin, dir) => _golemAttacks.ThrowRock(origin, dir);
+        golem.OnLaserFire += (_, origin, dir) => FireGolemLaser(origin, dir);
+        if (_doorSpawned) golem.SetPermanentBlockedTiles(DoorBlockedTiles());
+        return golem;
+    }
+
+    private void FireGolemLaser(Point origin, Point dir)
+    {
+        var tiles = _golemAttacks.FireLaser(_map, origin, dir);
+        if (tiles.Count == 0) return;
+
+        // Il raggio innesca le bombe che attraversa
+        _miner.DetonateBombsInArea(tiles, _map);
+        foreach (var t in tiles) _particles?.Burst(TileCenter(t), new Color(255, 70, 90), 3, 60f);
+        _flashLights.Add(new FlashLight(TileCenter(origin), 120f, new Color(255, 60, 80), 0.3f));
+        AudioManager.PlayExplosion(false);
+        ShakeScreen(3f, 0.2f);
+    }
+
+    /// <summary>Danno standard al miner (scudo, scatto post-danno, perdita vita).</summary>
+    private void HurtMiner()
+    {
+        if (_miner.TryAbsorbWithShield()) return;
+        _miner.TriggerDashAfterHit();
+        _miner.Kill();
+    }
+
+    private void RhinoHitMiner(Bat rhino)
+    {
+        rhino.OnChargeHitPlayer();
+        _miner.ApplyStun(1.4f);
+        var c = _miner.Position + new Vector2(TileMap.TileSize * 0.5f);
+        _particles?.Burst(c, new Color(255, 200, 90), 18, 140f);
+        _particles?.AddText(c - new Vector2(0, 18), "STORDITO!", new Color(255, 220, 90), 0.8f);
+        ShakeScreen(6f, 0.3f);
+    }
+
+    private void GodnessCaughtMiner()
+    {
+        var c = _miner.Position + new Vector2(TileMap.TileSize * 0.5f);
+        _particles?.Burst(c, new Color(255, 210, 80), 40, 200f);
+        _particles?.AddText(c - new Vector2(0, 20), "PRESO DALLA GODNESS!", new Color(255, 215, 80), 1.2f);
+        _flashLights.Add(new FlashLight(c, 260f, new Color(255, 200, 90), 0.6f));
+        ShakeScreen(12f, 0.6f);
+        _miner.ForceGameOver();
+    }
+
+    /// <summary>Stelline che girano sopra la testa del miner stordito.</summary>
+    private void DrawMinerStunStars()
+    {
+        var center = _miner.Position + new Vector2(TileMap.TileSize * 0.5f, 2f);
+        for (var i = 0; i < 3; i++)
+        {
+            var a = _fxTime * 6f + i * MathF.Tau / 3f;
+            var x = (int)(center.X + MathF.Cos(a) * 11f);
+            var y = (int)(center.Y + MathF.Sin(a) * 3.5f);
+            var col = MathF.Sin(a) > 0f ? new Color(255, 240, 90) : new Color(200, 170, 60) * 0.7f;
+            _spriteBatch.Draw(_pixel, new Rectangle(x - 1, y - 3, 2, 6), col);
+            _spriteBatch.Draw(_pixel, new Rectangle(x - 3, y - 1, 6, 2), col);
+        }
     }
 
     private void HandleChestDrop(Point tile)
@@ -2037,6 +2208,7 @@ public class GameScene : Scene
         HookMap();
         _particles?.Clear();
         _flashLights.Clear();
+        _golemAttacks.Clear();
         _levelFadeTimer = 0f;
 
         _miner.ResetForNewLevel(_spawnPoint);

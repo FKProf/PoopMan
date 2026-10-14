@@ -1,4 +1,4 @@
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using PoopManLibrary;
@@ -341,10 +341,25 @@ public class Miner
         }
 
         UpdateInvincibility(gameTime);
-        HandleInput();
+        if (_stunTimer > 0f)
+        {
+            // Stordito (carica del golem rhino): niente movimento né bombe
+            _stunTimer = Math.Max(0f, _stunTimer - (float)gameTime.ElapsedGameTime.TotalSeconds);
+            _heldDirections.Clear();
+            _bufferTimer = 0f;
+        }
+        else
+        {
+            HandleInput();
+        }
+
         UpdateDash(gameTime);
-        HandleBombPlacement(map);
-        HandleRemoteDetonation(map);
+        if (!IsStunned)
+        {
+            HandleBombPlacement(map);
+            HandleRemoteDetonation(map);
+        }
+
         UpdateBombs(gameTime, map);
         UpdateMovement(map, gameTime);
         UpdateAnimation(gameTime);
@@ -679,6 +694,26 @@ public class Miner
     // VITA / MORTE / RESPAWN
     // ═══════════════════════════════════════════════════════════════════
 
+    private float _stunTimer;
+
+    /// <summary>True mentre il miner è stordito e non può muoversi né piazzare bombe.</summary>
+    public bool IsStunned => _stunTimer > 0f;
+
+    public void ApplyStun(float duration)
+    {
+        if (IsDead) return;
+        _stunTimer = Math.Max(_stunTimer, duration);
+    }
+
+    /// <summary>Fine partita immediata, a prescindere dalle vite (contatto con la Godness).</summary>
+    public void ForceGameOver()
+    {
+        if (IsDead) return;
+        Lives = 1;
+        _stunTimer = 0f;
+        Kill();
+    }
+
     public void Kill()
     {
         if (IsDead) return;
@@ -750,6 +785,7 @@ public class Miner
 
     private void ResetPosition(Point spawnTile)
     {
+        _stunTimer = 0f;
         TilePosition = spawnTile;
         Position = new Vector2(spawnTile.X * TileMap.TileSize, spawnTile.Y * TileMap.TileSize);
         _targetPosition = Position;

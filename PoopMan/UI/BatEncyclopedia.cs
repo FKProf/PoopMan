@@ -1,4 +1,4 @@
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -175,6 +175,115 @@ public class BatEncyclopedia
             "Il piu pericoloso! Eliminalo a distanza massima con big bomb.",
             "NUCLEARE",
             new Color(255, 80, 60)
+        ),
+
+        // -- Golem (nuovo mondo, dal livello 30) --
+        new(
+            "GOLEM",
+            "Nuovo mondo: dal Livello 30",
+            new Color(170, 140, 230),
+            Color.Transparent,
+            new[]
+            {
+                "Golem di pietra: cammina, non vola",
+                "Piu lento dei bat ma piu resistente",
+                "Nessuna abilita speciale",
+                "+250 punti al kill"
+            },
+            "Lento e prevedibile: intrappolalo tra due bombe.",
+            "GOLEM",
+            new Color(170, 140, 230),
+            "golem_normal"
+        ),
+        new(
+            "GOLEM LANCIATORE",
+            "Sblocca al Livello 30",
+            new Color(200, 160, 110),
+            Color.Transparent,
+            new[]
+            {
+                "Lancia una palla di roccia quando sei sulla sua riga o colonna",
+                "La roccia vola sopra acqua e lava",
+                "Si frantuma contro muri e blocchi",
+                "+350 punti al kill"
+            },
+            "Non restare allineato con lui: muoviti in diagonale tra i blocchi.",
+            "LANCIATORE",
+            new Color(210, 170, 120),
+            "golem_booler"
+        ),
+        new(
+            "GOLEM BRUTO",
+            "Sblocca al Livello 32",
+            new Color(255, 110, 90),
+            new Color(255, 40, 30, 110),
+            new[]
+            {
+                "Molto robusto: +3 HP rispetto ai golem normali",
+                "35% di probabilita di incassare un colpo senza danno",
+                "Quando viene colpito entra in FURIA: piu veloce e ti insegue",
+                "Spinto poco dalle esplosioni",
+                "+450 punti al kill"
+            },
+            "Colpiscilo da lontano: una volta infuriato non ti molla.",
+            "BRUTO",
+            new Color(255, 110, 90),
+            "golem_brute"
+        ),
+        new(
+            "GOLEM RINOCERONTE",
+            "Sblocca al Livello 34",
+            new Color(255, 170, 60),
+            new Color(255, 160, 40, 110),
+            new[]
+            {
+                "Quando ti vede in linea retta raspa il terreno e CARICA",
+                "Se ti colpisce ti stordisce",
+                "Contro un blocco indistruttibile resta stordito",
+                "Sfonda i blocchi distruttibili",
+                "+450 punti al kill"
+            },
+            "Schivalo all'ultimo: fallo schiantare contro un muro!",
+            "CARICA",
+            new Color(255, 170, 60),
+            "golem_rhino"
+        ),
+        new(
+            "GOLEM LASER",
+            "Sblocca al Livello 36",
+            new Color(255, 70, 90),
+            new Color(255, 40, 60, 120),
+            new[]
+            {
+                "Ogni tot secondi carica e spara un laser verso di te",
+                "La linea rossa lampeggiante avvisa dove colpira",
+                "Il laser ferisce e distrugge i blocchi",
+                "Fa esplodere le bombe che attraversa",
+                "+500 punti al kill"
+            },
+            "Quando vedi la linea rossa, esci subito dalla traiettoria.",
+            "LASER",
+            new Color(255, 70, 90),
+            "golem_laser"
+        ),
+        new(
+            "GOLEM GODNESS",
+            "Boss raro dal Livello 35",
+            new Color(255, 215, 80),
+            new Color(255, 210, 80, 120),
+            new[]
+            {
+                "Il boss dei golem: tutte le abilita di golem e bat",
+                "Ti vede attraverso i muri",
+                "Puo entrare in fase e attraversare le pareti (non il confine)",
+                "Se ti tocca e GAME OVER, vite e scudo non contano",
+                "Ha al massimo 2 HP ma esplode alla morte",
+                "+5000 punti al kill"
+            },
+            "Non farti mai toccare! Big bomb da lontano e scappa.",
+            "BOSS",
+            new Color(255, 215, 80),
+            "golem_godness"
         )
     };
 
@@ -186,7 +295,7 @@ public class BatEncyclopedia
     // --------------------------------------------------------------------
     private static readonly BiomeEntry[] BiomeEntries =
     {
-        new("PRATERIA", "Livelli 0-3", new Color(80, 200, 80), new Color(60, 180, 60, 60),
+        new("PRATERIA", "Livelli 0-5", new Color(80, 200, 80), new Color(60, 180, 60, 60),
             "Il bioma di partenza. Terreno verde e luminoso, ideale per imparare le meccaniche di gioco.",
             new[]
             {
@@ -198,7 +307,7 @@ public class BatEncyclopedia
             "Impara i movimenti e la gestione delle bombe qui prima di avanzare.",
             new Color(60, 200, 60)),
 
-        new("CAVERNA", "Livelli 4-7", new Color(180, 100, 255), new Color(160, 80, 255, 100),
+        new("CAVERNA", "Livelli 5-10", new Color(180, 100, 255), new Color(160, 80, 255, 100),
             "Grotte oscure e claustrofobiche. Il Dasher compare qui per la prima volta.",
             new[]
             {
@@ -211,7 +320,7 @@ public class BatEncyclopedia
             "Usa la big bomb per il Nuke ma solo da distanza di sicurezza!",
             new Color(160, 100, 255)),
 
-        new("LAVA", "Livelli 8-11", new Color(255, 100, 20), new Color(255, 80, 0, 80),
+        new("LAVA", "Livelli 10-15", new Color(255, 100, 20), new Color(255, 80, 0, 80),
             "Zone vulcaniche con lava animata. L'ambiente rosso-arancione crea alta tensione.",
             new[]
             {
@@ -224,7 +333,7 @@ public class BatEncyclopedia
             "Il Ghost Bat e imprevedibile: evita di usare solo bombe-blocco.",
             new Color(255, 120, 0)),
 
-        new("GHIACCIO", "Livelli 12-15", new Color(140, 200, 255), new Color(100, 180, 255, 70),
+        new("GHIACCIO", "Livelli 15-20", new Color(140, 200, 255), new Color(100, 180, 255, 70),
             "Ambiente innevato e gelido. Dal livello 5 la porta richiede la chiave per aprirsi.",
             new[]
             {
@@ -236,7 +345,7 @@ public class BatEncyclopedia
             "Trova la chiave prima di cercare la porta! Walid esplode: stai lontano.",
             new Color(120, 180, 255)),
 
-        new("PALUDE", "Livelli 16-19", new Color(80, 160, 80), new Color(60, 140, 60, 80),
+        new("PALUDE", "Livelli 20-25", new Color(80, 160, 80), new Color(60, 140, 60, 80),
             "Terreno fangoso e cupo. I pipistrelli piu pericolosi iniziano a comparire.",
             new[]
             {
@@ -248,7 +357,7 @@ public class BatEncyclopedia
             "Non lasciare mai lo Splitter vicino a te quando esplode.",
             new Color(80, 180, 80)),
 
-        new("RUNE", "Livello 20", new Color(255, 80, 80), new Color(255, 60, 60, 120),
+        new("RUNE", "Livelli 25-30", new Color(255, 80, 80), new Color(255, 60, 60, 120),
             "Il bioma finale. Il Nuke e il Bat Robusto raggiungono la loro massima pericolosita.",
             new[]
             {
@@ -269,6 +378,9 @@ public class BatEncyclopedia
     private float _animTimer;
     private Dictionary<string, List<Rectangle>> _batAnimations = new();
     private Texture2D? _batTexture;
+
+    // Sprite sheet dei golem: stesso layout del bat (image/enemies/golem_*.png)
+    private readonly Dictionary<string, Texture2D> _sheetTextures = new();
     private bool _closeHovered;
     private int _hoveredArrow;
     private int _hoveredCard = -1;
@@ -339,6 +451,9 @@ public class BatEncyclopedia
             _batAnimations = temp.ToDictionary(
                 p => p.Key,
                 p => p.Value.OrderBy(f => f.frame).Select(f => f.rect).ToList());
+
+            foreach (var sheet in BatEntries.Select(e => e.Sheet).Where(s => s != null))
+                _sheetTextures[sheet!] = content.Load<Texture2D>($"image/enemies/{sheet}");
         }
         catch { }
     }
@@ -787,7 +902,15 @@ public class BatEncyclopedia
                 entry.AuraColor * (0.35f + 0.15f * (float)Math.Sin(_pulse)));
         }
 
-        if (_batTexture != null)
+        var texture = _batTexture;
+        var tint = entry.PrimaryColor;
+        if (entry.Sheet != null && _sheetTextures.TryGetValue(entry.Sheet, out var sheetTexture))
+        {
+            texture = sheetTexture;
+            tint = Color.White; // i golem hanno già i propri colori
+        }
+
+        if (texture != null)
         {
             string[] candidates = { "fly_front", "fly", "idle", "walk" };
             List<Rectangle>? frames = null;
@@ -800,8 +923,8 @@ public class BatEncyclopedia
                 var src = frames[frame];
                 var scale = (float)size / Math.Max(src.Width, src.Height);
                 var origin = new Vector2(src.Width * 0.5f, src.Height * 0.5f);
-                sb.Draw(_batTexture, new Vector2(cx + 2, cy + 2), src, Color.Black * 0.4f, 0f, origin, scale, SpriteEffects.None, 0f);
-                sb.Draw(_batTexture, new Vector2(cx, cy), src, entry.PrimaryColor * pulse, 0f, origin, scale, SpriteEffects.None, 0f);
+                sb.Draw(texture, new Vector2(cx + 2, cy + 2), src, Color.Black * 0.4f, 0f, origin, scale, SpriteEffects.None, 0f);
+                sb.Draw(texture, new Vector2(cx, cy), src, tint * pulse, 0f, origin, scale, SpriteEffects.None, 0f);
                 return;
             }
         }
@@ -849,7 +972,7 @@ public class BatEncyclopedia
     // -- Record types ----------------------------
     private readonly record struct BatEntry(
         string Name, string UnlockInfo, Color PrimaryColor, Color AuraColor,
-        string[] Abilities, string Tip, string Tag, Color TagColor);
+        string[] Abilities, string Tip, string Tag, Color TagColor, string? Sheet = null);
 
     // UpgradeEntry is defined as MinerUpgradeEntry in MinerUpgradeDescriptions.cs
 

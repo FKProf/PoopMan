@@ -154,3 +154,15 @@ C:\Users\fkpro\source\repos\PoopMan\PoopMan\obj\Debug\net9.0-windows\PoopMan.gen
 C:\Users\fkpro\source\repos\PoopMan\PoopMan\obj\Debug\net9.0-windows\ref\PoopMan.dll
 C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\items\doors.xml
 C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\items\doors.xnb
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\golem_booler.xml
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\golem_booler.xnb
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\golem_brute.xml
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\golem_brute.xnb
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\golem_godness.xml
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\golem_godness.xnb
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\golem_laser.xml
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\golem_laser.xnb
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\golem_normal.xml
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\golem_normal.xnb
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\golem_rhino.xml
+C:\Users\fkpro\source\repos\PoopMan\PoopMan\bin\Debug\net9.0-windows\Content\image\enemies\golem_rhino.xnb

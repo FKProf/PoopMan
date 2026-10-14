@@ -96,6 +96,11 @@ public class GameOverlay
             DrawTextCentered(sb, $"TEMA: {themeName}", vw / 2, baseY + 44,
                 accent * alpha, 1.8f);
 
+        // Inizio del nuovo mondo: arrivano i golem
+        if (level == Bat.GolemFirstLevel)
+            DrawTextCentered(sb, "NUOVO MONDO: ARRIVANO I GOLEM!", vw / 2, baseY - 46,
+                new Color(255, 200, 90) * alpha, 1.5f);
+
         // Bonus porta — più grande ogni 5 livelli
         var bigMilestone = level > 0 && level % 5 == 0;
         var bonusText = bigMilestone

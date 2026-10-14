@@ -10,7 +10,7 @@ using System.Xml.Linq;
 
 namespace PoopMan.GameObjects;
 
-public class Bat
+public partial class Bat
 {
     // ── Variante bat ──────────────────────────────────────────────────────
     /// <summary>
@@ -57,7 +57,11 @@ public class Bat
         Slowed = 2,
         Damaged = 4,
         Immune = 8,
-        Spotted = 16
+        Spotted = 16,
+        Tanked = 32,
+        Enraged = 64,
+        PhaseShift = 128,
+        Crashed = 256
     }
 
     // ── Effetti visivi di stato ───────────────────────────────────────────
@@ -217,6 +221,7 @@ public class Bat
     {
         get
         {
+            if (IsGolem) return GolemKillPoints;
             var pts = 100;
             if (_canDash) pts += 50; // Livello  5+
             if (_canGhost) pts += 100; // Livello 10+
@@ -257,6 +262,7 @@ public class Bat
     {
         get
         {
+            if (IsGolem) return GolemDrawColor;
             if (_isMini) return new Color(180, 220, 255); // azzurro chiaro
             if (BigExplosion) return new Color(255, 60, 60); // rosso fuoco
             if (_canWalid) return new Color(255, 140, 30); // arancio
@@ -275,6 +281,7 @@ public class Bat
     {
         get
         {
+            if (IsGolem) return GolemDrawScale;
             if (BigExplosion) return 1.35f;
             if (_canBerserk) return 1.25f;
             if (_canSplit) return 1.15f;
@@ -289,15 +296,16 @@ public class Bat
     private readonly double _hoverSeed = Random.Shared.NextDouble() * Math.PI * 2;
 
     /// <summary>Oscillazione verticale del volo (pixel): il bat "galleggia" in aria.</summary>
-    public float HoverOffset => IsDead ? 0f : (float)Math.Sin(Environment.TickCount64 * 0.006 + _hoverSeed) * 1.6f;
+    public float HoverOffset => IsDead || IsGolem ? 0f : (float)Math.Sin(Environment.TickCount64 * 0.006 + _hoverSeed) * 1.6f;
 
     /// <summary>True se il bat ha l'aura pulsante.</summary>
-    public bool HasAura => _walidDetonating || _isBerserk || _isGhosting || _canWalid || BigExplosion;
+    public bool HasAura => IsGolem ? GolemHasAura : _walidDetonating || _isBerserk || _isGhosting || _canWalid || BigExplosion;
 
     public Color AuraColor
     {
         get
         {
+            if (IsGolem) return GolemAuraColor;
             var pulse = 0.55f + 0.45f * (float)Math.Sin(Environment.TickCount64 * 0.007);
             if (_walidDetonating)
             {
@@ -494,7 +502,9 @@ public class Bat
     /// </summary>
     public void ApplyKnockback(Vector2 direction, float speed = 180f)
     {
-        if (IsDead) return;
+        if (IsDead || _isWallPhasing) return;
+        // I golem sono pesanti: vengono spinti meno lontano
+        if (IsGolem) speed *= Golem is GolemKind.Brute or GolemKind.Godness ? 0.4f : 0.6f;
         _knockbackVelocity = direction * speed;
         _knockbackTimer = KnockbackDuration;
     }
@@ -513,7 +523,11 @@ public class Bat
             return false;
         }
 
+        // Brute / Godness: possono incassare il colpo senza danno
+        if (IsGolem && GolemTanksHit()) return false;
+
         _hitPoints -= damage;
+        if (IsGolem) OnGolemDamaged();
         if (_hitPoints > 0)
         {
             _fxEvents |= FxEvent.Damaged;
@@ -723,6 +737,14 @@ public class Bat
         _registeredPos = TilePosition;
         _allBatPositions.Add(_registeredPos);
 
+        // ── Golem: azioni esclusive (carica, lancio roccia, laser) ─────────
+        if (IsGolem && UpdateGolem(map, dt))
+        {
+            UpdateTrail(dt);
+            UpdateAnimation(gameTime);
+            return;
+        }
+
         _pathCacheTime += dt;
 
         // ── Cooldown dash ─────────────────────────────────────────────────
@@ -805,7 +827,11 @@ public class Bat
         if (isMoving && !knockedBack)
         {
             // Se la destinazione è diventata bloccata (bomba piazzata nel frattempo), annulla
-            if (_solidBombTiles.Contains(TilePosition) && TilePosition != _moveFromTile &&
+            if (_isWallPhasing)
+            {
+                // In fase la Godness attraversa muri e bombe: nessun rollback
+            }
+            else if (_solidBombTiles.Contains(TilePosition) && TilePosition != _moveFromTile &&
                 map.IsWalkable(_moveFromTile) && !_solidBombTiles.Contains(_moveFromTile))
             {
                 // Torna indietro lungo la stessa linea verso il tile di partenza: un tile
@@ -839,7 +865,8 @@ public class Bat
             var direction = targetPosition - Position;
             var distance = direction.Length();
             var currentSpeed = moveSpeed * (_isBerserk ? BerserkSpeedMul : 1f)
-                                         * (_isDashing ? DashSpeedMul : 1f) * _slowFactor;
+                                         * (_isDashing ? DashSpeedMul : 1f) * _slowFactor
+                                         * (IsGolem ? GolemSpeedMul : 1f);
 
             if (distance <= currentSpeed * dt)
             {
@@ -877,7 +904,7 @@ public class Bat
         if (_trailTimer > 0f) return;
         _trailTimer = TrailInterval;
 
-        if (_isGhosting || _isDashing || _isBerserk || _knockbackTimer > 0f)
+        if (_isGhosting || _isDashing || _isBerserk || _knockbackTimer > 0f || IsCharging || _isWallPhasing)
         {
             for (var i = _trail.Length - 1; i > 0; i--) _trail[i] = _trail[i - 1];
             _trail[0] = Position;
@@ -890,7 +917,9 @@ public class Bat
     }
 
     private Color TrailColor =>
-        _isGhosting ? new Color(120, 255, 255)
+        _isWallPhasing ? new Color(170, 90, 255)
+        : IsCharging ? new Color(255, 170, 70)
+        : _isGhosting ? new Color(120, 255, 255)
         : _isBerserk ? new Color(220, 80, 255)
         : _isDashing ? new Color(255, 190, 80)
         : new Color(255, 255, 255);
@@ -898,6 +927,9 @@ public class Bat
     // ── Macchina a stati: sceglie la prossima tile ────────────────────────
     private Point ChooseNextTile(TileMap map, float dt)
     {
+        // ── GODNESS in fase: attraversa le pareti dritta verso il miner ───
+        if (_isWallPhasing) return PhaseStep(map);
+
         var inDanger = _dangerTiles.Contains(TilePosition);
 
         // ── GHOST: attiva se una bomba solida blocca tutti i percorsi ─────
@@ -925,8 +957,11 @@ public class Bat
             return BfsToSafeTile(map);
         }
 
+        // ── Golem: furia del Brute / ingresso in fase della Godness ───────
+        if (IsGolem && GolemAiOverride(map, out var golemStep)) return golemStep;
+
         // ── Aggiorna stato AI in base alla visibilità del giocatore ───────
-        var canSee = HasLineOfSight(map, TilePosition, _playerTile, _sightRange);
+        var canSee = CanSeePlayer(map);
         if (canSee)
         {
             if (!_playerSeen)
@@ -1341,8 +1376,8 @@ public class Bat
             scale *= 1f + 0.22f * hitK; // "pop" all'impatto
         }
 
-        // Ghost: semi-trasparente
-        if (_isGhosting)
+        // Ghost / fase nei muri: semi-trasparente
+        if (_isGhosting || _isWallPhasing)
             tint *= 0.55f;
 
         // Rotazione: barcolla se stordito, ruota mentre viene sbalzato dall'esplosione
@@ -1354,6 +1389,7 @@ public class Bat
         var origin = new Vector2(srcRect.Width * 0.5f, srcRect.Height * 0.5f);
         var center = Position + new Vector2(srcRect.Width * 0.5f, srcRect.Height * 0.5f);
         center.Y += HoverOffset;
+        if (IsGolem && alive) center += GolemShakeOffset(time);
 
         // Scia di immagini residue (ghost / dash / berserk / spinta)
         if (alive)
@@ -1380,7 +1416,7 @@ public class Bat
         if (alive) DrawStatusEffects(spriteBatch, center, srcRect, scale, time);
 
         // Occhi luminosi per bat speciali (piccoli quadrati bianchi sopra gli occhi)
-        if (_level >= 5 && !_isMini && !IsDead)
+        if (_level >= 5 && !_isMini && !IsDead && !IsGolem)
         {
             var eyeColor = _canBerserk ? Color.Red :
                 BigExplosion ? new Color(255, 60, 60) :
@@ -1402,7 +1438,8 @@ public class Bat
         }
 
         // ── Badge tipo speciale (sopra la testa) ─────────────────────────
-        if (!_isMini && !IsDead && (_canWalid || BigExplosion || _canGhost || _canSplit || _canDash || _canBerserk))
+        if (IsGolem && alive) DrawGolemOverlay(spriteBatch, center, srcRect, scale, time);
+        else if (!_isMini && !IsDead && (_canWalid || BigExplosion || _canGhost || _canSplit || _canDash || _canBerserk))
         {
             // posizione base: sopra la testa del bat
             var pulse = 0.6f + 0.4f * (float)Math.Sin(Environment.TickCount64 * 0.008);
