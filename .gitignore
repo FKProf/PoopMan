@@ -210,8 +210,6 @@ user_settings.json
 # Local leaderboards (generated at runtime)
 leaderboard.json
 leaderboard_backup.json
-/PoopManLibrary/obj/
-/PoopMan/obj/
 
 # graphify knowledge graph output
 graphify-out/
