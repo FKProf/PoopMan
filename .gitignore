@@ -210,12 +210,8 @@ user_settings.json
 # Local leaderboards (generated at runtime)
 leaderboard.json
 leaderboard_backup.json
-/PoopManLibrary/obj/Release/net9.0/PoopManLibrary.AssemblyInfoInputs.cache
-/PoopManLibrary/obj/Release/net9.0/PoopManLibrary.AssemblyInfo.cs
-/PoopManLibrary/obj/Release/net9.0/PoopManLibrary.AssemblyInfo.cs
-/PoopManLibrary/obj/Release/net9.0/PoopManLibrary.AssemblyInfoInputs.cache
-/PoopMan/obj/Release/net9.0-windows/PoopMan.AssemblyInfoInputs.cache
-/PoopMan/obj/Release/net9.0-windows/PoopMan.AssemblyInfo.cs
+/PoopManLibrary/obj/
+/PoopMan/obj/
 
 # graphify knowledge graph output
 graphify-out/
