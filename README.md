@@ -13,10 +13,10 @@ Place bombs to destroy breakable tiles, eliminate bat enemies, collect power-ups
 
 - `PoopMan/` — game executable
   - `Game1.cs` — window setup, fullscreen toggle, letterbox scaling
-  - `GameController.cs` — input abstraction (keyboard bindings)
-  - `Scenes/` — `TitleScene` (animated title screen), `GameScene` (gameplay loop), `VisualEffectSystem` (VFX)
-  - `GameObjects/` — `Miner` (player), `Bat` (enemy), `Bomb` (small & big), `MinerUpgrade` (upgrade registry & gameplay state), `MinerUpgradeDescriptions` (encyclopedia copy)
-  - `UI/` — `GameHud`, `GameOverlay`, `PauseMenu`, `AudioSettingsPanel`, `BatEncyclopedia` (3-tab encyclopedia: Nemici · Upgrade · Biomi)
+  - `GameController.cs`, `InputBindings.cs` — input abstraction and rebindable key/button mapping
+  - `Scenes/` — `TitleScene` (animated title screen), `GameScene` (gameplay loop), `GolemAttackSystem` (rocks & lasers), `LightingSystem`, `ParticleSystem`, `BiomeAtmosphere`, `VisualEffectSystem` (VFX)
+  - `GameObjects/` — `Miner` (player), `Bat` (enemy; `Bat.Golem.cs` adds the golem family), `Bomb` (small & big), `MinerUpgrade` (upgrade registry & gameplay state), `MinerUpgradeDescriptions` (encyclopedia copy)
+  - `UI/` — `GameHud`, `GameOverlay`, `PauseMenu`, `AudioSettingsPanel`, `ControlsSettingsPanel`, `Leaderboard` / `LeaderboardScreen` / `NameEntryScreen`, `BatEncyclopedia` (3-tab encyclopedia: Nemici · Upgrade · Biomi)
 - `PoopManLibrary/` — shared game logic
   - `Core.cs` — game bootstrap (window, graphics, content, scene management)
   - `Collision.cs` — circular hitbox system
@@ -25,6 +25,7 @@ Place bombs to destroy breakable tiles, eliminate bat enemies, collect power-ups
   - `Input/` — `InputManager`, `KeyboardInfo`, `MouseInfo`
   - `Scenes/Scene.cs` — base scene class
   - `World/` — `TileMap`, `TileAtlas`, `TileType`
+- `tests/` — Windows auto-play bot (`PoopMan.AutoPlay`) and smoke test (see [Testing & CI](#testing--ci))
 
 ## Features
 
@@ -38,6 +39,7 @@ Place bombs to destroy breakable tiles, eliminate bat enemies, collect power-ups
 - All four corners are always cleared for safe spawning
 - The exit door and the key are always placed on tiles **reachable** from the spawn (possibly by breaking blocks) — no more levels sealed off by water or lava
 - Atlas-driven tile rendering via `terrain.png` + `TilesetAtlas.xml`
+- Each biome has its own **door sprites** (`doors.png` + `doors.xml`, with and without key)
 
 ### Player (Miner)
 
@@ -75,6 +77,22 @@ Eight **bat variants**, each with a unique ability, unlocked progressively:
 - From level 20 onward, multiple variants can appear in the same wave
 - **Robusto** HP progression: +1 HP every 5 levels past 20, cap 6 HP at lv 40+
 - The **exit door** and the **key** are always immune to Nuke explosions
+
+### Golems (new world, from level 30)
+
+From **level 30** part of every wave (30 % at lv 30, +2 % per level, max 60 %) is replaced by **golems**: stone enemies that walk instead of flying. They reuse the bat AI, pathfinding and damage rules, and add their own abilities:
+
+| Golem | Unlocks | Ability |
+|-------|---------|---------|
+| Normal | Lv 30 | No ability; slower but tougher than bats (appears twice as often as the others) |
+| Booler | Lv 30 | Throws a rock when aligned with the miner (flies over water and lava, shatters on walls and blocks) |
+| Brute | Lv 32 | Extra HP; 35 % chance to absorb a hit, then goes into a faster **rage** |
+| Rhino | Lv 34 | Charges in a straight line: stuns the miner on hit, stuns itself against an indestructible wall, smashes breakable blocks |
+| Laser | Lv 36 | Charges (red telegraph line) and fires a laser that hurts, destroys breakable blocks and detonates bombs |
+| Godness | Lv 35 *(rare boss)* | All golem and bat abilities, sees through walls, can phase through them (not the border). **Touching it is an instant game over**; max 2 HP, explodes on death |
+
+- **Godness** spawn chance: 2 % at lv 35, +0.4 % per level, capped at 8 %
+- Golem kills give more points than bats (see [Scoring](#scoring))
 
 ### Chest System
 
@@ -148,6 +166,7 @@ Upgrades that would have no effect (e.g. *+1 Vita* with full lives, invincibilit
 - Kill 1 bat: **+100 pts**
 - Multi-kill (N bats, same explosion): `N × 25 + (N − 1) × 50` pts
 - Level clear: **+500 pts**
+- Golems: Normal **+250**, Booler **+350**, Brute / Rhino **+450**, Laser **+500**, Godness **+5000**
 
 ### HUD & UI
 
@@ -155,15 +174,17 @@ Upgrades that would have no effect (e.g. *+1 Vita* with full lives, invincibilit
 - Floating score popups (`+100`, `CRIT!`, `COMBO x3`), pickup texts (`CHIAVE!`, `+1 TNT`) and the name of the upgrade just chosen
 - Small-bomb icon pulses with a special effect when **Instant Kill** is active
 - Skull/explosion ability icon shown when a Mythic upgrade is held
-- **Pause menu** (`Esc`): Audio Settings and Bat Encyclopedia sub-pages
+- **Pause menu** (`Esc`): Riprendi · Enciclopedia · Audio · Comandi · Menu principale
+- **Controls panel** (*Comandi*, from the title screen or the pause menu): rebind two keyboard keys and one gamepad button per action (move, small/big bomb, detonate, pause). Bindings are saved to `%APPDATA%\PoopMan\controls.cfg`
+- **Leaderboard** (*Classifica*): top 20 scores, stored in `leaderboard.json` next to the executable. After a game over you enter your name (max 16 characters) before the score is saved
 - **Bat Encyclopedia** — 3-tab scrollable card gallery (Nemici · Upgrade · Biomi):
-  - *Nemici*: all eight bat variants with sprite preview, stats, and spawn level
+  - *Nemici*: all eight bat variants plus the six golems with sprite preview, stats, and spawn level
   - *Upgrade*: all Miner upgrades including Mythic entries (highlighted with a special card style)
   - *Biomi*: six visual themes with descriptions
 - **Audio Settings** — independent Music / SFX volume sliders with mute toggle, available in-game and on the title screen
 - **Game Over overlay** with final score (`R` / `Enter` to restart, `Esc` to title)
 - **Level flash** on completion (1.8 s, with theme name every 3 levels)
-- **Title screen** with parallax scrolling clouds, main menu, instructions, and audio overlay
+- **Title screen** with parallax scrolling clouds and a main menu: Gioca · Classifica · Istruzioni · Audio · Comandi
 
 ### Window & Rendering
 
@@ -180,6 +201,8 @@ Upgrades that would have no effect (e.g. *+1 Vita* with full lives, invincibilit
 - Screen shake scaled by explosion size (map only — the HUD stays still)
 
 ## Controls
+
+Default bindings. All of them can be changed from the **Comandi** panel.
 
 | Key | Action |
 |-----|--------|
@@ -216,6 +239,8 @@ Upgrades that would have no effect (e.g. *+1 Vita* with full lives, invincibilit
 | `Content/image/character/miner_animation.xml` | Miner animation metadata |
 | `Content/image/character/miner` | Miner HUD icon |
 | `Content/image/enemies/bat.xml` | Bat animation metadata |
+| `Content/image/enemies/golem_*.xml` | Golem animation metadata (normal, booler, brute, laser, rhino, godness) |
+| `Content/image/items/doors.xml` | Per-biome door sprites (with / without key) |
 | `Content/image/items/items.xml` | Items / UI animation metadata |
 | `Content/image/backgound/1`, `2`, `3` | Title screen background layers |
 | `Content/image/fxs/` | Visual effect sprites |
@@ -230,7 +255,29 @@ Upgrades that would have no effect (e.g. *+1 Vita* with full lives, invincibilit
 3. Set `PoopMan` as the Startup Project.
 4. Build and run (`F5`).
 
-> Requires the **MonoGame Content Builder** (MGCB) to compile assets before the first run.
+From the command line (Windows, .NET 9 SDK):
+
+```
+dotnet build PoopMan/PoopMan.csproj -c Release   # also runs the content pipeline
+dotnet run --project PoopMan/PoopMan.csproj
+```
+
+> The MonoGame Content Builder (MGCB) runs automatically as part of the build and compiles the assets before the first run.
+> The game targets Windows (DirectX); it does not build or run on Linux/macOS.
+
+### Download
+
+Prebuilt Windows releases are published on the [Releases](https://github.com/FKProf/PoopMan/releases) page: extract the zip and run `PoopMan.exe` (requires the [.NET 9 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/9.0)). Release notes live in `.github/release-notes/`.
+
+## Testing & CI
+
+There is no unit-test project; the game is verified on Windows by the **Windows auto-play** workflow (`.github/workflows/windows-autoplay.yml`):
+
+1. Release build of the game, identical to the published one
+2. Smoke test of the real `PoopMan.exe` driven with real key presses (`tests/windows-smoke.ps1`), with screenshots
+3. Auto-play bot (`tests/PoopMan.AutoPlay`) that plays many levels checking for exceptions, bats stuck in walls, and reachable door/key
+
+Screenshots and logs are attached to the workflow run as artifacts.
 
 ## Roadmap
 
